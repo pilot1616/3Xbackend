@@ -1,0 +1,7 @@
+database:
+  mysql:
+    user: root
+    password: zhangxinghui
+    address: 192.168.80.128
+    port: 3306
+    schema: 3X
