@@ -22,4 +22,5 @@ func main() {
 	if err := db.Init(configFile); err != nil {
 		fmt.Printf("init db failed: %v", err)
 	}
+	db.Connect.AutoMigrate(database.User{})
 }
