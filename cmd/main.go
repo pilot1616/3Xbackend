@@ -2,6 +2,7 @@ package main
 
 import (
 	"3Xbackend/internal/database"
+	"3Xbackend/internal/server"
 	"fmt"
 	"path/filepath"
 )
@@ -22,5 +23,7 @@ func main() {
 	if err := db.Init(configFile); err != nil {
 		fmt.Printf("init db failed: %v", err)
 	}
-	db.Connect.AutoMigrate(database.User{})
+	
+	svr := server.Server{}
+	svr.Init()
 }
