@@ -1,3 +1,10 @@
+server:
+  port: 8080
+
+auth:
+  secret: 3Xbackend-dev-secret
+  token_expire_hours: 24
+
 database:
   # mysql:
   #   user: root
@@ -8,7 +15,7 @@ database:
 
   mysql:
     user: root
-    password: 123456
+    password: zhangxinghui
     address: 10.2.98.225
     port: 3306
     schema: 3X

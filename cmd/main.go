@@ -1,9 +1,10 @@
 package main
 
 import (
+	"3Xbackend/internal/config"
 	"3Xbackend/internal/database"
 	"3Xbackend/internal/server"
-	"fmt"
+	"log"
 	"path/filepath"
 )
 
@@ -19,11 +20,24 @@ func init() {
 }
 
 func main() {
-	db := database.MysqlDb{}
-	if err := db.Init(configFile); err != nil {
-		fmt.Printf("init db failed: %v", err)
+	cfg, err := config.Load(configFile)
+	if err != nil {
+		log.Fatalf("load config failed: %v", err)
 	}
-	
+
+	db := database.MysqlDb{}
+	if err := db.Init(cfg.Database.Mysql); err != nil {
+		log.Fatalf("init db failed: %v", err)
+	}
+	if err := db.CreateTable(); err != nil {
+		log.Fatalf("create table failed: %v", err)
+	}
+
 	svr := server.Server{}
-	svr.Init()
+	if err := svr.Init(db.Connect, cfg.Auth); err != nil {
+		log.Fatalf("init server failed: %v", err)
+	}
+	if err := svr.Run(cfg.Server.Address()); err != nil {
+		log.Fatalf("start server failed: %v", err)
+	}
 }

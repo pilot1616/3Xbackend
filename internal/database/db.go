@@ -3,8 +3,6 @@ package database
 import (
 	"3Xbackend/internal/config"
 	"fmt"
-
-	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -19,15 +17,12 @@ type MysqlDb struct {
 	Connect  *gorm.DB
 }
 
-func (db *MysqlDb) Init(path string) error {
-	if err := config.Parse(path); err != nil {
-		return fmt.Errorf("parse params error: %v", err)
-	}
-	db.User = viper.GetString("database.mysql.user")
-	db.Password = viper.GetString("database.mysql.password")
-	db.Address = viper.GetString("database.mysql.address")
-	db.Port = viper.GetString("database.mysql.port")
-	db.Schema = viper.GetString("database.mysql.schema")
+func (db *MysqlDb) Init(cfg config.Mysql) error {
+	db.User = cfg.User
+	db.Password = cfg.Password
+	db.Address = cfg.Address
+	db.Port = cfg.Port
+	db.Schema = cfg.Schema
 	return db.GetConnect()
 }
 
@@ -47,6 +42,11 @@ func (db *MysqlDb) GetConnectString() string {
 }
 
 func (db *MysqlDb) CreateTable() error {
-	db.Connect.AutoMigrate(User{})
+	if db.Connect == nil {
+		return fmt.Errorf("db connection is nil")
+	}
+	if err := db.Connect.AutoMigrate(&User{}); err != nil {
+		return fmt.Errorf("auto migrate failed: %v", err)
+	}
 	return nil
 }
