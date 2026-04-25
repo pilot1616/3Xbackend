@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3X-Login</title>
+    <link rel="icon" href="../res/img/favicon.ico" type="images/x-ico" />
+    <link rel="stylesheet" type="text/css" href="../res/layui/css/layui.css">
+    <link type="text/css" rel="stylesheet" href="../layui-v2.9.2/layui/css/layui.css">
+    <link rel="stylesheet" type="text/css" href="../res/css/main.css">
+    <style>
+        body {
+            background-image: url(../res/img/bgimg1.jpg);
+            background-size: cover;
+        }
+
+        .error-message {
+            color: red;
+            margin-top: 5px;
+        }
+
+        .confirm-password {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="shell">
+        <h2 class="title">Login</h2>
+        <input class="username" type="text" id="username" placeholder="Username">
+        <div>
+            <input class="password" type="password" id="password" placeholder="Password">
+            <i class="layui-icon layui-icon-eye" id="eye"></i>
+        </div>
+        <div class="confirm-password">
+            <input type="password" id="confirmPassword" placeholder="Confirm Password">
+            <i class="layui-icon layui-icon-eye" id="ceye"></i>
+        </div>
+
+        <div class="layui-form layui-row layui-col-space16" id="securityQuestionBox">
+            <div class="layui-col-md6">
+              <select id="securityQuestion">
+                <option value="">请选择密保问题：</option>
+                <option value="year">你印象最深刻的一年是？</option>
+                <option value="person">你印象最深刻的人是？</option>
+                <option value="book">你印象最深刻的书是？</option>
+              </select>
+            </div>
+          </div>
+
+        <input class="security" type="text" id="security" placeholder="输入密保">
+        <div class="error-message" id="error-message"></div>
+        <input class="loginBtn" type="submit" value="Login" id="loginBtn">
+        <input class="changeBtn" type="submit" value="Change" id="changeBtn">
+        <div class="footer">
+            <div class="Remember">
+                <input type="checkbox" id="rememberMe">
+                <label for="rememberMe">记住我</label>
+            </div>
+            <button id="Password">去注册</button>
+            <button id="forget">忘记密码</button>
+            <a href="index.html" class="gotoIndex">返回首页</a>
+        </div>
+    </div>
+    <script src="../res/js/jquery.min.js"></script>
+    <script type="text/javascript" src="../layui-v2.9.2/layui/layui.js"></script>
+    <!-- <script src="../res/js/bcrypt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.js"></script> -->
+    <script>
+        $(document).ready( function () {
+            var securityQuestionBox = $('#securityQuestionBox');
+            var security = $('#security');
+            var changeBtn = $('#changeBtn');
+            securityQuestionBox.hide();
+            security.hide();
+            changeBtn.hide();
+
+            // 读取nowUserInfo中的信息填充到输入框
+            var nowUserInfo = localStorage.getItem('nowUserInfo');
+            nowUserInfo = nowUserInfo ? JSON.parse(nowUserInfo) : {};
+
+            if (nowUserInfo.rememberMe) {
+                $('#password').val(nowUserInfo.nohashedPassword);
+                $('#username').val(nowUserInfo.nohashedUsername);
+                $('#rememberMe').prop('checked', true);
+            }
+            localStorage.removeItem("nowUserInfo")
+        });
+
+        $('#Password').on('click', function () {
+            var title = $('.title');
+            var loginBtn = $('#loginBtn');
+            var changeBtn = $('#changeBtn');
+            var rememberMeLabel = $('.Remember');
+            var passwordBtn = $('#Password');
+            var errorMessage = $('#error-message');
+            var confirmPasswordInput = $('.confirm-password');
+            var securityQuestionBox = $('#securityQuestionBox');
+            var security = $('#security');
+            var forget = $('#forget');
+
+            if (title.text() === 'Login') {
+                rememberMeLabel.hide(); 
+                forget.hide();
+                changeBtn.hide();
+                confirmPasswordInput.show();
+                securityQuestionBox.show();
+                security.show();
+
+                title.text('Register');
+                loginBtn.val('注册');
+                passwordBtn.text('去登录');
+                errorMessage.text('请使用手机号码注册，并且密码必须由字母和数字组成，且长度大于等于6位');
+                $('#username').val('');
+                $('#password').val('');
+                $('#confirmPassword').val('');
+                $('#securityQuestion').val('');
+                $('#security').val('');
+                $('#username').attr('placeholder', 'New Username');
+                $('#password').attr('placeholder', 'New Password');
+                $('#confirmPassword').attr('placeholder', 'Confirm Password');
+                $('#password').attr('type', 'password');
+                $('#confirmPassword').attr('type', 'password');
+            } else {
+                rememberMeLabel.show();
+                loginBtn.show();
+                forget.show();
+                confirmPasswordInput.hide(); 
+                securityQuestionBox.hide();
+                security.hide();
+                changeBtn.hide();
+
+                title.text('Login');
+                loginBtn.val('登录');
+                passwordBtn.text('去注册');
+                errorMessage.text('');
+                $('#username').val('');
+                $('#password').val('');
+                $('#username').attr('placeholder', 'Username');
+                $('#password').attr('placeholder', 'Password');
+                $('#password').attr('type', 'password');
+            }
+        });
+
+        $('#forget').on('click', function () {
+            var title = $('.title');
+            var loginBtn = $('#loginBtn');
+            var changeBtn = $('#changeBtn');
+            var rememberMeLabel = $('.Remember');
+            var passwordBtn = $('#Password');
+            var errorMessage = $('#error-message');
+            var confirmPasswordInput = $('.confirm-password');
+            var securityQuestionBox = $('#securityQuestionBox');
+            var security = $('#security');
+            var forget = $('#forget');
+
+            rememberMeLabel.hide(); 
+            loginBtn.hide();
+            forget.hide();
+            passwordBtn.show();
+            confirmPasswordInput.show();
+            securityQuestionBox.hide();
+            security.show();
+            changeBtn.show();
+
+            title.text('Change');
+            passwordBtn.text('去登录');
+
+            errorMessage.text('请输入要更改密码的账号');
+
+            $('#username').val('');
+            $('#password').val('');
+            $('#confirmPassword').val('');
+            $('#securityQuestion').val('');
+            $('#security').val('');
+            $('#username').attr('placeholder', 'New Username');
+            $('#password').attr('placeholder', 'New Password');
+            $('#confirmPassword').attr('placeholder', 'Confirm Password');
+            $('#password').attr('type', 'password');
+            $('#confirmPassword').attr('type', 'password');
+
+
+            $('#username').on('blur', function() {
+                var username = $('#username').val();
+                // 错误提示信息
+                var errorMessage = $('#error-message');
+                errorMessage.text('');
+                // 检查输入是否为空
+                if (!username) {
+                    errorMessage.text('请填写账号！');
+                    return;
+                }
+
+                var saltUsername = 10; // 加盐的轮数
+                hashPassword(username, saltUsername)
+                .then(hashedUsername  => {
+                    // 存储到localStorage中
+                    var registeredUsers = localStorage.getItem('registeredUsers');
+                    registeredUsers = registeredUsers ? JSON.parse(registeredUsers) : [];
+
+                    // 检查用户名是否已经注册
+                    var user = registeredUsers.find(function (user) {
+                        return hashedUsername === user.username;
+                    });
+
+                    if (!user) {
+                        errorMessage.text('该用户未注册!');
+                        return;
+                    }else{
+                        if(user.securityQuestion === "year"){
+                            errorMessage.text('你的密保问题是：你印象最深刻的一年是？!');
+                        }
+                        else if(user.securityQuestion === "person"){
+                            errorMessage.text('你的密保问题是：你印象最深刻的人是？!');
+                        }
+                        else if(user.securityQuestion === "book"){
+                            errorMessage.text('你的密保问题是：你印象最深刻的书是？!');
+                        }
+                    }
+                })
+                .catch(error => {
+                console.error("Error:", error);
+                });
+                
+            });
+        })
+
+        $("#eye").click(function () {
+            //获取type属性
+            var type = $(this).prev().attr("type");
+            if (type === "password") {
+                //获取input标签并设置type属性为text
+                $(this).prev().attr("type", "text");
+            } else {
+                //获取input标签并设置type属性为text
+                $(this).prev().attr("type", "password");
+            }
+            //删除当前元素指定的类名，并设置指定的类
+            $(this).toggleClass("layui-icon-eye")
+                .toggleClass("layui-icon-eye-invisible");
+        });
+
+        $("#ceye").click(function () {
+            //获取type属性
+            var type = $(this).prev().attr("type");
+            if (type === "password") {
+                //获取input标签并设置type属性为text
+                $(this).prev().attr("type", "text");
+            } else {
+                //获取input标签并设置type属性为text
+                $(this).prev().attr("type", "password");
+            }
+            //删除当前元素指定的类名，并设置指定的类
+            $(this).toggleClass("layui-icon-eye")
+                .toggleClass("layui-icon-eye-invisible");
+        });
+
+        async function hashPassword(password, salt) {
+            const encoder = new TextEncoder();
+            const passwordBuffer = encoder.encode(password);
+            const saltBuffer = encoder.encode(salt);
+
+            const resultBuffer = await crypto.subtle.digest('SHA-256', passwordBuffer);
+
+            const saltedPasswordBuffer = new Uint8Array(resultBuffer.byteLength + saltBuffer.byteLength);
+            saltedPasswordBuffer.set(new Uint8Array(resultBuffer), 0);
+            saltedPasswordBuffer.set(new Uint8Array(saltBuffer), resultBuffer.byteLength);
+
+            const hashedPassword = btoa(String.fromCharCode.apply(null, saltedPasswordBuffer));
+            return hashedPassword;
+        }
+
+        
+        $('#changeBtn').on('click', async function () {
+            // 获取用户输入的账户、密码
+            var username = $('#username').val();
+            var password = $('#password').val();
+            var confirmPassword = $('#confirmPassword').val();
+            var security = $('#security').val();
+
+            // 错误提示信息
+            var errorMessage = $('#error-message');
+            errorMessage.text('');
+
+            // 检查输入是否为空
+            if (!security) {
+                errorMessage.text('请填写密保。');
+                return;
+            }
+            // 检查输入是否为空
+            if (!username || !password || !confirmPassword) {
+                errorMessage.text('请填写用户名和密码。');
+                return;
+            }
+
+            // 验证用户名是否为手机号
+            var isPhoneNumber = /^\d{11}$/.test(username);
+            if (!isPhoneNumber) {
+                errorMessage.text('Please enter a valid phone number.');
+                return;
+            }
+
+            // 验证密码是否符合要求
+            const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
+            if (!passwordRegex.test(password)) {
+                errorMessage.text('密码必须由字母和数字组成，且长度大于等于6位。');
+                return;
+            }
+
+             // 验证两次输入的密码是否一致
+             if (password !== confirmPassword) {
+                errorMessage.text('两次输入的密码不一致，请重新输入。');
+                return;
+            }
+
+            var saltUsername = 10; // 加盐的轮数
+            const hashedUsername = await hashPassword(username, saltUsername);
+
+            // 存储到localStorage中
+            var registeredUsers = localStorage.getItem('registeredUsers');
+            registeredUsers = registeredUsers ? JSON.parse(registeredUsers) : [];
+
+            // 检查用户名是否已经注册
+            var user = registeredUsers.find(function (user) {
+                return user.username === hashedUsername;
+            });
+
+            if (user) {
+                const hashedPassword = await hashPassword(password, user.salt);
+                user.password = hashedPassword
+
+                localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+
+                // 跳转到登录
+                layer.msg('修改密码成功');
+                $('#Password').click();
+                return;
+            }else{
+                errorMessage.text('该用户未注册!');
+                return;
+            }
+
+            
+        })
+
+        // 示例：点击Login/Register按钮的事件
+        $('#loginBtn').on('click', async function () {
+            // 获取用户输入的账户、密码
+            var username = $('#username').val();
+            var password = $('#password').val();
+            var confirmPassword = $('#confirmPassword').val();
+            var securityQuestion =  $('#securityQuestion').val();
+            var security = $('#security').val();
+            var title = $('.title');
+
+            // 错误提示信息
+            var errorMessage = $('#error-message');
+            errorMessage.text('');
+
+            // 检查输入是否为空
+            if (!username || !password) {
+                errorMessage.text('请填写用户名和密码。');
+                return;
+            }
+
+            // 验证用户名是否为手机号
+            var isPhoneNumber = /^\d{11}$/.test(username);
+            if (!isPhoneNumber) {
+                errorMessage.text('Please enter a valid phone number.');
+                return;
+            }
+
+            // 验证密码是否符合要求
+            const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
+            if (!passwordRegex.test(password)) {
+                errorMessage.text('密码必须由字母和数字组成，且长度大于等于6位。');
+                return;
+            }
+
+
+            // 生成随机盐值
+            const salt = btoa(String.fromCharCode.apply(null, crypto.getRandomValues(new Uint8Array(16))));
+
+
+            if (title.text() === 'Register') {
+                // 验证两次输入的密码是否一致
+                if (password !== confirmPassword) {
+                    errorMessage.text('两次输入的密码不一致，请重新输入。');
+                    return;
+                }
+                // 检查输入是否为空
+                if (!securityQuestion || !security) {
+                    errorMessage.text('请选择密保问题以及填写密保。');
+                    return;
+                }
+                // 在注册时对密码和用户名进行加盐哈希处理
+                var saltUsername = 10; // 加盐的轮数
+                // 在注册时生成随机盐值，并对密码进行加盐哈希处理
+                const hashedPassword = await hashPassword(password, salt);
+                const hashedSecurity= await hashPassword(security, salt);
+                const hashedUsername = await hashPassword(username, saltUsername);
+
+                // 存储到localStorage中
+                var registeredUsers = localStorage.getItem('registeredUsers');
+                registeredUsers = registeredUsers ? JSON.parse(registeredUsers) : [];
+
+                // 检查用户名是否已经注册
+                var isUserRegistered = registeredUsers.some(function (user) {
+                    return user.username === hashedUsername;
+                });
+
+                if (isUserRegistered) {
+                    errorMessage.text('用户名已经注册。');
+                    return;
+                }
+
+                // 存储到 localStorage 中
+                var userData = {
+                    username: hashedUsername,
+                    password: hashedPassword,
+                    security:hashedSecurity,
+                    securityQuestion:securityQuestion,
+                    salt: salt,
+                    loginAttempts: 0
+                };
+
+                registeredUsers.push(userData);
+                localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+
+                // 跳转到登录
+                layer.msg('注册成功');
+                $('#Password').click();
+            } else {
+               // 在登录时读取存储的盐值，并对密码进行加盐哈希处理，与数据库中的哈希值进行比较
+               var storedUsers = localStorage.getItem('registeredUsers');
+                storedUsers = storedUsers ? JSON.parse(storedUsers) : [];
+
+                
+                var saltUsername = 10; // 加盐的轮数
+                const hashedUsername = await hashPassword(username, saltUsername);
+
+                var user = storedUsers.find(function (user) {
+                    return hashedUsername === user.username;
+                });
+
+                if (user) {
+                    // 检查是否存在锁定时间戳
+                    var lockoutTimestamp = user.lockoutTime
+                    if (lockoutTimestamp && new Date() < new Date(lockoutTimestamp)) {
+                        // 用户被锁定，计算剩余锁定时间
+                        const remainingTime = Math.ceil((new Date(lockoutTimestamp) - new Date()) / 1000 / 60);
+                        displayRemainingTime(remainingTime,user,storedUsers);
+                        return;
+                    }
+
+                    // 在登录时对密码进行加盐哈希处理，与数据库中的哈希值进行比较
+                    const hashedPassword = await hashPassword(password, user.salt);
+
+                    if (hashedPassword === user.password) {
+                        // 登录成功
+                        user.loginAttempts = 0; // 重置登录失败次数
+                        // 存储当前用户信息到localStorage
+                        if($('#rememberMe').prop('checked')){
+                            localStorage.setItem('nowUserInfo', JSON.stringify({
+                                nohashedUsername:username,
+                                nohashedPassword:password,
+                                username: hashedUsername,
+                                password: hashedPassword,
+                                salt: salt,
+                                loginAttempts: 0,
+                                logined:true, 
+                                rememberMe: true,
+                            }));
+                        }else{
+                            localStorage.setItem('nowUserInfo', JSON.stringify({
+                                username: hashedUsername,
+                                password: hashedPassword,
+                                salt: salt,
+                                loginAttempts: 0,
+                                logined:true, 
+                                rememberMe: true,
+                            }));
+                        }
+                        
+                        // 跳转到首页
+                        window.location.href = 'index.html';
+                    } else {
+                        // 登录失败，增加登录失败次数
+                        user.loginAttempts += 1;
+
+                        if (user.loginAttempts >= 3) {
+                            // 锁定用户，设置锁定时间戳为五分钟后
+                            const lockoutTime = new Date();
+                            lockoutTime.setMinutes(lockoutTime.getMinutes() + 5);
+                            user.lockoutTime = lockoutTime;
+                            displayRemainingTime(5,user,storedUsers);
+                        } else {
+                            errorMessage.text('用户名或密码不正确，请重试。你可再次尝试'+(3-user.loginAttempts)+"次");
+                        }
+                        localStorage.setItem('registeredUsers', JSON.stringify(storedUsers));
+                    }
+                } else {
+                    errorMessage.text('用户名不正确，请重试。');
+                }
+            }
+        });
+        
+        var timer = null;
+        function displayRemainingTime(minutes,user,storedUsers) {
+            var errorMessage = $('#error-message');
+            var remainingTimeMessage = '您的账户已被锁定，请稍后再试。剩余时间：' + minutes + '分钟。';
+            errorMessage.text(remainingTimeMessage);
+
+            if(timer != null){
+                clearInterval(timer);
+            }
+            // 定时器每分钟更新一次显示
+            timer = setInterval(function () {
+                minutes--;
+
+                if (minutes > 0) {
+                    remainingTimeMessage = '您的账户已被锁定，请稍后再试。剩余时间：' + minutes + '分钟。';
+                    errorMessage.text(remainingTimeMessage);
+                } else {
+                    clearInterval(timer);
+                    errorMessage.text(''); // 锁定时间到，清空提示信息
+                    user.lockoutTime = null;
+                    user.loginAttempts = 0;
+                    localStorage.setItem('registeredUsers', JSON.stringify(storedUsers));
+                }
+            }, 60000); // 每分钟更新一次
+        }
+    </script>
+
+</body>
+
+</html>

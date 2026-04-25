@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>3X产品论坛</title>
+    <link rel="icon" href="../res/img/favicon.ico" type="images/x-ico" />
+    <link rel="stylesheet" type="text/css" href="../res/layui/css/layui.css">
+    <link type="text/css" rel="stylesheet" href="../layui-v2.9.2/layui/css/layui.css">
+    <link rel="stylesheet" type="text/css" href="../res/css/main.css">
+    <!--加载meta IE兼容文件-->
+    <!--[if lt IE 9]>
+<script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+<script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+<![endif]-->
+</head>
+
+<body>
+    <div class="header w1000">
+        <div class="menu-btn">
+            <div class="menu"></div>
+        </div>
+        <h1 class="logo">
+            <a href="index.html">
+        <span>MYBLOG</span>
+        <img src="../res/img/logo.png" style="width: 80px;">
+      </a>
+        </h1>
+        <div class="nav">
+            <a href="index.html"   class="active">首页</a>
+            <a href="leacots.html">发布问题</a>
+            <a href="album.html">相册</a>
+            <a href="about.html">我的资料</a>
+        </div>
+        <div class="login-text ">
+            <button class="layui-btn layui-btn-radius" type="button" id="login">登录/注册</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="search-bar">
+            <input class="search-txt" type="text" name="" id="searchNickName" placeholder="输入你想要查看的用户昵称...">
+            <i class="layui-icon layui-icon-search search-btn" style="font-size: 30px; color: #fff; "></i>
+        </div>
+    </div>
+
+
+    <div class="content whisper-content">
+        <div class="cont">
+            <div class="whisper-list">
+                <div class="item-box">
+                    <div class="item">
+                        <div class="whisper-title">
+                            <i class="layui-icon layui-icon-friends" style="color: gray;"></i><span class="nickname">12:25 </span><br>
+                            <i class="layui-icon layui-icon-date"></i><span class="hour">12:25</span><span class="date">2018/06/08</span>
+                        </div>                       
+                        <p class="text-cont">
+                            一直听说牛油果吃起来像肥皂、肥肉，虽然很难吃，但是价格却很贵，我还是想尝试一下。今天公司新到了新西兰牛油果，这是新西兰牛油果是第一次在中国上市，个头比普通牛油果大了一倍，被誉为“超牛果”。好奇心驱使我尝了一颗，第一次吃牛油果没有见识，切开牛油果费了好大劲，切成了这样。
+                        </p>
+                        <div class="img-box">
+                            <!-- <img src="../res/img/wy_img1.jpg"> -->
+                        </div>
+                        <p class="quesiont-id">1231312</p>
+                        <div class="op-list">
+                            <p class="like"><i class="layui-icon layui-icon-praise"></i><span>1200</span></p>
+                            <p class="edit"><i class="layui-icon layui-icon-reply-fill"></i><span>1200</span></p>
+                            <p class="off"><span>展开</span><i class="layui-icon layui-icon-down"></i></p>
+                        </div>
+                    </div>
+                    <div class="review-version layui-hide">
+                        <div class="form">
+                            <img src="../res/img/header2.png" class="now-header">
+                            <form class="layui-form" action="">
+                                <div class="layui-form-item layui-form-text">
+                                    <div class="layui-input-block">
+                                        <textarea name="desc" placeholder="在这里评论" class="layui-textarea" id="1231312t"></textarea>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item layui-form-item-btn">
+                                    <div class="layui-input-block" style="text-align: right;">
+                                        <!-- <button class="layui-btn definite">確定</button> -->
+                                        <button class="comment-upload-btn" type="reset" id="1231312b">確定</button>    
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="list-cont">
+                            <div class="cont">
+                                <div class="img">
+                                    <img src="../res/img/header.png" alt="" class="header-img">
+                                </div>
+                                <div class="text">
+                                    <p class="tit"><span class="name">吳亦凡</span><span class="data">2018/06/06</span></p>
+                                    <p class="ct">敢问大师，师从何方？上古高人呐逐一地看完你的作品后，我的心久久 不能平静！这世间怎么可能还有如此精辟的作品？我不敢相信自己的眼睛。自从改革开放以后，我就以为再也不会有任何作品能打动我，没想到今天看到这个如此精妙绝伦的作品好厉害！</p>
+                                </div>
+                            </div>
+                            <div class="cont">
+                                <div class="img">
+                                    <img src="../res/img/header.png" alt="">
+                                </div>
+                                <div class="text">
+                                    <p class="tit"><span class="name">吳亦凡</span><span class="data">2018/06/06</span></p>
+                                    <p class="ct">敢问大师，师从何方？上古高人呐逐一地看完你的作品后，我的心久久 不能平静！这世间怎么可能还有如此精辟的作品？我不敢相信自己的眼睛。自从改革开放以后，我就以为再也不会有任何作品能打动我，没想到今天看到这个如此精妙绝伦的作品好厉害！</p>
+                                </div>
+                            </div>
+                            <div class="cont">
+                                <div class="img">
+                                    <img src="../res/img/header.png" alt="">
+                                </div>
+                                <div class="text">
+                                    <p class="tit"><span class="name">吳亦凡</span><span class="data">2018/06/06</span></p>
+                                    <p class="ct">敢问大师，师从何方？上古高人呐逐一地看完你的作品后，我的心久久 不能平静！这世间怎么可能还有如此精辟的作品？我不敢相信自己的眼睛。自从改革开放以后，我就以为再也不会有任何作品能打动我，没想到今天看到这个如此精妙绝伦的作品好厉害！</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="outerbox">
+        <div id="innerbox">
+            <img id="bigimg" src="" />
+        </div>
+    </div>
+
+    <footer>
+        <!-- 中间模块 -->
+        <div class="footerCenter">
+            <div class="w1000">
+                <!-- 左侧盒子 -->
+                <div class="footerCenterLeft">
+                    <!-- 上面About Us及横线 -->
+                    <div class="fclWordBoxOne">
+                        <div class="fclAbout">About Us</div>
+                        <div class="fclLineOne"></div>
+                    </div>
+                    <!-- 中间文字 -->
+                    <div class="fclWordBoxTwo">
+                        <div class="fclwbtWordOne">Hidden Hills property with mountain and city view boast <br> none bedrooms including a master suite with private <br> terrace and an entertainment.wing which includes a 20- <br> seat theater.</div>
+                        <div class="fclwbtWordTwo iconfont"><i class="layui-icon layui-icon-home" style="font-size: 12px; "></i>   15 Cliff St,New York NY 10038,USA</div>
+                        <div class="fclwbtWordThree iconfont"><i class="layui-icon layui-icon-cellphone" style="font-size: 12px; "></i>   +1 212-602-9641</div>
+                        <div class="fclwbtWordFourth iconfont"><i class="layui-icon layui-icon-email" style="font-size: 12px; "></i>   info@example.com</div>
+                    </div>
+                    <!-- 下方icon -->
+                    <div class="fclWordBoxThree">
+                        <i class="layui-icon layui-icon-friends" style="font-size: 20px; "></i>
+                        <i class="layui-icon layui-icon-login-weibo" style="font-size: 20px; "></i>
+                        <i class="layui-icon layui-icon-survey" style="font-size: 20px; "></i>
+                        <i class="layui-icon layui-icon-login-wechat" style="font-size: 20px; "></i>
+                        <i class="layui-icon layui-icon-login-qq" style="font-size: 20px; "></i>
+                    </div>
+                    
+                    <img src="../res/img/ad.jpg" alt="" style="float: right; width: 200px;">
+                    <div class="fbWord">@2019,Digiqole-News Magazine html Template.All rights reserved.</div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <div class="back">↑</div>
+    <script src="../res/js/jquery.min.js"></script>
+    <script type="text/javascript" src="../res/layui/layui.js"></script>
+    <script type="text/javascript" src="../layui-v2.9.2/layui/layui.js"></script>
+    <script type="text/javascript">
+        var nowUserInfo = localStorage.getItem('nowUserInfo');
+        var datas;
+        const params = new URLSearchParams(window.location.search);
+        const findNickName = params.get("findNickName");
+        if(findNickName)
+            $("#searchNickName").attr('placeholder',"当前查询用户为："+findNickName);
+        $(document).ready(function () {
+            // 读取nowUserInfo中的信息填充到输入框
+            nowUserInfo = nowUserInfo ? JSON.parse(nowUserInfo) : {};
+            var editedUsers = JSON.parse(localStorage.getItem('editedUsers')) || [];
+            console.log(editedUsers);
+            // 如果 logined 为 true，则将登录按钮文字改为 "退出登录"
+            if (nowUserInfo && nowUserInfo.logined) {
+                $('#login').text('退出登录');
+                $('#login').addClass("layui-btn-danger");
+            }else{
+                $('#login').text('登录/注册');
+                $('#login').removeClass("layui-btn-danger");
+            }
+
+            //首页启动即获取刷新
+            $.ajax({
+                    url: `http://localhost:3000/question_request/`,
+                    method: 'GET',
+                    dataType: 'json',
+                    async:false,//这里要设置为异步，下面要用到返回的数据
+                    success: function (data) {
+                        datas=data;
+                        console.log('File upload success:', data);
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error uploading file:', error);
+                    }
+                });
+
+                //通过深拷贝已有的元素来展示内容
+                var exitsData = $('.item-box');
+                for(var i=0;i<datas.length;i++)
+                {
+                    //跳过撤销发布的问题
+                    if(!datas.records[i].isUpload)
+                        continue;
+                        //从所有数据中选出登录用户发布的问题数据
+                    if(findNickName && findNickName !==datas.records[i].nickName)
+                        continue;
+                    //深拷贝
+                    var newData=exitsData.clone(true);
+
+                    //修改需要渲染出来的内容
+                    newData.children('.item').children('.whisper-title').children('.nickname').text(datas.records[i].nickName)
+                    newData.children('.item').children('.whisper-title').children('.hour').replaceWith("<span class=\"hour\">"+datas.records[i].time.split(' ')[1].substring(0,5)+"<span>");
+                    newData.children('.item').children('.whisper-title').children('.date').replaceWith("<span class=\"date\">"+datas.records[i].time.split(' ')[0]+"<span>");
+                    newData.children('.item').children('.text-cont').text(datas.records[i].text);
+                    newData.children('.item').children('.op-list').children('.like').children('span').text(datas.records[i].likesNum);
+                    newData.children('.item').children('.op-list').children('.edit').children('span').text(datas.records[i].commentsNum);
+                    newData.children('.item').children('.quesiont-id').text(datas.records[i].qid);
+                    
+                    //渲染图片
+                    for(var k=0;k<datas.records[i].files.length;k++)
+                    {
+                        //判断是图片还是mp4
+                        if (!/\.(png|jpg|jpeg|gif|PNG|JPG|JPEG|GIF)$/.test(datas.records[i].files[k]))
+                        {
+                            var newImg=$('<video>').attr({
+                                'width': '200px',
+                                'height': '200px',
+                                'class': 'new-img',
+                                'controls':true
+                            });
+                            var source=$('<source>').attr({
+                                'src': "../public/uploads/"+datas.records[i].files[k],
+                                'type': 'video/mp4'
+                            });
+                            newImg.append(source);
+                        }
+                        else
+                        {
+                            var newImg = $('<img>').attr({
+                                'src': "../public/uploads/"+datas.records[i].files[k],
+                                'class': 'new-img',
+                            });
+                        }
+                        
+                        //点击放大预览
+                        newImg.on('click', function () {
+                            var _this = $(this);
+                            showBigImg('#outerbox', '#innerbox', '#bigimg', _this);                            
+                        });
+
+                        newData.children('.item').children('.img-box').append(newImg);
+                    }
+
+                    //这三个用于点赞和发表评论，增加了问题id的属性来辨识点击的是哪个问题
+                    newData.children('.item').children('.op-list').children('.like').attr('id',datas.records[i].qid+'l');
+                    newData.children('.review-version').children('.form').children('.layui-form').children('.layui-form-text').children('.layui-input-block').children('textarea').attr('id',datas.records[i].qid+'t');
+                    newData.children('.review-version').children('.form').children('.layui-form').children('.layui-form-item-btn').children('.layui-input-block').children('button').attr('id',datas.records[i].qid+'b');
+                    var username =( nowUserInfo && nowUserInfo.username && nowUserInfo.logined) ? nowUserInfo.username : 'userImgDefault'
+                    newData.children('.review-version').children('.form').children('.now-header').attr('src','../public/images/'+removeNonAlphanumeric(username)+'.jpg');
+                    //深拷贝然后把里面的内容清楚后添加到新的问题的评论中
+                    var comments=newData.children('.review-version').children('.list-cont').clone(true);
+                    comments.children().remove();
+
+                    //渲染评论内容
+                    for(var j=0;j<datas.records[i].comments.length;j++)
+                    {
+                        var remoteComment=datas.records[i].comments[j];
+                        var remoteCommentName=remoteComment.user;
+                        var comment=newData.children('.review-version').children('.list-cont').children('.cont').first();
+                        comment.children('.text').children('.tit').children('.name').text(remoteComment.nickName);
+                        comment.children('.text').children('.tit').children('.data').text(remoteComment.time.split(' ')[0]);
+                        comment.children('.text').children('.ct').text(remoteComment.text);
+                        comment.children('.img').children('.header-img').attr('src',"../public/images/"+removeNonAlphanumeric(remoteCommentName)+'.jpg');
+                        comments.append(comment);
+                    }
+
+                    //渲染到页面上,这里是直接把原来的评论html替换了
+                    newData.children('.review-version').children('.list-cont').replaceWith(comments);
+                    $('.whisper-list').append(newData);
+                    
+                }
+
+                //隐藏第一个模板
+                $('.whisper-list').children('.item-box').first().css({"display":"none"});
+                //上传问题评论
+                $('.comment-upload-btn').on('click',function(e){
+                    //判断是否登录
+                    if(nowUserInfo==null)
+                    {
+                        //如果没登陆不能上传
+                        layer.msg('请先登录')
+                        return;
+                    }
+                    if(!nowUserInfo.logined)
+                    {
+                        //如果没登陆不能上传
+                        layer.msg('请先登录')
+                        return;
+                    }
+
+                    //获取需要被添加评论的qid
+                    var qidStr=e.target.id.substring(0,e.target.id.length-1);
+                    var qid=Number(qidStr);
+
+                    //获取评论文本
+                    var text=$('#'+qidStr+'t').val();
+                    
+                    //发表评论的登录用户，也就是自己的username
+                    var user=nowUserInfo.username;
+
+                    //获取当前时间
+                    var d=new Date();
+                    var time=d.toLocaleString();
+
+                    //昵称，这是需要再重新设置的
+                    var nickName='pilot1616';
+
+                    //要发送到后台的所有数据
+                    var message={};
+                    message['qid']=qid;
+                    message['user']=user;
+                    message['nickName']=nickName;
+                    message['time']=time;
+                    message['text']=text;
+
+                    //发送评论数据
+                    $.ajax({
+                        url: `http://localhost:3000/comment_upload/`,
+                        method: 'POST',
+                        contentType:"application/json;charset=utf-8",
+                        data:JSON.stringify(message),
+                        dataType: 'json',
+                        traditional:true,
+                        success: function (data) {
+                            console.log('File upload success:', data);
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('Error uploading file:', error);
+                        }
+                    });
+                });
+
+                //点赞
+                $('.like').on('click',function(e){
+                    //判断是否登录
+                    if(nowUserInfo==null)
+                    {
+                        //如果没登陆不能上传
+                        layer.msg('请先登录')
+                        return;
+                    }
+                    if(!nowUserInfo.logined)
+                    {
+                        //如果没登陆不能上传
+                        layer.msg('请先登录')
+                        return;
+                    }
+
+                    //获取需要被点赞的问题id
+                    var qidStr=e.target.parentNode.id.substring(0,e.target.parentNode.id.length-1);
+                    var qid=Number(qidStr);
+
+                    //获取自己的username
+                    var user=nowUserInfo.username;
+
+                    //当前时间
+                    var d=new Date();
+                    var time=d.toLocaleString();
+                    var nickName='pilot1616';
+
+                    //要发送的数据
+                    var message={};
+                    message['qid']=qid;
+                    message['user']=user;
+                    message['nickName']=nickName;
+                    message['time']=time;
+
+                    //发送
+                    $.ajax({
+                        url: `http://localhost:3000/like_upload/`,
+                        method: 'POST',
+                        contentType:"application/json;charset=utf-8",
+                        data:JSON.stringify(message),
+                        dataType: 'json',
+                        traditional:true,
+                        success: function (data) {
+                            console.log('File upload success:', data);
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('Error uploading file:', error);
+                        }
+                    });
+                });
+        });
+
+        // 点击登录按钮时的事件处理
+        $('#login').on('click', function () {
+            // 获取登录按钮的文字
+            var buttonText = $(this).text();
+
+            // 如果文字为 "登录/注册"，则跳转到登录页面
+            if (buttonText === '登录/注册') {
+                window.location.href = 'login.html';
+            } else {
+                // 如果文字为 "退出登录"，则执行退出登录的操作
+                // 将 nowUserInfo 中的 logined 改为 false 重新存储
+                nowUserInfo.logined = false;
+                localStorage.setItem('nowUserInfo', JSON.stringify(nowUserInfo));
+
+                // 将登录按钮文字改为 "登录/注册"
+                $(this).text('登录/注册');
+                $('#login').removeClass("layui-btn-danger");
+                
+                location.reload();
+            }
+        });
+
+        //搜索指定用户内容
+        $('.search-btn').on('click',function(){
+            location.href = "index.html?findNickName="+$('#searchNickName').val();
+        })
+
+        var back = document.querySelector('.back');
+        // 页面滚动事件
+        document.addEventListener('scroll',function() {
+            //window.pageYOffset页面被卷去的头部
+            //当被卷曲大于250px，按钮出现
+            if(window.pageYOffset >= 250) {
+                back.style.display = 'block';
+            } else {
+                back.style.display = 'none';
+            }
+        })
+        // 点击返回顶部按钮，返回顶部
+        $('.back').on('click',function() {
+            animateBack(window,0);
+        })
+
+        var scaling = 1;
+        //放大图片
+        var preImage=false;
+        function showBigImg(outerbox, innerbox, bigimg, _this) {
+                var src = _this.attr('src');
+                $(bigimg).attr('src', src);
+
+                if (!preImage) {
+                    preImage = true;
+                    $(bigimg).attr('src', src).on('load', function () {
+                        var windowW = $(window).width();
+                        var windowH = $(window).height();
+                        var realW = this.width;
+                        var realH = this.height;
+                        var imgW, imgH;
+                        var scale = 0.8;
+
+                        if (realH > windowH * scale) {
+                            imgH = windowH * scale;
+                            imgW = imgH / realH * realW;
+                            if (imgW > windowW * scale) {
+                                imgW = windowW * scale;
+                            }
+                        } else if (realW > windowW * scale) {
+                            imgW = windowW * scale;
+                            imgH = imgW / realW * realH;
+                        } else {
+                            imgW = realW;
+                            imgH = realH;
+                        }
+
+                        $(bigimg).css('width', imgW);
+                        var w = (windowW - imgW) / 2;
+                        var h = (windowH - imgH) / 2;
+                        $(innerbox).css({ 'top': h, 'left': w });
+                        $(outerbox).fadeIn('fast');
+
+                        $('body').css('overflow-y', 'hidden');
+
+                        $('#bigimg').on("mousewheel", MouseWheelHandler);
+                        $('#bigimg').on("DOMMouseScroll", MouseWheelHandler);
+                    });
+                }
+
+                $(outerbox).on('click', function () {
+                $(this).fadeOut('fast');
+
+                $('#bigimg').off("mousewheel");
+                $('#bigimg').off("DOMMouseScroll");
+                $('#bigimg').css('transform', 'scale(1)');
+                $('body').css('overflow-y', 'auto');
+                preImage = false;
+            });
+        }
+
+        //鼠标滚轮拖动放大图片
+        function MouseWheelHandler(event) {
+            var type = event.type;
+            if (type == 'DOMMouseScroll' || type == 'mousewheel') {
+                event.delta = (event.originalEvent.wheelDelta) ? event.originalEvent.wheelDelta / 120 : -(event.detail || 0) / 3;
+            }
+
+            if (event.delta == 1 || event.delta > 0) {
+                zoomImg('#bigimg', 'add');
+            } else if (event.delta == -1 || event.delta < 0) {
+                zoomImg('#bigimg', 'cut');
+            } else {
+                console.log("鼠标滚轮放大缩小状态获取失败");
+            }
+        }
+
+        function zoomImg(img, type) {
+            if (type == 'add') {
+                scaling += 0.1;
+            } else {
+                if (scaling < 0.5) {
+                    return;
+                }
+                scaling -= 0.1;
+            }
+            $(img).css('transform', `scale(${scaling})`);
+        }
+
+        function removeNonAlphanumeric(str) {
+            // 使用正则表达式删除非字母和数字
+            return str.replace(/[^a-zA-Z0-9]/g, '');
+        }
+
+        //返回顶部
+        function animateBack(obj,target,callback){
+            clearInterval(obj.timer);
+            obj.timer=setInterval(function(){
+                var step=(target-window.pageYOffset)/10;
+                step=step>0 ? Math.ceil(step): Math.floor(step);
+                if(window.pageYOffset==target)
+                {
+                    clearInterval(obj.timer);
+                    if(callback){
+                        callback();
+                    }
+                }
+                window.scroll(0,window.pageYOffset+step)
+            },15);
+        }
+
+        layui.config({
+            base: '../res/js/util/'
+        }).use(['element', 'laypage', 'form', 'menu'], function() {
+            element = layui.element, laypage = layui.laypage, form = layui.form, menu = layui.menu;
+            laypage.render({
+                elem: 'demo',
+                count: 70 //数据总数，从服务端得到
+            });
+            menu.init();
+            menu.off();
+            menu.submit()
+        })
+
+    </script>
+    <style>
+        .comment-upload-btn {
+            /* 文字颜色 */
+            color: #0099CC; 
+            /* 清除背景色 */
+            background-color: #f2c064;
+            /* background: transparent;  */
+            /* 边框样式、颜色、宽度 */
+            border: 2px solid #e9e254;
+            /* 给边框添加圆角 */
+            border-radius: 6px; 
+            /* 字母转大写 */
+            border: none;
+            color: rgb(249, 128, 14);
+            padding: 16px 32px;
+            text-align: center;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            -webkit-transition-duration: 0.4s; /* Safari */
+            transition-duration: 0.4s;
+            cursor: pointer;
+            text-decoration: none;
+            text-transform: uppercase;
+        }
+
+        /* 悬停样式 */
+        .comment-upload-btn:hover {
+            background-color: #f77d0a;
+            color: rgb(243, 98, 15);
+        }
+
+        .new-img{
+            width: 218px;
+            height: auto;
+        }
+
+
+
+        .header-img{
+            height: 40px;
+            width: 40px;
+            border-radius: 40px;
+        }
+
+        .now-header {
+            height: 40px;
+            width: 40px;
+            border-radius: 40px;
+        }
+
+        #outerbox{
+            width: 100%;
+            height: 100%;
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 9;
+        }
+        #innerbox{
+            position: absolute;
+            z-index: 99;
+        }
+        #innerbox #bigimg {
+            cursor: grab;
+            border: 5px solid #ffffff;
+        }
+    </style>
+</body>
+
+
+</html>

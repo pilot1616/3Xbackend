@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>3X产品论坛</title>
+    <link rel="icon" href="../res/img/favicon.ico" type="images/x-ico" />
+    <link rel="stylesheet" type="text/css" href="../res/layui/css/layui.css">
+    <link type="text/css" rel="stylesheet" href="../layui-v2.9.2/layui/css/layui.css">
+    <link rel="stylesheet" type="text/css" href="../res/css/main.css">
+    <!--加载meta IE兼容文件-->
+    <!--[if lt IE 9]>
+<script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+<script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+<![endif]-->
+</head>
+
+<body>
+    <div class="header w1000">
+        <div class="menu-btn">
+            <div class="menu"></div>
+        </div>
+        <h1 class="logo">
+            <a href="index.html">
+        <span>MYBLOG</span>
+        <img src="../res/img/logo.png" style="width: 80px;">
+      </a>
+        </h1>
+        <div class="nav">
+            <a href="index.html"  >首页</a>
+            <a href="leacots.html"  class="active">发布问题</a>
+            <a href="album.html">相册</a>
+            <a href="about.html">我的资料</a>
+        </div>
+        <div class="login-text ">
+            <button class="layui-btn layui-btn-radius" type="button" id="login">登录/注册</button>
+        </div>
+    </div>
+
+
+    <div class="content whisper-content leacots-content">
+        <div class="cont w1000">
+            <div class="whisper-list">
+                <div class="item-box">
+                    <div class="review-version">
+                        <div class="form-box">
+                            <!-- <img class="banner-img" src="../res/img/liuyan.jpg"> -->
+                            <div class="form">
+                                <form class="layui-form" action="" method="post" enctype="multipart/form-data">
+                                    <div class="layui-form-item layui-form-text">
+                                        <div class="layui-input-block">
+                                            <textarea name="desc" placeholder="既然来了，就说几句" class="layui-textarea"></textarea>
+                                        </div>
+                                    </div>
+                                    <!-- 这里用来存放上传文件进行预览 -->
+                                    <div class="sortable-container" style="position: relative;" id="drag-sortable-container"></div>
+                                    <a href="javascript:;" class="file-upload">选择文件
+                                        <input type="file" name="image" id="upload-input" multiple="multiple">
+                                    </a>
+                                    
+                                    <div class="layui-form-item">
+                                        <div class="layui-input-block" style="text-align: right;">
+                                            <!-- <button type="submit" class="layui-btn definite">確定</button>                                             -->
+                                            <div class="sumit-all"><button class="img-upload-btn" type="reset">確定</button></div>
+                                            
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        <div id="outerbox">
+                            <div id="innerbox">
+                                <img id="bigimg" src="" />
+                            </div>
+                        </div>
+                        <div class="volume">
+                            我发表的问题 <span></span>
+                        </div>
+                        <div class="list-cont">
+                            <div class="cont">
+                                <div class="img">
+                                    <img src="../res/img/header.png" alt="" id="userImg">
+                                </div>
+                                <div class="text">
+                                    <p class="tit"><span class="name">吳亦凡</span><span class="data">2018/06/06</span></p>
+                                    <p class="ct">敢问大师，师从何方？上古高人呐逐一地看完你的作品后，我的心久久 不能平静！这世间怎么可能还有如此精辟的作品？我不敢相信自己的眼睛。自从改革开放以后，我就以为再也不会有任何作品能打动我，没想到今天看到这个如此精妙绝伦的作品好厉害！</p>
+                                </div>
+                                <div class="img-box" style="margin-left: 70px;">
+                                </div>
+                                <div class="upload-btn">
+                                    <button class="niceButton control-upload" id="123123c">撤销发布</button>
+                                    <button class="niceButton delete-upload" id="123123d">删除</button>
+                                    <button class="niceButton edit-upload" id="123123e">编辑</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="outerbox">
+        <div id="innerbox">
+            <img id="bigimg" src="" />
+        </div>
+    </div>
+    <footer>
+        <!-- 中间模块 -->
+        <div class="footerCenter">
+            <div class="w1000">
+                <!-- 左侧盒子 -->
+                <div class="footerCenterLeft">
+                    <!-- 上面About Us及横线 -->
+                    <div class="fclWordBoxOne">
+                        <div class="fclAbout">About Us</div>
+                        <div class="fclLineOne"></div>
+                    </div>
+                    <!-- 中间文字 -->
+                    <div class="fclWordBoxTwo">
+                        <div class="fclwbtWordOne">Hidden Hills property with mountain and city view boast <br> none bedrooms including a master suite with private <br> terrace and an entertainment.wing which includes a 20- <br> seat theater.</div>
+                        <div class="fclwbtWordTwo iconfont"><i class="layui-icon layui-icon-home" style="font-size: 12px; "></i>   15 Cliff St,New York NY 10038,USA</div>
+                        <div class="fclwbtWordThree iconfont"><i class="layui-icon layui-icon-cellphone" style="font-size: 12px; "></i>   +1 212-602-9641</div>
+                        <div class="fclwbtWordFourth iconfont"><i class="layui-icon layui-icon-email" style="font-size: 12px; "></i>   info@example.com</div>
+                    </div>
+                    <!-- 下方icon -->
+                    <div class="fclWordBoxThree">
+                        <i class="layui-icon layui-icon-friends" style="font-size: 20px; "></i>
+                        <i class="layui-icon layui-icon-login-weibo" style="font-size: 20px; "></i>
+                        <i class="layui-icon layui-icon-survey" style="font-size: 20px; "></i>
+                        <i class="layui-icon layui-icon-login-wechat" style="font-size: 20px; "></i>
+                        <i class="layui-icon layui-icon-login-qq" style="font-size: 20px; "></i>
+                    </div>
+                    
+                    <img src="../res/img/ad.jpg" alt="" style="float: right; width: 200px;">
+                    <div class="fbWord">@2019,Digiqole-News Magazine html Template.All rights reserved.</div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <script src="../res/js/jquery.min.js"></script>
+    <script type="text/javascript" src="../layui-v2.9.2/layui/layui.js"></script>
+    <script type="text/javascript">
+        var nowUserInfo = localStorage.getItem('nowUserInfo');
+        // 读取nowUserInfo中的信息填充到输入框
+        nowUserInfo = nowUserInfo ? JSON.parse(nowUserInfo) : null;
+        var username;
+        if(nowUserInfo)
+            username = nowUserInfo.username
+        var editedUsers = JSON.parse(localStorage.getItem('editedUsers')) || [];
+        var userEditInfo = editedUsers.find(function (user) {
+            return username === user.username;
+        });
+        
+        if (!userEditInfo) {
+            layer.msg('该用户之前没有编辑过信息')
+        }else{
+        }
+        // 如果 logined 为 true，则将登录按钮文字改为 "退出登录"
+        if (nowUserInfo && nowUserInfo.logined) {
+            $('#login').text('退出登录');
+            $('#login').addClass("layui-btn-danger");
+        }else{
+            $('#login').text('登录/注册');
+            $('#login').removeClass("layui-btn-danger");
+            $('.list-cont').children('.cont').first().css({"display":"none"});
+        }
+
+       // 点击登录按钮时的事件处理
+       $('#login').on('click', function () {
+            // 获取登录按钮的文字
+            var buttonText = $(this).text();
+
+            // 如果文字为 "登录/注册"，则跳转到登录页面
+            if (buttonText === '登录/注册') {
+                window.location.href = 'login.html';
+            } else {
+                // 如果文字为 "退出登录"，则执行退出登录的操作
+                // 将 nowUserInfo 中的 logined 改为 false 重新存储
+                nowUserInfo.logined = false;
+                localStorage.setItem('nowUserInfo', JSON.stringify(nowUserInfo));
+                nowUserInfo=null;
+
+                // 将登录按钮文字改为 "登录/注册"
+                $(this).text('登录/注册');
+                $('#login').removeClass("layui-btn-danger");
+                
+                location.reload();
+            }
+        });
+
+        //接收页面加载的时候从后台请求的数据
+        var datas=null;
+        $(document).ready(function(){
+            //判断是否登录
+            //没登陆则不请求数据
+            if(nowUserInfo==null)
+            {
+                //如果没登陆不能上传
+                layer.msg('请先登录');
+                return;
+            }
+            if(!nowUserInfo.logined)
+            {
+                //如果没登陆不能上传
+                layer.msg('请先登录');
+                return;
+            }
+            var user=nowUserInfo.username;
+
+            //请求获取后台的数据
+            $.ajax({
+                    url: `http://localhost:3000/question_request/`,
+                    method: 'GET',
+                    dataType: 'json',
+                    async:false,
+                    success: function (data) {
+                        datas=data;
+                        console.log('File upload success:', data);
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error uploading file:', error);
+                    }
+                });
+
+            //通过深拷贝已有的模板元素来渲染登录用户发布的问题
+            var exitsData = $('.list-cont').children('.cont');
+            for(var i=0;i<datas.length;i++)
+            {
+                //从所有数据中选出登录用户发布的问题数据
+                if(nowUserInfo.username!==datas.records[i].user)
+                    continue;
+
+                //深拷贝
+                var newData=exitsData.clone(true);
+
+                //改变深拷贝里面的文本
+                newData.children('.img').children('img').attr('src','../public/images/'+removeNonAlphanumeric(datas.records[i].user)+'.jpg');
+                console.log(newData.children('.img').children('img'));
+                newData.children('.text').children('.tit').children('.name').text(datas.records[i].nickName);
+                newData.children('.text').children('.tit').children('.data').text(datas.records[i].time);
+                newData.children('.text').children('.ct').text(datas.records[i].text);
+
+                //给按钮添加id属性用于识别对应问题下的按钮点击事件
+                newData.children('.upload-btn').children('.control-upload').attr('id',datas.records[i].qid+'c');
+                newData.children('.upload-btn').children('.delete-upload').attr('id',datas.records[i].qid+'d');
+                newData.children('.upload-btn').children('.edit-upload').attr('id',datas.records[i].qid+'e');
+
+                //添加图片
+                for(var k=0;k<datas.records[i].files.length;k++)
+                {
+                    //识别是图片还是mp4
+                    if (!/\.(png|jpg|jpeg|gif|PNG|JPG|JPEG|GIF)$/.test(datas.records[i].files[k]))
+                    {
+                        var newImg=$('<video>').attr({
+                            'width': '200px',
+                            'height': '200px',
+                            'class': 'new-img',
+                            'controls':true
+                        });
+                        var source=$('<source>').attr({
+                            'src': "../public/uploads/"+datas.records[i].files[k],
+                            'type': 'video/mp4'
+                        });
+                        newImg.append(source);
+                    }
+                    else
+                    {
+                        var newImg = $('<img>').attr({
+                            'src': "../public/uploads/"+datas.records[i].files[k],
+                            'class': 'new-img',
+                        });
+                        // 为图片添加点击事件
+                        newImg.on('click', function () {
+                            var _this = $(this);
+                            showBigImg('#outerbox', '#innerbox', '#bigimg', _this);       
+                        });
+                    }
+                    newData.children('.img-box').append(newImg);
+                }
+                //用于判断是否发布出去
+                if(datas.records[i].isUpload)
+                    newData.children('.upload-btn').children('.control-upload').text('撤销发布');
+                else
+                    newData.children('.upload-btn').children('.control-upload').text('发布');
+
+                //添加一个发布问题记录
+                $('.list-cont').append(newData);
+
+            }
+            //把被深拷贝的模板隐藏起来
+            $('.list-cont').children('.cont').first().css({"display":"none"}); 
+            
+            //选择是否要发布出去
+            $('.control-upload').on('click',function(e){
+                var controlMsg={};
+                controlMsg['qid']=Number(e.target.id.substring(0,e.target.id.length-1));
+                
+                //发送问题id到后台改变发布状态
+                $.ajax({
+                        url: `http://localhost:3000/control_upload/`,
+                        method: 'POST',
+                        contentType:"application/json;charset=utf-8",
+                        data:JSON.stringify(controlMsg),
+                        dataType: 'json',
+                        traditional:true,
+                        success: function (data) {
+                            //根据问题发布状态改变按钮的文本
+                            if(data.uploadFlag)
+                            {
+                                e.target.innerHTML='撤销发布';
+                            }
+                            else
+                            {
+                                e.target.innerHTML='发布';
+                            }
+                            console.log('File control success:', data);
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('Error control file:', error);
+                        }
+                    });
+            })
+
+            //删除自己的贴子
+            $('.delete-upload').on('click',function(e){
+                var controlMsg={};
+                controlMsg['qid']=Number(e.target.id.substring(0,e.target.id.length-1));
+                
+                //发送问题id到后台删除问题记录
+                $.ajax({
+                        url: `http://localhost:3000/delete_upload/`,
+                        method: 'POST',
+                        contentType:"application/json;charset=utf-8",
+                        data:JSON.stringify(controlMsg),
+                        dataType: 'json',
+                        traditional:true,
+                        success: function (data) {
+                            console.log('File delete success:', data);
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('Error delete file:', error);
+                        }
+                    });
+            })
+
+            //转换对象，把获取到的blob转换为file
+            function createObjectBlob(text,type='text/plain'){
+                return new Blob([text], { type });
+            }
+
+            function createObjectFile(bolb,filename,type='text/plain'){
+                return new File([bolb],filename,{ type });
+            }            
+
+            //编辑发布过的问题
+            $('.edit-upload').on('click',function(e){
+                var controlMsg={};
+                var qidStr= e.target.id.substring(0,e.target.id.length-1);
+                controlMsg['qid']=Number(qidStr);
+                var tempFiles=[];
+
+                //重置上传的文件和textarea里的文本编辑
+                filesContainer=[];
+                container.children().remove();
+
+                //保存对应问题id的图片的路径
+                for(var i=0;i<datas.length;i++)
+                {
+                    if(Number(qidStr)==datas.records[i].qid)
+                    {
+                        $('.layui-textarea').val(datas.records[i].text);
+                        tempFiles=datas.records[i].files;
+                        break;
+                    }
+                }
+
+                //获取文件时用来请求本地文件的
+                //文件不是在后台获取的，是从后台获取文件名字来在前端获取的
+                function loadImage(uri,index,callback){
+                    if(typeof callback!='function'){
+                        callback=function(uri){
+                            console.log(uri);
+                        }
+                    }
+                    var xhr = new XMLHttpRequest();
+                    xhr.responseType = 'blob';
+                    xhr.onload = function() {
+                        var getFile=createObjectFile(xhr.response,tempFiles[index].split('_')[1]);
+                        callback(getFile);
+                    }
+                    xhr.open('GET', uri, true);
+                    xhr.send();
+                }
+
+                //一个个获取文件，每一个文件发送一次请求
+                for(var i=0;i<tempFiles.length;i++)
+                {                    
+                    var imgUrl=`../public/uploads/`+tempFiles[i];
+
+                    //因为请求是异步的，所以发送前要传入保存当前请求图片在图片数组中的下标
+                    loadImage(imgUrl,i,function(editFile){
+                        // var getFile=createObjectFile(editBlob,tempFiles[i].split('_')[1]);
+                        console.log(editFile);
+                        filesContainer.push(editFile);
+
+                        //前面加div盒子用来拖拽排序的
+                        var newItem=$('<div>').attr({
+                            'class':'img-item',
+                            'id':editFile.lastModified+'i'
+                        })
+
+                        //判断是图片还是mp4文件
+                        if (!/\.(png|jpg|jpeg|gif|PNG|JPG|JPEG|GIF)$/.test(editFile.name))
+                        {
+                            var newImg=$('<video>').attr({
+                                'width': '200px',
+                                'height': '200px',
+                                'class': 'new-img',
+                                'id': editFile.lastModified,
+                                'controls':true
+                            });
+                            var source=$('<source>').attr({
+                                'src': window.URL.createObjectURL(editFile),
+                                'type': 'video/mp4'
+                            });
+                            newImg.append(source);
+                        }
+                        else
+                        {
+                            var newImg = $('<img>').attr({
+                                'src': window.URL.createObjectURL(editFile),
+                                // 'src': `../public/uploads/`+tempFiles[i],
+                                'class': 'sortable-item',
+                                'draggable': true,
+                                'id' : editFile.lastModified,
+                            });
+                        }
+                        
+
+                        //双击删除
+                        newItem.dblclick(function(e){                  
+                            for(let i=0;i<filesContainer.length;i++)
+                            {
+                                if(e.target.id == filesContainer[i].lastModified.toString())
+                                {
+                                    //在保存的图片文件数组中删除对应文件
+                                    filesContainer.splice(i,1);
+                                    break;
+                                }
+                            }
+                            //页面中把图片移除掉
+                            e.target.parentNode.parentNode.removeChild(e.target.parentNode);
+                        })
+
+                        //点击放大预览
+                        //用来定时器区分双击和单击
+                        newImg.on('click', function () {
+                            // 取消上次延时未执行的方法
+                            clearTimeout(TimeFn);
+                            var _this = $(this);
+                            //执行延时
+                            TimeFn = setTimeout(function(){
+                                //do function在此处写单击事件要执行的代码
+                                
+                                showBigImg('#outerbox', '#innerbox', '#bigimg', _this);
+                            },300);  
+                            
+                        });
+                        //渲染到文件预览那里
+                        newItem.append(newImg);
+                        container.append(newItem);
+                    });
+
+                }
+                console.log(filesContainer);
+                //这里可以让对应的帖子在点击编辑后删除
+                //但是这样会刷新页面，刷新页面后要编辑的数据就没有了，我也不知道应该怎么搞
+                // $('#'+qidStr+'d').click();
+
+                //下面是用来拖拽排序的
+                const dragCon = document.getElementById('drag-sortable-container');
+                dragCon.addEventListener('dragstart', startDrag, false);
+                /**
+                 * 这里一定要阻止dragover的默认行为，不然触发不了drop
+                 */
+                dragCon.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                }, false);
+                dragCon.addEventListener('drop', exchangeElement, false);
+                
+            })
+        })
+
+        var container = $('.sortable-container');
+        var uploadInput = $('#upload-input');
+        var filesContainer=[];
+        var text;
+        var TimeFn=null;//定时器区分点击和双击事件
+
+        //点击上传文件时
+        uploadInput.on('change', function (e) {
+            uploadImages(e.target.files);
+
+            //监听拖拽排序
+            const dragCon = document.getElementById('drag-sortable-container');
+            dragCon.addEventListener('dragstart', startDrag, false);
+            /**
+             * 这里一定要阻止dragover的默认行为，不然触发不了drop
+             */
+            dragCon.addEventListener('dragover', function (e) {
+                e.preventDefault();
+            }, false);
+            dragCon.addEventListener('drop', exchangeElement, false);
+        });
+
+        //从本地上传图片
+        function uploadImages(files) {
+            if (!/\.(png|jpg|jpeg|gif|PNG|JPG|JPEG|GIF|mp4|MP4)$/.test(files[0].name)) {
+                layer.msg('File ' + files[0].name + ' upload error, file format must be png|jpg|jpeg|gif|mp4');
+                return;
+            }
+
+            //这里要再获取一次存放文件预览的地方的标签
+            //因为在点击编辑的时候这个标签里会插入要编辑的图片，这就和页面刚开始时的不一样了
+            container = $('.sortable-container');
+            //限制最多可以发3个文件
+            if (container.children().length + files.length > 3)
+            {
+                files=null;
+                layer.msg('最多只能存放三个文件');
+                return;
+            }
+            var acceptNumber=files.length;
+            if(files.length>3)
+                acceptNumber=3;
+
+            //一个个发传上去的文件存到filesContainer里面,它是最终点击确定发送到后台的数据
+            //在进行排序，删除的时候filesContainer的内容也会对应改变
+            for(let i=0;i<acceptNumber;i++)
+            {
+                filesContainer.push(files[i]);
+
+                //添加div盒子来拖拽排序
+                var newItem=$('<div>').attr({
+                    'class':'img-item',
+                    'id':files[i].lastModified+'i'
+                })
+                //判断图片的类型是图片还是mp4
+                if (!/\.(png|jpg|jpeg|gif|PNG|JPG|JPEG|GIF)$/.test(files[0].name))
+                {
+                    var newImg=$('<video>').attr({
+                        'width': '500px',
+                        'height': '500px',
+                        'class': 'sortable-item',
+                        'id' : files[i].lastModified,
+                        'controls':true
+                    });
+                    var source=$('<source>').attr({
+                        'src': window.URL.createObjectURL(files[i]),
+                        'type': 'video/mp4'
+                    });
+                    newImg.append(source);
+                }
+                else
+                {
+                    var newImg = $('<img>').attr({
+                        'src': window.URL.createObjectURL(files[i]),
+                        'class': 'sortable-item',
+                        'draggable': true,
+                        'id' : files[i].lastModified
+                    });
+                }
+                
+                //双击删除
+                newItem.dblclick(function(e){                  
+                    for(let i=0;i<filesContainer.length;i++)
+                        {
+                            if(e.target.id == filesContainer[i].lastModified.toString())
+                            {
+                                filesContainer.splice(i,1);
+                                break;
+                            }
+                        }
+                        e.target.parentNode.parentNode.removeChild(e.target.parentNode);
+                })
+
+                //点击放大预览
+                newImg.on('click', function () {
+                    // 取消上次延时未执行的方法
+                    clearTimeout(TimeFn);
+                    var _this = $(this);
+                    //执行延时
+                    TimeFn = setTimeout(function(){
+                        //do function在此处写单击事件要执行的代码
+                        
+                        showBigImg('#outerbox', '#innerbox', '#bigimg', _this);
+                    },300);  
+                    
+                });
+
+                //渲染到页面上
+                newItem.append(newImg);
+                container.append(newItem);
+            }
+        }
+        
+        //预览放大图片
+        var preImage=false;
+        function showBigImg(outerbox, innerbox, bigimg, _this) {
+                var src = _this.attr('src');
+                $(bigimg).attr('src', src);
+
+                if (!preImage) {
+                    preImage = true;
+                    $(bigimg).attr('src', src).on('load', function () {
+                        var windowW = $(window).width();
+                        var windowH = $(window).height();
+                        var realW = this.width;
+                        var realH = this.height;
+                        var imgW, imgH;
+                        var scale = 0.8;
+
+                        if (realH > windowH * scale) {
+                            imgH = windowH * scale;
+                            imgW = imgH / realH * realW;
+                            if (imgW > windowW * scale) {
+                                imgW = windowW * scale;
+                            }
+                        } else if (realW > windowW * scale) {
+                            imgW = windowW * scale;
+                            imgH = imgW / realW * realH;
+                        } else {
+                            imgW = realW;
+                            imgH = realH;
+                        }
+
+                        $(bigimg).css('width', imgW);
+                        var w = (windowW - imgW) / 2;
+                        var h = (windowH - imgH) / 2;
+                        $(innerbox).css({ 'top': h, 'left': w });
+                        $(outerbox).fadeIn('fast');
+
+                        $('body').css('overflow-y', 'hidden');
+
+                        $('#bigimg').on("mousewheel", MouseWheelHandler);
+                        $('#bigimg').on("DOMMouseScroll", MouseWheelHandler);
+                    });
+                }
+
+                $(outerbox).on('click', function () {
+                $(this).fadeOut('fast');
+
+                $('#bigimg').off("mousewheel");
+                $('#bigimg').off("DOMMouseScroll");
+                scaling = 1;
+                $('#bigimg').css('transform', 'scale(1)');
+                $('body').css('overflow-y', 'auto');
+                preImage = false;
+            });
+        }
+
+        //鼠标滚轮放大图片
+        function MouseWheelHandler(event) {
+            var type = event.type;
+            if (type == 'DOMMouseScroll' || type == 'mousewheel') {
+                event.delta = (event.originalEvent.wheelDelta) ? event.originalEvent.wheelDelta / 120 : -(event.detail || 0) / 3;
+            }
+
+            if (event.delta == 1 || event.delta > 0) {
+                zoomImg('#bigimg', 'add');
+            } else if (event.delta == -1 || event.delta < 0) {
+                zoomImg('#bigimg', 'cut');
+            } else {
+                console.log("鼠标滚轮放大缩小状态获取失败");
+            }
+        }
+
+        //拖动排序
+        function startDrag(e) {
+            e.dataTransfer.setData('Text', e.target.id + ';' + e.target.parentElement.id);
+        }
+
+        function exchangeElement(e) {
+            e.preventDefault();
+            const el = e.target;
+            let PE, //要插入位置的父元素
+            CE; //需要交换的元素
+            if (el.tagName.toLowerCase() !== 'div') {           
+                PE = el.parentElement;
+                CE = el;
+            } else {
+                PE = el;
+                CE = el.querySelector('img');
+            }
+
+            /**
+             * 判断不在控制范围内
+             */
+            if (!PE.classList.contains('img-item')) {
+                return;
+            }
+            const data = e.dataTransfer.getData('Text').split(';');
+            //交换元素
+            document.getElementById(data[1]).appendChild(CE);
+            PE.appendChild(document.getElementById(data[0]));
+
+            //根据拖拽的排序改变filesContainer里面的文件位置
+            var index0;
+            var index1;
+            for(var i=0;i<filesContainer.length;i++)
+            {
+                //通过id来识别拖动的图片和filesContainer里的文件
+                //id是文件最有一次编辑的时间戳，属性名字为lastModefied
+                if(filesContainer[i].lastModified==Number(PE.id.substring(0,PE.id.length-1)))
+                    index0=i;
+                else if(filesContainer[i].lastModified==Number(data[1].substring(0,data[1].length-1)))
+                    index1=i;
+            }
+            var tempDragFile=filesContainer[index0];
+            filesContainer[index0]=filesContainer[index1];
+            filesContainer[index1]=tempDragFile;
+        }
+
+        //所有东西提交到后台
+        $('.img-upload-btn').on('click', function(){
+            message={};
+
+            //获取输入的文本
+            text=$('.layui-textarea').val();
+
+            //获取当前时间
+            var d=new Date();
+            var time=d.toLocaleString();
+
+            //判断是否登录
+            if(nowUserInfo==null)
+            {
+                //如果没登陆不能上传
+                layer.msg('请先登录');
+                return;
+            }
+            if(!nowUserInfo.logined)
+            {
+                //如果没登陆不能上传
+                layer.msg('请先登录');
+                return;
+            }
+            var user=nowUserInfo.username;
+
+
+            //给问题设置初始值
+            //点赞数量，评论数量，评论
+            //问题id用的是当前获取时间的hash值
+            var likesNum=0;
+            var commentsNum=0;
+            var comments=[];
+            var qid=time.hashCode();
+
+            //记录文件名，文件名是:{问题id}_{本来的文件名}
+            var transferFilesContainer=new Array();
+
+            //记录本来的文件名，其实是多余的，但是不想改了
+            var imgName=new Array();
+
+            //把文件转成formdata来传输
+            var formData = new FormData();
+            
+            for(let i=0;i<filesContainer.length;i++)
+            {
+                formData.append("file", filesContainer[i]);
+                transferFilesContainer.push(qid.toString()+'_'+filesContainer[i].name);
+                imgName.push(filesContainer[i].name);
+            }
+
+
+            //message是要发送过去的json数据
+            message['qid']=qid;
+            message['isUpload']=true;
+            message['user']=user;
+            message['nickName']=userEditInfo.editedInfo.nickName;
+            message['time']=time;
+            message['text']=text;
+            message['files']=transferFilesContainer;
+            message['imgName']=imgName;
+            message['likesNum']=likesNum;
+            message['commentsNum']=commentsNum;
+            message['comments']=comments;
+            console.log(message);
+            console.log(JSON.stringify(message));
+
+            //发送文字信息
+            $.ajax({
+                    url: `http://localhost:3000/question_upload/`,
+                    method: 'POST',
+                    contentType:"application/json;charset=utf-8",
+                    data:JSON.stringify(message),
+                    dataType: 'json',
+                    traditional:true,
+                    success: function (data) {
+                        console.log('File upload success:', data);
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error uploading file:', error);
+                    }
+                });
+
+           
+            //此处添加一个参数问题id和图片一起上传
+            formData.append("qid",qid);
+            
+             //发送图片信息
+            $.ajax({
+                url: `http://localhost:3000/question_file_upload/`,
+                type: "post",
+                data: formData,
+                processData: false, // 告诉jQuery不要去处理发送的数据
+                contentType: false, // 告诉jQuery不要去设置Content-Type请求头
+                dataType: 'text',
+                success: function(data) {
+                    // var params = JSON.parse(data)
+                    // $("#img").attr("src", params);
+                },
+                error: function(data) {
+                    
+                }
+            });
+
+        })
+
+        function removeNonAlphanumeric(str) {
+            // 使用正则表达式删除非字母和数字
+            return str.replace(/[^a-zA-Z0-9]/g, '');
+        }
+
+        //哈希时间作为对应问题id
+        String.prototype.hashCode = function() {
+            var hash = 0, i, chr;
+            if (this.length === 0) return hash;
+            for (i = 0; i < this.length; i++) {
+                chr   = this.charCodeAt(i);
+                hash  = ((hash << 5) - hash) + chr;
+                hash |= 0; // Convert to 32bit integer
+            }
+            return hash;
+        };
+
+
+        layui.config({
+            base: '../res/js/util/'
+        }).use(['element', 'laypage', 'form', 'menu'], function() {
+            element = layui.element, laypage = layui.laypage, form = layui.form, menu = layui.menu;
+            laypage.render({
+                elem: 'demo',
+                count: 70 //数据总数，从服务端得到
+            });
+            menu.init();
+            menu.submit();
+
+            //这个是我的发布问题那里的记录数量，只能放在这个位置
+            //减一是因为本来就有一个样版，但是被我隐藏了
+            var listNumber=Number($('.volume').children('span').text());
+            $('.volume').children('span').text(listNumber-1);
+        })
+
+        var scaling = 1;
+        //放大图片
+        var preImage=false;
+        function showBigImg(outerbox, innerbox, bigimg, _this) {
+                var src = _this.attr('src');
+                $(bigimg).attr('src', src);
+
+                if (!preImage) {
+                    preImage = true;
+                    $(bigimg).attr('src', src).on('load', function () {
+                        var windowW = $(window).width();
+                        var windowH = $(window).height();
+                        var realW = this.width;
+                        var realH = this.height;
+                        var imgW, imgH;
+                        var scale = 0.8;
+
+                        if (realH > windowH * scale) {
+                            imgH = windowH * scale;
+                            imgW = imgH / realH * realW;
+                            if (imgW > windowW * scale) {
+                                imgW = windowW * scale;
+                            }
+                        } else if (realW > windowW * scale) {
+                            imgW = windowW * scale;
+                            imgH = imgW / realW * realH;
+                        } else {
+                            imgW = realW;
+                            imgH = realH;
+                        }
+
+                        $(bigimg).css('width', imgW);
+                        var w = (windowW - imgW) / 2;
+                        var h = (windowH - imgH) / 2;
+                        $(innerbox).css({ 'top': h, 'left': w });
+                        $(outerbox).fadeIn('fast');
+
+                        $('body').css('overflow-y', 'hidden');
+
+                        $('#bigimg').on("mousewheel", MouseWheelHandler);
+                        $('#bigimg').on("DOMMouseScroll", MouseWheelHandler);
+                    });
+                }
+
+                $(outerbox).on('click', function () {
+                $(this).fadeOut('fast');
+
+                $('#bigimg').off("mousewheel");
+                $('#bigimg').off("DOMMouseScroll");
+                $('#bigimg').css('transform', 'scale(1)');
+                $('body').css('overflow-y', 'auto');
+                preImage = false;
+            });
+        }
+
+        //鼠标滚轮拖动放大图片
+        function MouseWheelHandler(event) {
+            var type = event.type;
+            if (type == 'DOMMouseScroll' || type == 'mousewheel') {
+                event.delta = (event.originalEvent.wheelDelta) ? event.originalEvent.wheelDelta / 120 : -(event.detail || 0) / 3;
+            }
+
+            if (event.delta == 1 || event.delta > 0) {
+                zoomImg('#bigimg', 'add');
+            } else if (event.delta == -1 || event.delta < 0) {
+                zoomImg('#bigimg', 'cut');
+            } else {
+                console.log("鼠标滚轮放大缩小状态获取失败");
+            }
+        }
+
+        function zoomImg(img, type) {
+            if (type == 'add') {
+                scaling += 0.1;
+            } else {
+                if (scaling < 0.5) {
+                    return;
+                }
+                scaling -= 0.1;
+            }
+            $(img).css('transform', `scale(${scaling})`);
+        }
+
+
+    </script>
+    <style>
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            background: #D0EEFF;
+            border: 1px solid #99D3F5;
+            border-radius: 4px;
+            padding: 4px 12px;
+            overflow: hidden;
+            color: #1E88C7;
+            text-decoration: none;
+            text-indent: 0;
+            line-height: 20px;
+        }
+        .file-upload input {
+            position: absolute;
+            font-size: 100px;
+            right: 0;
+            top: 0;
+            opacity: 0;
+        }
+        .file-upload:hover {
+            background: #AADFFD;
+            border-color: #78C3F3;
+            color: #004974;
+            text-decoration: none;
+        }
+
+        .sortable-item {
+            width: 140px;
+            height: 140px;
+            margin: 10px;
+            user-select: none;
+            border-radius: 10px;
+            /* position: absolute; */
+        }
+
+        .sortable-item:hover {
+            opacity: 0.5;
+            cursor: move;
+        }
+
+        .sortable-container {
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+        }
+
+        .img-upload-btn {
+            /* 文字颜色 */
+            color: #0099CC; 
+            /* 清除背景色 */
+            background-color: #f2c064;
+            /* background: transparent;  */
+            /* 边框样式、颜色、宽度 */
+            border: 2px solid #e9e254;
+            /* 给边框添加圆角 */
+            border-radius: 6px; 
+            /* 字母转大写 */
+            border: none;
+            color: rgb(249, 128, 14);
+            padding: 16px 32px;
+            text-align: center;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            -webkit-transition-duration: 0.4s; /* Safari */
+            transition-duration: 0.4s;
+            cursor: pointer;
+            text-decoration: none;
+            text-transform: uppercase;
+        }
+
+        /* 悬停样式 */
+        .img-upload-btn:hover {
+            background-color: #f77d0a;
+            color: rgb(243, 98, 15);
+        }
+
+        /* 放大 */
+        #outerbox{
+            width: 100%;
+            height: 100%;
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 9;
+        }
+        #innerbox{
+            position: absolute;
+            z-index: 99;
+        }
+        #innerbox #bigimg {
+            cursor: grab;
+            border: 5px solid #ffffff;
+        }
+
+        /* 删除，撤销发布按钮 */
+        .niceButton {
+            background-color: #1795bb;
+            border-radius: 12px;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 8px;
+            margin: 4px 2px;
+            -webkit-transition-duration: 0.4s;
+            transition-duration: 0.4s;
+            cursor: pointer;
+        }
+        .niceButton:hover {
+            background-color: #fff;
+            color: #1795bb;
+            border: 1px solid #ccc;
+        }
+
+        .new-img{
+            width: 218px;
+            height: auto;
+        }
+
+        #userImg {
+            height: 40px;
+            width: 40px;
+            border-radius: 40px;
+        }
+
+    </style>
+</body>
+
+</html>
