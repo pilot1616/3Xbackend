@@ -238,6 +238,19 @@ video {
   font-size: 13px;
 }
 
+.forum-like-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.forum-like-pagination span {
+  color: #8d8d8d;
+  font-size: 14px;
+}
+
 .forum-comment-avatar,
 .header-img {
   width: 48px;
@@ -683,6 +696,11 @@ video {
   }
 
   .forum-comment-pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .forum-like-pagination {
     flex-direction: column;
     align-items: stretch;
   }

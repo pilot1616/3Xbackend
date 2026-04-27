@@ -78,7 +78,7 @@ export function QuestionCard({
     if (!likesOpen) {
       return;
     }
-    void loadLikes();
+    void loadLikes(1);
   }, [likesOpen, question.qid, question.likesNum]);
 
   async function handleCommentSubmit(event: FormEvent<HTMLFormElement>) {
@@ -105,11 +105,11 @@ export function QuestionCard({
     }
   }
 
-  async function loadLikes() {
+  async function loadLikes(page = 1) {
     setLikesLoading(true);
     setLikesMessage('');
     try {
-      const result = await listQuestionLikes(question.qid, 1, 8);
+      const result = await listQuestionLikes(question.qid, page, 8);
       setLikesPage(result);
     } catch (err) {
       setLikesMessage(err instanceof Error ? err.message : '加载点赞列表失败');
@@ -152,6 +152,7 @@ export function QuestionCard({
   }
 
   const totalCommentPages = Math.max(1, Math.ceil((commentsPage.total || 0) / Math.max(1, commentsPage.page_size || 10)));
+  const totalLikePages = Math.max(1, Math.ceil((likesPage.total || 0) / Math.max(1, likesPage.page_size || 8)));
 
   return (
     <div className="item-box forum-question-card">
@@ -216,14 +217,34 @@ export function QuestionCard({
             {likesLoading ? <div className="forum-empty-likes">正在加载点赞列表...</div> : null}
             {!likesLoading && likesPage.records.length === 0 && !likesMessage ? <div className="forum-empty-likes">暂时还没有人点赞。</div> : null}
             {likesPage.records.length > 0 ? (
-              <div className="forum-like-list">
-                {likesPage.records.map((item) => (
-                  <div className="forum-like-chip" key={item.id}>
-                    <strong>{item.nickName}</strong>
-                    <span>{item.time}</span>
+              <>
+                <div className="forum-like-list">
+                  {likesPage.records.map((item) => (
+                    <div className="forum-like-chip" key={item.id}>
+                      <strong>{item.nickName}</strong>
+                      <span>{item.time}</span>
+                    </div>
+                  ))}
+                </div>
+                {likesPage.total > likesPage.page_size ? (
+                  <div className="forum-like-pagination">
+                    <button className="legacy-action-button secondary small" disabled={likesLoading || likesPage.page <= 1} onClick={() => void loadLikes(likesPage.page - 1)} type="button">
+                      上一页
+                    </button>
+                    <span>
+                      第 {likesPage.page} / {totalLikePages} 页
+                    </span>
+                    <button
+                      className="legacy-action-button secondary small"
+                      disabled={likesLoading || likesPage.page >= totalLikePages}
+                      onClick={() => void loadLikes(likesPage.page + 1)}
+                      type="button"
+                    >
+                      下一页
+                    </button>
                   </div>
-                ))}
-              </div>
+                ) : null}
+              </>
             ) : null}
           </div>
         ) : null}
