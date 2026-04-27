@@ -49,3 +49,47 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
 
   return payload as T;
 }
+
+export function uploadRequest<T>(path: string, body: FormData, onProgress?: (percent: number) => void): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_BASE_URL}${path}`);
+
+    const session = getSession();
+    if (session?.token) {
+      xhr.setRequestHeader('Authorization', `Bearer ${session.token}`);
+    }
+
+    xhr.upload.addEventListener('progress', (event) => {
+      if (!event.lengthComputable || !onProgress) {
+        return;
+      }
+      const percent = Math.min(100, Math.round((event.loaded / event.total) * 100));
+      onProgress(percent);
+    });
+
+    xhr.addEventListener('load', () => {
+      const contentType = xhr.getResponseHeader('content-type') ?? '';
+      const isJson = contentType.includes('application/json');
+      const payload = isJson && xhr.responseText ? JSON.parse(xhr.responseText) : null;
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(payload as T);
+        return;
+      }
+
+      if (xhr.status === 401) {
+        clearSession();
+      }
+
+      const message = payload && typeof payload.message === 'string' ? payload.message : 'request failed';
+      reject(new ApiError(xhr.status, message));
+    });
+
+    xhr.addEventListener('error', () => {
+      reject(new ApiError(0, 'network error'));
+    });
+
+    xhr.send(body);
+  });
+}

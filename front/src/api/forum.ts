@@ -1,4 +1,4 @@
-import { request } from './client';
+import { request, uploadRequest } from './client';
 import type {
   CommentListPage,
   DeleteQuestionResult,
@@ -144,13 +144,10 @@ export function getMySummary() {
   return request<MySummaryResult>('/api/v1/users/me/summary');
 }
 
-export function uploadQuestionFiles(qid: number, files: File[]) {
+export function uploadQuestionFiles(qid: number, files: File[], onProgress?: (percent: number) => void) {
   const formData = new FormData();
   files.forEach((file) => formData.append('files', file));
-  return request<FileUploadResult>(`/api/v1/questions/${qid}/files`, {
-    method: 'POST',
-    body: formData,
-  });
+  return uploadRequest<FileUploadResult>(`/api/v1/questions/${qid}/files`, formData, onProgress);
 }
 
 export function deleteQuestionFile(qid: number, fileName: string) {

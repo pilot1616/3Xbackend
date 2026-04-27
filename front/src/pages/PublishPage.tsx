@@ -80,11 +80,13 @@ export function PublishPage() {
   const [uploadFilter, setUploadFilter] = useState('');
   const [keyword, setKeyword] = useState('');
   const [createFiles, setCreateFiles] = useState<File[]>([]);
+  const [composerUploadProgress, setComposerUploadProgress] = useState<number | null>(null);
   const [busyQid, setBusyQid] = useState<number | null>(null);
   const [composerBusy, setComposerBusy] = useState(false);
   const [editingQid, setEditingQid] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
   const [fileSelections, setFileSelections] = useState<Record<number, File[]>>({});
+  const [uploadProgressByQid, setUploadProgressByQid] = useState<Record<number, number>>({});
 
   useEffect(() => {
     if (session) {
@@ -100,6 +102,7 @@ export function PublishPage() {
   function resetComposer() {
     setText('');
     setCreateFiles([]);
+    setComposerUploadProgress(null);
   }
 
   function normalizeSelectedFiles(fileList: FileList | null) {
@@ -160,7 +163,8 @@ export function PublishPage() {
     try {
       const created = await createQuestion({ text });
       if (createFiles.length > 0) {
-        await uploadQuestionFiles(created.qid, createFiles);
+        setComposerUploadProgress(0);
+        await uploadQuestionFiles(created.qid, createFiles, (percent) => setComposerUploadProgress(percent));
       }
       resetComposer();
       setMessage('发帖成功');
@@ -235,13 +239,21 @@ export function PublishPage() {
     setBusyQid(qid);
     setMessage('');
     try {
-      await uploadQuestionFiles(qid, files);
+      setUploadProgressByQid((current) => ({ ...current, [qid]: 0 }));
+      await uploadQuestionFiles(qid, files, (percent) => {
+        setUploadProgressByQid((current) => ({ ...current, [qid]: percent }));
+      });
       setFileSelections((current) => ({ ...current, [qid]: [] }));
       setMessage('附件上传成功');
       await loadMyQuestions(sort, uploadFilter, keyword);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : '上传附件失败');
     } finally {
+      setUploadProgressByQid((current) => {
+        const next = { ...current };
+        delete next[qid];
+        return next;
+      });
       setBusyQid(null);
     }
   }
@@ -328,6 +340,14 @@ export function PublishPage() {
                   <SelectedFilePreviewGrid files={createFiles} />
                 </>
               ) : null}
+              {composerUploadProgress !== null ? (
+                <div className="legacy-progress-block">
+                  <div className="legacy-progress-label">附件上传进度 {composerUploadProgress}%</div>
+                  <div className="legacy-progress-track">
+                    <div className="legacy-progress-fill" style={{ width: `${composerUploadProgress}%` }}></div>
+                  </div>
+                </div>
+              ) : null}
               <div className="layui-form-item">
                 <div className="layui-input-block" style={{ textAlign: 'right' }}>
                   <button className="legacy-action-button" disabled={composerBusy} type="submit">
@@ -351,6 +371,7 @@ export function PublishPage() {
             const selectedFiles = fileSelections[question.qid] ?? [];
             const isEditing = editingQid === question.qid;
             const isBusy = busyQid === question.qid;
+            const uploadProgress = uploadProgressByQid[question.qid];
 
             return (
               <div className="legacy-manage-group" key={question.qid}>
@@ -403,6 +424,15 @@ export function PublishPage() {
                         </div>
                         <SelectedFilePreviewGrid files={selectedFiles} />
                       </>
+                    ) : null}
+
+                    {uploadProgress !== undefined ? (
+                      <div className="legacy-progress-block">
+                        <div className="legacy-progress-label">附件上传进度 {uploadProgress}%</div>
+                        <div className="legacy-progress-track">
+                          <div className="legacy-progress-fill" style={{ width: `${uploadProgress}%` }}></div>
+                        </div>
+                      </div>
                     ) : null}
 
                     {question.files.length > 0 ? (
