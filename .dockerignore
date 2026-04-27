@@ -1,0 +1,15 @@
+.git
+.gitignore
+.vscode
+.claude
+
+node_modules
+front/node_modules
+front/dist
+
+example
+
+public
+
+*.log
+*.tmp

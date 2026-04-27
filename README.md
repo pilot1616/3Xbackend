@@ -132,6 +132,60 @@ npm run build
 - `VITE_API_BASE_URL`: 后端 API 根地址，默认 `http://localhost:3000`
 - `VITE_ASSET_BASE_URL`: 静态资源根地址，默认跟随 `VITE_API_BASE_URL`
 
+## Docker 运行
+
+仓库根目录已经提供：
+
+- [Dockerfile](/Users/zhangxinghui/Desktop/web/3Xbackend/Dockerfile)
+- [.dockerignore](/Users/zhangxinghui/Desktop/web/3Xbackend/.dockerignore)
+
+这个镜像会同时：
+
+- 构建 `front/` 前端产物
+- 构建 Go 后端二进制
+- 在最终容器中由 Go 服务统一提供 API、前端页面和上传目录
+
+### 1. 构建镜像
+
+```bash
+docker build -t 3xbackend .
+```
+
+### 2. 运行容器
+
+```bash
+docker run --rm -p 3000:3000 \
+  -e SERVER_PORT=3000 \
+  -e DATABASE_MYSQL_USER=root \
+  -e DATABASE_MYSQL_PASSWORD=your-password \
+  -e DATABASE_MYSQL_ADDRESS=host.docker.internal \
+  -e DATABASE_MYSQL_PORT=3306 \
+  -e DATABASE_MYSQL_SCHEMA=3X \
+  -v $(pwd)/public:/app/public \
+  3xbackend
+```
+
+说明：
+
+- 推荐把 `public` 目录挂载出来，保留头像和帖子附件
+- 容器内默认工作目录是 `/app`
+- 前端页面会由后端直接托管，不需要再额外启动 Vite
+- 当前后端已支持通过环境变量覆盖 `config/config.yaml` 中的主要配置
+
+### 3. 可覆盖的常用环境变量
+
+- `SERVER_PORT`
+- `AUTH_SECRET`
+- `AUTH_TOKEN_EXPIRE_HOURS`
+- `STORAGE_PUBLIC_DIR`
+- `STORAGE_IMAGE_DIR`
+- `STORAGE_UPLOAD_DIR`
+- `DATABASE_MYSQL_USER`
+- `DATABASE_MYSQL_PASSWORD`
+- `DATABASE_MYSQL_ADDRESS`
+- `DATABASE_MYSQL_PORT`
+- `DATABASE_MYSQL_SCHEMA`
+
 ## 旧前端与新前端的关系
 
 旧前端目录：

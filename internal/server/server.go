@@ -6,6 +6,9 @@ import (
 	"3Xbackend/internal/middleware"
 	"3Xbackend/internal/service"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -35,6 +38,7 @@ func (s *Server) Init(db *gorm.DB, cfg *config.Config) error {
 	s.router.Static("/public", cfg.Storage.PublicRoot())
 
 	s.registerRoutes()
+	s.registerFrontendRoutes(filepath.Join("front", "dist"))
 	return nil
 }
 
@@ -98,4 +102,56 @@ func (s *Server) registerRoutes() {
 	s.router.POST("/delete_upload/", s.forumHandler.DeleteUpload)
 	s.router.POST("/file_upload/", s.forumHandler.FileUpload)
 	s.router.GET("/image_info/:filename", s.forumHandler.ImageInfo)
+}
+
+func (s *Server) registerFrontendRoutes(frontDist string) {
+	indexFile := filepath.Join(frontDist, "index.html")
+	if _, err := os.Stat(indexFile); err != nil {
+		return
+	}
+
+	staticDirs := []string{"assets", "legacy"}
+	for _, dir := range staticDirs {
+		fullPath := filepath.Join(frontDist, dir)
+		if _, err := os.Stat(fullPath); err == nil {
+			s.router.Static("/"+dir, fullPath)
+		}
+	}
+
+	s.router.GET("/", func(c *gin.Context) {
+		c.File(indexFile)
+	})
+
+	s.router.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+		if isBackendPath(path) {
+			c.JSON(http.StatusNotFound, gin.H{"message": "not found"})
+			return
+		}
+		c.File(indexFile)
+	})
+}
+
+func isBackendPath(path string) bool {
+	prefixes := []string{
+		"/api/",
+		"/public/",
+		"/question_request/",
+		"/question_upload/",
+		"/question_file_upload/",
+		"/comment_upload/",
+		"/like_upload/",
+		"/control_upload/",
+		"/delete_upload/",
+		"/file_upload/",
+		"/image_info/",
+	}
+
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+
+	return path == "/health"
 }

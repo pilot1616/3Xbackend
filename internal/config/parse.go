@@ -47,6 +47,9 @@ type Mysql struct {
 func Load(path string) (*Config, error) {
 	v := viper.New()
 	v.SetConfigFile(path)
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+	bindEnv(v)
 	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("read config failed : %v", err)
 	}
@@ -57,6 +60,26 @@ func Load(path string) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+func bindEnv(v *viper.Viper) {
+	keys := []string{
+		"server.port",
+		"auth.secret",
+		"auth.token_expire_hours",
+		"storage.public_dir",
+		"storage.image_dir",
+		"storage.upload_dir",
+		"database.mysql.user",
+		"database.mysql.password",
+		"database.mysql.address",
+		"database.mysql.port",
+		"database.mysql.schema",
+	}
+
+	for _, key := range keys {
+		_ = v.BindEnv(key)
+	}
 }
 
 func (s Server) Address() string {
