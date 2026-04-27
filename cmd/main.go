@@ -34,7 +34,7 @@ func main() {
 	}
 
 	svr := server.Server{}
-	if err := svr.Init(db.Connect, cfg.Auth); err != nil {
+	if err := svr.Init(db.Connect, cfg); err != nil {
 		log.Fatalf("init server failed: %v", err)
 	}
 	if err := svr.Run(cfg.Server.Address()); err != nil {

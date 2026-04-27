@@ -34,3 +34,26 @@ func AuthRequired(authService *service.AuthService) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func OptionalAuth(authService *service.AuthService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authorization := strings.TrimSpace(c.GetHeader("Authorization"))
+		if authorization == "" {
+			c.Next()
+			return
+		}
+
+		parts := strings.SplitN(authorization, " ", 2)
+		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+			c.Next()
+			return
+		}
+
+		userID, err := authService.ParseToken(parts[1])
+		if err == nil {
+			c.Set(ContextUserIDKey, userID)
+		}
+
+		c.Next()
+	}
+}

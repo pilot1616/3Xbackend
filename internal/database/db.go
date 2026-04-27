@@ -45,7 +45,7 @@ func (db *MysqlDb) CreateTable() error {
 	if db.Connect == nil {
 		return fmt.Errorf("db connection is nil")
 	}
-	if err := db.Connect.AutoMigrate(&User{}); err != nil {
+	if err := db.Connect.AutoMigrate(&User{}, &Question{}, &QuestionFile{}, &Comment{}, &QuestionLike{}); err != nil {
 		return fmt.Errorf("auto migrate failed: %v", err)
 	}
 	return nil

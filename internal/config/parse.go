@@ -13,6 +13,7 @@ const defaultServerPort = "8080"
 type Config struct {
 	Server   Server   `mapstructure:"server"`
 	Auth     Auth     `mapstructure:"auth"`
+	Storage  Storage  `mapstructure:"storage"`
 	Database Database `mapstructure:"database"`
 }
 
@@ -23,6 +24,12 @@ type Server struct {
 type Auth struct {
 	Secret           string `mapstructure:"secret"`
 	TokenExpireHours int    `mapstructure:"token_expire_hours"`
+}
+
+type Storage struct {
+	PublicDir string `mapstructure:"public_dir"`
+	ImageDir  string `mapstructure:"image_dir"`
+	UploadDir string `mapstructure:"upload_dir"`
 }
 
 type Database struct {
@@ -77,4 +84,25 @@ func (a Auth) TokenTTL() time.Duration {
 		hours = 24
 	}
 	return time.Duration(hours) * time.Hour
+}
+
+func (s Storage) PublicRoot() string {
+	if strings.TrimSpace(s.PublicDir) == "" {
+		return "public"
+	}
+	return strings.TrimSpace(s.PublicDir)
+}
+
+func (s Storage) ImageRoot() string {
+	if strings.TrimSpace(s.ImageDir) == "" {
+		return "public/images"
+	}
+	return strings.TrimSpace(s.ImageDir)
+}
+
+func (s Storage) UploadRoot() string {
+	if strings.TrimSpace(s.UploadDir) == "" {
+		return "public/uploads"
+	}
+	return strings.TrimSpace(s.UploadDir)
 }

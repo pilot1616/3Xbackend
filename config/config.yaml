@@ -1,9 +1,14 @@
 server:
-  port: 8080
+  port: 3000
 
 auth:
   secret: 3Xbackend-dev-secret
   token_expire_hours: 24
+
+storage:
+  public_dir: public
+  image_dir: public/images
+  upload_dir: public/uploads
 
 database:
   # mysql:
