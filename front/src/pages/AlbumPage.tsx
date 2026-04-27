@@ -84,6 +84,9 @@ export function AlbumPage() {
               <strong>QID {item.qid}</strong>
               <p>{item.time}</p>
               <p>{item.text}</p>
+              <Link className="legacy-action-button secondary small" to={`/questions/${item.qid}`}>
+                查看原帖
+              </Link>
             </div>
           </article>
         ))}

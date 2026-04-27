@@ -354,7 +354,7 @@ export function PublishPage() {
 
             return (
               <div className="legacy-manage-group" key={question.qid}>
-                <QuestionCard compact question={question} />
+                <QuestionCard compact detailHref={`/questions/${question.qid}`} question={question} />
 
                 <div className="legacy-manage-panel">
                   <div className="legacy-manage-actions">

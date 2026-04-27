@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { buildAssetUrl } from '../api/client';
 import { listQuestionComments, listQuestionLikes } from '../api/forum';
@@ -24,6 +25,7 @@ interface QuestionCardProps {
   canInteract?: boolean;
   submitting?: boolean;
   currentUsername?: string;
+  detailHref?: string;
   onLikeToggle?: (question: QuestionRecord) => Promise<void> | void;
   onCommentSubmit?: (question: QuestionRecord, text: string) => Promise<void> | void;
   onCommentUpdate?: (question: QuestionRecord, commentID: number, text: string) => Promise<void> | void;
@@ -47,6 +49,7 @@ export function QuestionCard({
   canInteract = false,
   submitting = false,
   currentUsername,
+  detailHref,
   onLikeToggle,
   onCommentSubmit,
   onCommentUpdate,
@@ -197,6 +200,11 @@ export function QuestionCard({
         </div>
 
         <div className="forum-detail-toolbar">
+          {detailHref ? (
+            <Link className="forum-inline-button" to={detailHref}>
+              查看详情
+            </Link>
+          ) : null}
           <button className="forum-inline-button" onClick={() => setLikesOpen((current) => !current)} type="button">
             {likesOpen ? '收起点赞列表' : `查看点赞列表 (${question.likesNum})`}
           </button>

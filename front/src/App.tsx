@@ -6,6 +6,7 @@ import { AuthPage } from './pages/AuthPage';
 import { HomePage } from './pages/HomePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { PublishPage } from './pages/PublishPage';
+import { QuestionDetailPage } from './pages/QuestionDetailPage';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route element={<PublishPage />} path="publish" />
           <Route element={<AlbumPage />} path="album" />
           <Route element={<ProfilePage />} path="profile" />
+          <Route element={<QuestionDetailPage />} path="questions/:qid" />
           <Route element={<Navigate replace to="/" />} path="*" />
         </Route>
       </Routes>

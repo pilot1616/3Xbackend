@@ -228,6 +228,9 @@ export function ProfilePage() {
                   <strong>QID {item.qid}</strong>
                   <p>{item.text}</p>
                   <span>{item.time}</span>
+                  <Link className="legacy-action-button secondary small" to={`/questions/${item.qid}`}>
+                    查看原帖
+                  </Link>
                 </div>
               ))}
               {comments.total > comments.page_size ? (
@@ -259,6 +262,9 @@ export function ProfilePage() {
                   <strong>{item.questionNickName || item.questionUser}</strong>
                   <p>{item.questionText}</p>
                   <span>{item.likedAt}</span>
+                  <Link className="legacy-action-button secondary small" to={`/questions/${item.qid}`}>
+                    查看原帖
+                  </Link>
                 </div>
               ))}
               {likes.total > likes.page_size ? (
