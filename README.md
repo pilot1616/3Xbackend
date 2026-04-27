@@ -77,6 +77,12 @@ go run ./cmd
 task backend
 ```
 
+如果你希望顺手把 Docker 里的 MySQL 也拉起来，再跑后端：
+
+```bash
+task backend:docker
+```
+
 ### 1. 准备 MySQL
 
 先准备一个可用的 MySQL 数据库，并确认 `config/config.yaml` 中的配置正确。
@@ -299,13 +305,19 @@ brew install go-task/tap/go-task
   作用：只启动本地 MySQL 容器
 
 - `task backend`
-  作用：直接 `go run ./cmd` 跑后端，不预编译
+  作用：直接 `go run ./cmd` 跑后端，不预编译，不自动拉 Docker
+
+- `task backend:docker`
+  作用：先启动 Docker MySQL，再本地跑后端
 
 - `task frontend`
   作用：直接运行前端 Vite 开发服务
 
 - `task dev`
-  作用：一条命令同时跑后端和前端，不预编译，适合本地联调
+  作用：一条命令同时跑后端和前端，不预编译，不自动拉 Docker，适合已有本地 MySQL 或已手动启动数据库的场景
+
+- `task dev:docker`
+  作用：先启动 Docker MySQL，再跑本地前后端联调
 
 - `task compose:up`
   作用：启动完整 Docker Compose 环境
@@ -321,6 +333,13 @@ brew install go-task/tap/go-task
 ```bash
 task init
 task dev
+```
+
+如果你没有本地 MySQL，希望直接用容器数据库：
+
+```bash
+task init
+task dev:docker
 ```
 
 ## 下一步方向
