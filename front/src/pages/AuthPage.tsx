@@ -12,6 +12,9 @@ const securityQuestionOptions = [
   { value: 'book', label: '你印象最深刻的书是？' },
 ];
 
+const phonePattern = /^1\d{10}$/;
+const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
+
 export function AuthPage() {
   const [mode, setMode] = useState<Mode>('login');
   const [username, setUsername] = useState('');
@@ -26,18 +29,53 @@ export function AuthPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  function validateForm() {
+    if (!phonePattern.test(username.trim())) {
+      return '请输入 11 位手机号';
+    }
+
+    if (!passwordPattern.test(password)) {
+      return '密码必须至少 6 位，并同时包含字母和数字';
+    }
+
+    if (mode !== 'login' && password !== confirmPassword) {
+      return '两次输入的密码不一致';
+    }
+
+    if (mode === 'register' && !nickname.trim()) {
+      return '昵称不能为空';
+    }
+
+    if (mode === 'register' && !securityAnswer.trim()) {
+      return '密保答案不能为空';
+    }
+
+    if (mode === 'reset' && !securityQuestionLabel) {
+      return '请先查询密保问题';
+    }
+
+    if (mode === 'reset' && !securityAnswer.trim()) {
+      return '请输入密保答案';
+    }
+
+    return '';
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setLoading(true);
     setMessage('');
 
-    try {
-      if (mode !== 'login' && password !== confirmPassword) {
-        throw new Error('两次输入的密码不一致');
-      }
+    const validationMessage = validateForm();
+    if (validationMessage) {
+      setMessage(validationMessage);
+      return;
+    }
 
+    setLoading(true);
+
+    try {
       if (mode === 'login') {
-        const result = await login({ username, password });
+        const result = await login({ username: username.trim(), password });
         saveSession(result);
         navigate('/');
         return;
@@ -45,19 +83,19 @@ export function AuthPage() {
 
       if (mode === 'register') {
         const result = await register({
-          username,
+          username: username.trim(),
           password,
-          nickname,
-          sign,
+          nickname: nickname.trim(),
+          sign: sign.trim(),
           security_question: securityQuestion,
-          security_answer: securityAnswer,
+          security_answer: securityAnswer.trim(),
         });
         saveSession(result);
         navigate('/');
         return;
       }
 
-      const result = await resetPassword({ username, password, security_answer: securityAnswer });
+      const result = await resetPassword({ username: username.trim(), password, security_answer: securityAnswer.trim() });
       setMessage(result.message);
       setMode('login');
       setSecurityQuestionLabel('');
@@ -70,8 +108,12 @@ export function AuthPage() {
 
   async function handleFetchQuestion() {
     setMessage('');
+    if (!phonePattern.test(username.trim())) {
+      setMessage('请先输入正确的 11 位手机号');
+      return;
+    }
     try {
-      const result = await getSecurityQuestion(username);
+      const result = await getSecurityQuestion(username.trim());
       const option = securityQuestionOptions.find((item) => item.value === result.security_question);
       setSecurityQuestion(result.security_question);
       setSecurityQuestionLabel(option?.label ?? result.security_question);

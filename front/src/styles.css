@@ -277,6 +277,19 @@ video {
   margin-top: 8px;
 }
 
+.forum-comment-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.forum-comment-pagination span {
+  color: #8d8d8d;
+  font-size: 14px;
+}
+
 .auth-legacy-page {
   min-height: calc(100vh - 360px);
   padding: 24px 0 80px;
@@ -502,6 +515,10 @@ video {
   margin-top: 16px;
 }
 
+.legacy-selected-preview-grid {
+  margin-top: 12px;
+}
+
 .legacy-attachment-item {
   display: grid;
   gap: 10px;
@@ -554,6 +571,19 @@ video {
 
 .legacy-mini-card p {
   margin: 8px 0;
+}
+
+.legacy-list-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.legacy-list-pagination span {
+  color: #8d8d8d;
+  font-size: 14px;
 }
 
 .legacy-album-grid {
@@ -614,6 +644,11 @@ video {
   .legacy-manage-actions {
     align-items: stretch;
   }
+
+  .legacy-list-pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 @media screen and (max-width: 768px) {
@@ -645,6 +680,11 @@ video {
   .auth-secondary-button {
     width: 100%;
     text-align: center;
+  }
+
+  .forum-comment-pagination {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .legacy-manage-actions {

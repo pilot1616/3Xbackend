@@ -33,30 +33,69 @@ export function ProfilePage() {
   const [summary, setSummary] = useState(emptySummary);
   const [comments, setComments] = useState(emptyComments);
   const [likes, setLikes] = useState(emptyLikes);
+  const [commentPage, setCommentPage] = useState(1);
+  const [likePage, setLikePage] = useState(1);
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [likesLoading, setLikesLoading] = useState(false);
 
   useEffect(() => {
     if (!session) {
       return;
     }
-    void loadProfile();
+    void loadBaseProfile();
   }, [session]);
 
-  async function loadProfile() {
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+    void loadCommentsPage(commentPage);
+  }, [session, commentPage]);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+    void loadLikesPage(likePage);
+  }, [session, likePage]);
+
+  async function loadBaseProfile() {
     try {
-      const [me, nextSummary, nextComments, nextLikes] = await Promise.all([
+      const [me, nextSummary] = await Promise.all([
         getMe(),
         getMySummary(),
-        listMyComments(),
-        listMyLikes(),
       ]);
       setUser(me);
       setSummary(nextSummary);
-      setComments(nextComments);
-      setLikes(nextLikes);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : '加载资料失败');
+    }
+  }
+
+  async function loadCommentsPage(page: number) {
+    setCommentsLoading(true);
+    try {
+      const nextComments = await listMyComments(page);
+      setComments(nextComments);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : '加载我的评论失败');
+    } finally {
+      setCommentsLoading(false);
+    }
+  }
+
+  async function loadLikesPage(page: number) {
+    setLikesLoading(true);
+    try {
+      const nextLikes = await listMyLikes(page);
+      setLikes(nextLikes);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : '加载我的点赞失败');
+    } finally {
+      setLikesLoading(false);
     }
   }
 
@@ -65,14 +104,25 @@ export function ProfilePage() {
     if (!user) {
       return;
     }
+
+    if (!user.nickname.trim()) {
+      setMessage('昵称不能为空');
+      return;
+    }
+
+    if (!Number.isInteger(user.age) || user.age < 0 || user.age > 120) {
+      setMessage('年龄必须是 0 到 120 之间的整数');
+      return;
+    }
+
     setSaving(true);
     setMessage('');
     try {
       const result = await updateMe({
-        nickname: user.nickname,
+        nickname: user.nickname.trim(),
         age: user.age,
-        hobby: user.hobby,
-        sign: user.sign,
+        hobby: user.hobby.trim(),
+        sign: user.sign.trim(),
       });
       setUser(result.user);
       setMessage(result.message);
@@ -88,14 +138,33 @@ export function ProfilePage() {
     if (!file) {
       return;
     }
+
+    const validTypes = ['image/png', 'image/jpeg', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      setMessage('头像只支持 png、jpg、jpeg、gif');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage('头像大小不能超过 5MB');
+      return;
+    }
+
+    setAvatarUploading(true);
+    setMessage('');
     try {
       await uploadAvatar(file);
-      await loadProfile();
+      await loadBaseProfile();
       setMessage('头像上传成功');
     } catch (err) {
       setMessage(err instanceof Error ? err.message : '头像上传失败');
+    } finally {
+      setAvatarUploading(false);
     }
   }
+
+  const totalCommentPages = Math.max(1, Math.ceil(comments.total / Math.max(1, comments.page_size)));
+  const totalLikePages = Math.max(1, Math.ceil(likes.total / Math.max(1, likes.page_size)));
 
   if (!session) {
     return (
@@ -132,6 +201,7 @@ export function ProfilePage() {
           <form className="legacy-panel" onSubmit={handleSubmit}>
             <img alt={user.nickname} className="legacy-profile-avatar" src={buildAssetUrl(user.avatar_path)} />
             <input accept=".png,.jpg,.jpeg,.gif" onChange={handleAvatarChange} type="file" />
+            {avatarUploading ? <div style={{ marginTop: 10, color: '#8d8d8d' }}>头像上传中...</div> : null}
             <div className="legacy-card-list" style={{ marginTop: 16 }}>
               <input onChange={(event) => setUser({ ...user, nickname: event.target.value })} placeholder="昵称" value={user.nickname} />
               <input
@@ -151,6 +221,8 @@ export function ProfilePage() {
           <div className="legacy-card-list">
             <section className="legacy-panel">
               <h2>我的评论</h2>
+              {commentsLoading ? <div className="legacy-empty-inline">正在加载我的评论...</div> : null}
+              {!commentsLoading && comments.records.length === 0 ? <div className="legacy-empty-inline">你还没有发表过评论。</div> : null}
               {comments.records.map((item) => (
                 <div className="legacy-mini-card" key={item.id}>
                   <strong>QID {item.qid}</strong>
@@ -158,10 +230,30 @@ export function ProfilePage() {
                   <span>{item.time}</span>
                 </div>
               ))}
+              {comments.total > comments.page_size ? (
+                <div className="legacy-list-pagination">
+                  <button className="legacy-action-button secondary small" disabled={commentsLoading || commentPage <= 1} onClick={() => setCommentPage((current) => current - 1)} type="button">
+                    上一页
+                  </button>
+                  <span>
+                    第 {commentPage} / {totalCommentPages} 页
+                  </span>
+                  <button
+                    className="legacy-action-button secondary small"
+                    disabled={commentsLoading || commentPage >= totalCommentPages}
+                    onClick={() => setCommentPage((current) => current + 1)}
+                    type="button"
+                  >
+                    下一页
+                  </button>
+                </div>
+              ) : null}
             </section>
 
             <section className="legacy-panel">
               <h2>我的点赞</h2>
+              {likesLoading ? <div className="legacy-empty-inline">正在加载我的点赞...</div> : null}
+              {!likesLoading && likes.records.length === 0 ? <div className="legacy-empty-inline">你还没有点赞过任何帖子。</div> : null}
               {likes.records.map((item) => (
                 <div className="legacy-mini-card" key={item.id}>
                   <strong>{item.questionNickName || item.questionUser}</strong>
@@ -169,6 +261,24 @@ export function ProfilePage() {
                   <span>{item.likedAt}</span>
                 </div>
               ))}
+              {likes.total > likes.page_size ? (
+                <div className="legacy-list-pagination">
+                  <button className="legacy-action-button secondary small" disabled={likesLoading || likePage <= 1} onClick={() => setLikePage((current) => current - 1)} type="button">
+                    上一页
+                  </button>
+                  <span>
+                    第 {likePage} / {totalLikePages} 页
+                  </span>
+                  <button
+                    className="legacy-action-button secondary small"
+                    disabled={likesLoading || likePage >= totalLikePages}
+                    onClick={() => setLikePage((current) => current + 1)}
+                    type="button"
+                  >
+                    下一页
+                  </button>
+                </div>
+              ) : null}
             </section>
           </div>
         </div>

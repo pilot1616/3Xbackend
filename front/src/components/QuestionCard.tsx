@@ -1,8 +1,15 @@
 import { FormEvent, useEffect, useState } from 'react';
 
 import { buildAssetUrl } from '../api/client';
-import { listQuestionLikes } from '../api/forum';
-import type { LikeListPage, QuestionRecord } from '../types/api';
+import { listQuestionComments, listQuestionLikes } from '../api/forum';
+import type { CommentListPage, LikeListPage, QuestionRecord } from '../types/api';
+
+const emptyComments: CommentListPage = {
+  page: 1,
+  page_size: 10,
+  total: 0,
+  records: [],
+};
 
 const emptyLikes: LikeListPage = {
   page: 1,
@@ -49,10 +56,20 @@ export function QuestionCard({
   const [commentText, setCommentText] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingCommentText, setEditingCommentText] = useState('');
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsMessage, setCommentsMessage] = useState('');
+  const [commentsPage, setCommentsPage] = useState<CommentListPage>(emptyComments);
   const [likesOpen, setLikesOpen] = useState(false);
   const [likesLoading, setLikesLoading] = useState(false);
   const [likesMessage, setLikesMessage] = useState('');
   const [likesPage, setLikesPage] = useState(emptyLikes);
+
+  useEffect(() => {
+    if (!expanded) {
+      return;
+    }
+    void loadComments(1);
+  }, [expanded, question.qid]);
 
   useEffect(() => {
     if (!likesOpen) {
@@ -69,6 +86,20 @@ export function QuestionCard({
     }
     await onCommentSubmit(question, text);
     setCommentText('');
+    await loadComments(1);
+  }
+
+  async function loadComments(page = 1) {
+    setCommentsLoading(true);
+    setCommentsMessage('');
+    try {
+      const result = await listQuestionComments(question.qid, page, 10);
+      setCommentsPage(result);
+    } catch (err) {
+      setCommentsMessage(err instanceof Error ? err.message : '加载评论失败');
+    } finally {
+      setCommentsLoading(false);
+    }
   }
 
   async function loadLikes() {
@@ -101,6 +132,7 @@ export function QuestionCard({
     }
     await onCommentUpdate(question, commentID, nextText);
     cancelEditingComment();
+    await loadComments(commentsPage.page || 1);
   }
 
   async function handleCommentDelete(commentID: number) {
@@ -113,7 +145,10 @@ export function QuestionCard({
     }
     await onCommentDelete(question, commentID);
     cancelEditingComment();
+    await loadComments(1);
   }
+
+  const totalCommentPages = Math.max(1, Math.ceil((commentsPage.total || 0) / Math.max(1, commentsPage.page_size || 10)));
 
   return (
     <div className="item-box forum-question-card">
@@ -213,8 +248,10 @@ export function QuestionCard({
           </div>
 
           <div className="list-cont">
-            {question.comments.length === 0 ? <div className="forum-empty-comments">暂时还没有评论。</div> : null}
-            {question.comments.map((comment) => (
+            {commentsMessage ? <div className="forum-empty-comments">{commentsMessage}</div> : null}
+            {commentsLoading ? <div className="forum-empty-comments">正在加载评论...</div> : null}
+            {!commentsLoading && commentsPage.records.length === 0 && !commentsMessage ? <div className="forum-empty-comments">暂时还没有评论。</div> : null}
+            {commentsPage.records.map((comment) => (
               <div className="cont" key={comment.id}>
                 <div className="img">
                   <img alt={comment.nickName} className="header-img" src="/legacy/res/img/userImgDefault.png" />
@@ -254,6 +291,25 @@ export function QuestionCard({
                 </div>
               </div>
             ))}
+
+            {commentsPage.total > commentsPage.page_size ? (
+              <div className="forum-comment-pagination">
+                <button className="legacy-action-button secondary small" disabled={commentsLoading || commentsPage.page <= 1} onClick={() => void loadComments(commentsPage.page - 1)} type="button">
+                  上一页
+                </button>
+                <span>
+                  第 {commentsPage.page} / {totalCommentPages} 页
+                </span>
+                <button
+                  className="legacy-action-button secondary small"
+                  disabled={commentsLoading || commentsPage.page >= totalCommentPages}
+                  onClick={() => void loadComments(commentsPage.page + 1)}
+                  type="button"
+                >
+                  下一页
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
