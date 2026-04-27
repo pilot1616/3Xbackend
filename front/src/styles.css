@@ -432,6 +432,10 @@ video {
   grid-template-columns: minmax(320px, 420px) 1fr;
 }
 
+.question-detail-layout {
+  align-items: start;
+}
+
 .legacy-manage-group {
   display: grid;
   gap: 14px;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
-import { createComment, deleteComment, getQuestion, likeQuestion, unlikeQuestion, updateComment } from '../api/forum';
+import { createComment, deleteComment, getQuestion, likeQuestion, listQuestions, unlikeQuestion, updateComment } from '../api/forum';
 import { QuestionCard } from '../components/QuestionCard';
 import { useSession } from '../lib/session';
 import type { QuestionRecord } from '../types/api';
@@ -13,10 +13,20 @@ export function QuestionDetailPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [relatedQuestions, setRelatedQuestions] = useState<QuestionRecord[]>([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
 
   useEffect(() => {
     void loadQuestion();
   }, [qid, session?.token]);
+
+  useEffect(() => {
+    if (!question?.user) {
+      setRelatedQuestions([]);
+      return;
+    }
+    void loadRelatedQuestions(question.user, question.qid);
+  }, [question?.user, question?.qid, session?.token]);
 
   async function loadQuestion() {
     if (!qid || Number.isNaN(Number(qid))) {
@@ -35,6 +45,24 @@ export function QuestionDetailPage() {
       setMessage(err instanceof Error ? err.message : '加载帖子详情失败');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadRelatedQuestions(author: string, currentQid: number) {
+    setRelatedLoading(true);
+    try {
+      const result = await listQuestions({
+        author,
+        sort: 'latest',
+        isUpload: 'true',
+        page: 1,
+        pageSize: 6,
+      });
+      setRelatedQuestions(result.records.filter((item) => item.qid !== currentQid).slice(0, 5));
+    } catch {
+      setRelatedQuestions([]);
+    } finally {
+      setRelatedLoading(false);
     }
   }
 
@@ -134,17 +162,37 @@ export function QuestionDetailPage() {
       {!loading && !question && !message ? <div className="legacy-feedback">没有找到对应帖子。</div> : null}
 
       {question ? (
-        <div className="whisper-list">
-          <QuestionCard
-            canInteract={Boolean(session)}
-            currentUsername={session?.user.username}
-            onCommentDelete={handleCommentDelete}
-            onCommentSubmit={handleCommentSubmit}
-            onCommentUpdate={handleCommentUpdate}
-            onLikeToggle={handleLikeToggle}
-            question={question}
-            submitting={submitting}
-          />
+        <div className="legacy-grid two-column question-detail-layout">
+          <div className="whisper-list">
+            <QuestionCard
+              canInteract={Boolean(session)}
+              currentUsername={session?.user.username}
+              onCommentDelete={handleCommentDelete}
+              onCommentSubmit={handleCommentSubmit}
+              onCommentUpdate={handleCommentUpdate}
+              onLikeToggle={handleLikeToggle}
+              question={question}
+              submitting={submitting}
+            />
+          </div>
+
+          <aside className="legacy-card-list">
+            <section className="legacy-panel">
+              <h2>作者更多帖子</h2>
+              {relatedLoading ? <div className="legacy-empty-inline">正在加载更多内容...</div> : null}
+              {!relatedLoading && relatedQuestions.length === 0 ? <div className="legacy-empty-inline">当前没有更多可展示的帖子。</div> : null}
+              {relatedQuestions.map((item) => (
+                <article className="legacy-mini-card" key={item.qid}>
+                  <strong>{item.nickName}</strong>
+                  <p>{item.text}</p>
+                  <span>{item.time}</span>
+                  <Link className="legacy-action-button secondary small" to={`/questions/${item.qid}`}>
+                    查看这条
+                  </Link>
+                </article>
+              ))}
+            </section>
+          </aside>
         </div>
       ) : null}
     </section>
