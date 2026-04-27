@@ -1,0 +1,77 @@
+version: '3'
+
+dotenv:
+  - .env
+
+tasks:
+  init:
+    desc: 初始化本地开发环境
+    cmds:
+      - mkdir -p public/images public/uploads
+      - sh -c '[ -f .env ] || cp .env.example .env'
+      - sh -c '[ -f front/.env ] || cp front/.env.example front/.env'
+      - cd front && npm install
+
+  db:up:
+    desc: 启动本地 MySQL 容器
+    cmds:
+      - docker compose up -d mysql
+
+  db:down:
+    desc: 关闭本地 MySQL 容器
+    cmds:
+      - docker compose stop mysql
+
+  compose:up:
+    desc: 启动完整 Docker Compose 环境
+    deps: [init]
+    cmds:
+      - docker compose up -d --build
+
+  compose:down:
+    desc: 关闭完整 Docker Compose 环境
+    cmds:
+      - docker compose down
+
+  backend:
+    desc: 直接本地运行后端（go run）
+    deps: [init, db:up]
+    cmds:
+      - |
+        SERVER_PORT="${SERVER_PORT:-3000}" \
+        DATABASE_MYSQL_USER="${DATABASE_MYSQL_USER:-root}" \
+        DATABASE_MYSQL_PASSWORD="${DATABASE_MYSQL_PASSWORD:-root}" \
+        DATABASE_MYSQL_ADDRESS="${DATABASE_MYSQL_ADDRESS:-127.0.0.1}" \
+        DATABASE_MYSQL_PORT="${DATABASE_MYSQL_PORT:-3306}" \
+        DATABASE_MYSQL_SCHEMA="${DATABASE_MYSQL_SCHEMA:-3X}" \
+        AUTH_SECRET="${AUTH_SECRET:-3Xbackend-dev-secret}" \
+        go run ./cmd
+
+  frontend:
+    desc: 直接本地运行前端开发服务
+    deps: [init]
+    dir: front
+    cmds:
+      - npm run dev -- --host 0.0.0.0
+
+  dev:
+    desc: 本地联调，直接运行后端和前端（不编译）
+    deps: [init, db:up]
+    cmds:
+      - |
+        sh -c 'trap "kill 0" EXIT INT TERM; \
+        SERVER_PORT="${SERVER_PORT:-3000}" \
+        DATABASE_MYSQL_USER="${DATABASE_MYSQL_USER:-root}" \
+        DATABASE_MYSQL_PASSWORD="${DATABASE_MYSQL_PASSWORD:-root}" \
+        DATABASE_MYSQL_ADDRESS="${DATABASE_MYSQL_ADDRESS:-127.0.0.1}" \
+        DATABASE_MYSQL_PORT="${DATABASE_MYSQL_PORT:-3306}" \
+        DATABASE_MYSQL_SCHEMA="${DATABASE_MYSQL_SCHEMA:-3X}" \
+        AUTH_SECRET="${AUTH_SECRET:-3Xbackend-dev-secret}" \
+        go run ./cmd & \
+        cd front && npm run dev -- --host 0.0.0.0'
+
+  build:
+    desc: 本地检查 Go 和前端构建
+    cmds:
+      - go build ./...
+      - cd front && npm run build

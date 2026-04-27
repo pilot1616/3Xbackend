@@ -63,6 +63,20 @@
 
 ## 后端启动
 
+如果你已经安装了 `go-task`，更推荐直接使用 [Taskfile.yml](/Users/zhangxinghui/Desktop/web/3Xbackend/Taskfile.yml)。
+
+可以直接本地运行，不需要先编译成二进制：
+
+```bash
+go run ./cmd
+```
+
+或者用任务命令：
+
+```bash
+task backend
+```
+
 ### 1. 准备 MySQL
 
 先准备一个可用的 MySQL 数据库，并确认 `config/config.yaml` 中的配置正确。
@@ -83,6 +97,12 @@
 
 ```bash
 go run ./cmd
+```
+
+或者：
+
+```bash
+task backend
 ```
 
 默认监听：
@@ -114,6 +134,12 @@ npm install
 npm run dev
 ```
 
+或者：
+
+```bash
+task frontend
+```
+
 ### 3. 类型检查和构建
 
 ```bash
@@ -138,6 +164,9 @@ npm run build
 
 - [Dockerfile](/Users/zhangxinghui/Desktop/web/3Xbackend/Dockerfile)
 - [.dockerignore](/Users/zhangxinghui/Desktop/web/3Xbackend/.dockerignore)
+- [docker-compose.yml](/Users/zhangxinghui/Desktop/web/3Xbackend/docker-compose.yml)
+- [Taskfile.yml](/Users/zhangxinghui/Desktop/web/3Xbackend/Taskfile.yml)
+- [.env.example](/Users/zhangxinghui/Desktop/web/3Xbackend/.env.example)
 
 这个镜像会同时：
 
@@ -163,6 +192,12 @@ docker run --rm -p 3000:3000 \
   -e DATABASE_MYSQL_SCHEMA=3X \
   -v $(pwd)/public:/app/public \
   3xbackend
+```
+
+或者直接用 Compose：
+
+```bash
+task compose:up
 ```
 
 说明：
@@ -244,6 +279,49 @@ docker run --rm -p 3000:3000 \
 - 每完成一个独立功能点，单独提交一次 Git commit
 - 新前端开发集中在 [front](/Users/zhangxinghui/Desktop/web/3Xbackend/front)
 - `example/` 只作为参考，不作为最终前端继续堆功能
+
+## Task 命令
+
+仓库根目录已经补了 [Taskfile.yml](/Users/zhangxinghui/Desktop/web/3Xbackend/Taskfile.yml)，常用命令如下：
+
+如果本机还没有 `task`，可以先安装：
+
+```bash
+brew install go-task/tap/go-task
+```
+
+或者参考官方仓库：`https://taskfile.dev/installation/`
+
+- `task init`
+  作用：初始化本地运行环境，创建 `public` 目录、补 `.env`/`front/.env`、安装前端依赖
+
+- `task db:up`
+  作用：只启动本地 MySQL 容器
+
+- `task backend`
+  作用：直接 `go run ./cmd` 跑后端，不预编译
+
+- `task frontend`
+  作用：直接运行前端 Vite 开发服务
+
+- `task dev`
+  作用：一条命令同时跑后端和前端，不预编译，适合本地联调
+
+- `task compose:up`
+  作用：启动完整 Docker Compose 环境
+
+- `task compose:down`
+  作用：关闭完整 Docker Compose 环境
+
+- `task build`
+  作用：检查 Go 构建和前端构建是否通过
+
+推荐本地开发顺序：
+
+```bash
+task init
+task dev
+```
 
 ## 下一步方向
 
