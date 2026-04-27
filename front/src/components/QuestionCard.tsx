@@ -280,46 +280,56 @@ export function QuestionCard({
             {commentsMessage ? <div className="forum-empty-comments">{commentsMessage}</div> : null}
             {commentsLoading ? <div className="forum-empty-comments">正在加载评论...</div> : null}
             {!commentsLoading && commentsPage.records.length === 0 && !commentsMessage ? <div className="forum-empty-comments">暂时还没有评论。</div> : null}
-            {commentsPage.records.map((comment) => (
-              <div className="cont" key={comment.id}>
-                <div className="img">
-                  <img alt={comment.nickName} className="header-img" src="/legacy/res/img/userImgDefault.png" />
-                </div>
-                <div className="text">
-                  <p className="tit">
-                    <span className="name">{comment.nickName}</span>
-                    <span className="data">{comment.time}</span>
-                  </p>
-                  {editingCommentId === comment.id ? (
-                    <div className="forum-comment-editor">
-                      <textarea onChange={(event) => setEditingCommentText(event.target.value)} rows={3} value={editingCommentText}></textarea>
-                      <div className="forum-comment-actions">
-                        <button className="legacy-action-button small" disabled={submitting} onClick={() => void handleCommentUpdate(comment.id)} type="button">
-                          {submitting ? '保存中...' : '保存'}
-                        </button>
-                        <button className="legacy-action-button secondary small" disabled={submitting} onClick={cancelEditingComment} type="button">
-                          取消
-                        </button>
+            <div className="forum-comment-timeline">
+              {commentsPage.records.map((comment, index) => (
+                <div className="forum-comment-node" key={comment.id}>
+                  <div className="forum-comment-rail">
+                    <span className="forum-comment-dot">{index + 1}</span>
+                    <span className="forum-comment-line"></span>
+                  </div>
+                  <div className="forum-comment-card">
+                    <div className="forum-comment-head">
+                      <div className="forum-comment-user">
+                        <img alt={comment.nickName} className="header-img" src="/legacy/res/img/userImgDefault.png" />
+                        <div>
+                          <strong>{comment.nickName}</strong>
+                          <span>{comment.user}</span>
+                        </div>
                       </div>
+                      <span className="forum-comment-time">{comment.time}</span>
                     </div>
-                  ) : (
-                    <>
-                      <p className="ct">{comment.text}</p>
-                      {canInteract && currentUsername === comment.user ? (
+
+                    {editingCommentId === comment.id ? (
+                      <div className="forum-comment-editor">
+                        <textarea onChange={(event) => setEditingCommentText(event.target.value)} rows={3} value={editingCommentText}></textarea>
                         <div className="forum-comment-actions">
-                          <button className="forum-inline-button" onClick={() => startEditingComment(comment.id, comment.text)} type="button">
-                            编辑评论
+                          <button className="legacy-action-button small" disabled={submitting} onClick={() => void handleCommentUpdate(comment.id)} type="button">
+                            {submitting ? '保存中...' : '保存'}
                           </button>
-                          <button className="forum-inline-button danger" onClick={() => void handleCommentDelete(comment.id)} type="button">
-                            删除评论
+                          <button className="legacy-action-button secondary small" disabled={submitting} onClick={cancelEditingComment} type="button">
+                            取消
                           </button>
                         </div>
-                      ) : null}
-                    </>
-                  )}
+                      </div>
+                    ) : (
+                      <>
+                        <p className="forum-comment-body">{comment.text}</p>
+                        {canInteract && currentUsername === comment.user ? (
+                          <div className="forum-comment-actions">
+                            <button className="forum-inline-button" onClick={() => startEditingComment(comment.id, comment.text)} type="button">
+                              编辑评论
+                            </button>
+                            <button className="forum-inline-button danger" onClick={() => void handleCommentDelete(comment.id)} type="button">
+                              删除评论
+                            </button>
+                          </div>
+                        ) : null}
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
             {commentsPage.total > commentsPage.page_size ? (
               <div className="forum-comment-pagination">
