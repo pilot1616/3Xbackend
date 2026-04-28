@@ -45,52 +45,58 @@ export function AlbumPage() {
     }
   }
 
-  if (!session) {
-    return (
-      <section className="page-section narrow">
-        <div className="legacy-empty-card">
-          <h2>请先登录</h2>
-          <p>这里对应旧版 `album.html`，以后会展示当前用户发帖时上传过的全部附件。</p>
-          <Link className="legacy-action-button" to="/auth">
-            去登录
-          </Link>
-        </div>
-      </section>
-    );
-  }
-
   return (
-    <section className="album-content w1000 page-section">
-      <div className="legacy-toolbar-card">
-        <div>
-          <h2>我的附件相册</h2>
-          <p>这里对应旧版 `album.html`，当前直接从“我的帖子”接口中抽取附件展示。</p>
+    <>
+      {!session ? (
+        <div id="noLogined">
+          <div id="loginReminder" style={{ textAlign: 'center', padding: 50 }}>
+            <h2>请登录</h2>
+            <p>当前页面需要登录才能访问，请先登录。</p>
+            <Link className="legacy-action-button" to="/auth">
+              去登录
+            </Link>
+          </div>
         </div>
-      </div>
+      ) : null}
 
-      {message ? <div className="legacy-feedback">{message}</div> : null}
+      {session ? (
+        <div className="album-content w1000 legacy-album-page">
+          {message ? <div className="legacy-feedback legacy-home-feedback">{message}</div> : null}
 
-      {items.length === 0 && !message ? <div className="legacy-feedback">你还没有上传过附件，先去发布一条带图片或视频的帖子。</div> : null}
+          <div className="img-list">
+            <div className="layui-fluid" style={{ padding: 0 }}>
+              <div className="layui-row layui-col-space30 space">
+                {items.length === 0 && !message ? (
+                  <div className="layui-col-xs12">
+                    <div className="legacy-feedback">你还没有上传过附件，先去发布一条带图片或视频的帖子。</div>
+                  </div>
+                ) : null}
 
-      <div className="legacy-album-grid">
-        {items.map((item) => (
-          <article className="legacy-album-item" key={`${item.qid}-${item.fileName}`}>
-            {isImage(item.fileName) ? (
-              <img alt={item.fileName} src={buildAssetUrl(`/public/uploads/${item.fileName}`)} />
-            ) : (
-              <video controls src={buildAssetUrl(`/public/uploads/${item.fileName}`)} />
-            )}
-            <div>
-              <strong>QID {item.qid}</strong>
-              <p>{item.time}</p>
-              <p>{item.text}</p>
-              <Link className="legacy-action-button secondary small" to={`/questions/${item.qid}`}>
-                查看原帖
-              </Link>
+                {items.map((item) => (
+                  <div className="layui-col-xs12 layui-col-sm4 layui-col-md4" key={`${item.qid}-${item.fileName}`}>
+                    <div className="item">
+                      <div className="imgBox legacy-album-media-box" style={{ height: 195, overflow: 'hidden' }}>
+                        {isImage(item.fileName) ? (
+                          <img alt={item.fileName} className="single-img" src={buildAssetUrl(`/public/uploads/${item.fileName}`)} />
+                        ) : (
+                          <video className="single-img" controls src={buildAssetUrl(`/public/uploads/${item.fileName}`)} />
+                        )}
+                      </div>
+                      <div className="cont-text">
+                        <div className="data">{item.time.split(' ')[0] ?? item.time}</div>
+                        <p className="briefly">{item.text.length > 17 ? `${item.text.slice(0, 17)}...` : item.text}</p>
+                        <Link className="legacy-inline-link" to={`/questions/${item.qid}`}>
+                          查看原帖
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </article>
-        ))}
-      </div>
-    </section>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

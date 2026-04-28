@@ -45,6 +45,13 @@ video {
   font-weight: 700;
 }
 
+.legacy-login-name {
+  margin-top: 8px;
+  color: #8d8d8d;
+  font-size: 12px;
+  text-align: right;
+}
+
 .legacy-home-banner {
   padding: 24px 0 12px;
 }
@@ -152,6 +159,34 @@ video {
   margin: 0 4px;
   color: #ff7f21;
   font-weight: 700;
+}
+
+.legacy-home-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin: 0 auto 22px;
+  padding: 18px 24px;
+  background: #fff;
+  border-radius: 6px;
+}
+
+.legacy-home-filter-row input,
+.legacy-home-filter-row select {
+  min-width: 180px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid #e6e6e6;
+  background: #f8f8f8;
+}
+
+.legacy-home-feedback {
+  margin-bottom: 20px;
+}
+
+.legacy-publish-filter-row {
+  margin-bottom: 18px;
 }
 
 .forum-question-card {
@@ -397,6 +432,27 @@ video {
   align-items: center;
 }
 
+.auth-input-row {
+  position: relative;
+  width: 350px;
+}
+
+.auth-input-row i {
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  transform: translateY(-50%);
+  color: #6f7db9;
+  cursor: pointer;
+}
+
+.auth-input-row input[type='text'],
+.auth-input-row input[type='password'] {
+  width: 100%;
+  margin: 10px 0;
+  padding-right: 52px;
+}
+
 .auth-shell-legacy input[type='text'],
 .auth-shell-legacy input[type='password'] {
   width: 350px;
@@ -442,6 +498,15 @@ video {
   padding: 0 20px;
 }
 
+.auth-security-box {
+  width: 350px;
+  margin: 10px 0;
+}
+
+.auth-fetch-button {
+  width: 350px;
+}
+
 .auth-error-legacy {
   width: 100%;
   color: #fff;
@@ -450,6 +515,11 @@ video {
 }
 
 .auth-footer-legacy {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
@@ -459,6 +529,16 @@ video {
   color: #7597ff;
   font-size: 18px;
   font-weight: bold;
+  cursor: pointer;
+}
+
+.auth-footer-legacy .Remember {
+  color: #fff;
+  font-size: 14px;
+}
+
+.auth-footer-legacy .gotoIndex {
+  text-decoration: underline;
 }
 
 .auth-question-box {
@@ -561,6 +641,14 @@ video {
   margin-top: 18px;
   padding-top: 18px;
   border-top: 1px dashed #ead8c8;
+}
+
+.legacy-publish-form-box {
+  margin-bottom: 24px;
+}
+
+.legacy-publish-form-panel {
+  max-width: none;
 }
 
 .legacy-section-title {
@@ -709,6 +797,22 @@ video {
   gap: 20px;
 }
 
+.legacy-album-page {
+  padding: 35px 0 70px;
+}
+
+.legacy-album-media-box .single-img {
+  width: 100%;
+  height: 195px;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
+
+.legacy-inline-link {
+  color: #ff7f21;
+}
+
 .legacy-album-item {
   padding: 16px;
   background: #fff;
@@ -747,6 +851,46 @@ video {
   font-weight: 700;
 }
 
+.legacy-profile-page {
+  padding: 35px 0 70px;
+}
+
+.legacy-profile-info-wrap {
+  display: flex;
+  gap: 36px;
+  align-items: center;
+}
+
+.legacy-profile-summary {
+  margin-top: 18px;
+}
+
+.legacy-profile-upload-col {
+  margin-right: 50px;
+}
+
+.legacy-sortable-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 300px;
+}
+
+.legacy-profile-form {
+  margin-top: 50px;
+  margin-left: 40px;
+}
+
+.legacy-profile-records {
+  display: grid;
+  gap: 24px;
+  margin-top: 28px;
+}
+
+.legacy-record-panel {
+  padding: 26px 30px;
+}
+
 @media screen and (max-width: 900px) {
   .legacy-toolbar-card,
   .legacy-page-header,
@@ -756,6 +900,16 @@ video {
 
   .legacy-toolbar-card {
     display: grid;
+  }
+
+  .legacy-profile-info-wrap,
+  #editInfo {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .legacy-profile-form {
+    margin: 20px 0 0;
   }
 
   .legacy-manage-actions {
@@ -780,6 +934,13 @@ video {
     padding: 28px 20px;
   }
 
+  .auth-input-row,
+  .auth-fetch-button,
+  .auth-security-box,
+  .auth-footer-legacy {
+    width: 100%;
+  }
+
   .auth-shell-legacy input[type='text'],
   .auth-shell-legacy input[type='password'],
   .auth-select-legacy,
@@ -797,6 +958,16 @@ video {
   .auth-secondary-button {
     width: 100%;
     text-align: center;
+  }
+
+  .legacy-home-filter-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .legacy-home-filter-row input,
+  .legacy-home-filter-row select {
+    width: 100%;
   }
 
   .forum-comment-pagination {

@@ -155,30 +155,24 @@ export function HomePage() {
 
       <section className="content whisper-content">
         <div className="cont">
-          <div className="legacy-toolbar-card">
-            <div>
-              <h2>问题广场</h2>
-              <p>这里正在用 TypeScript 重写旧版 `index.html`，但视觉结构先沿用原示例。</p>
-            </div>
-            <div className="legacy-toolbar-actions">
-              <input onChange={(event) => setKeyword(event.target.value)} placeholder="按正文关键字搜索" value={keyword} />
-              <select onChange={(event) => setSort(event.target.value)} value={sort}>
-                <option value="latest">最新发布</option>
-                <option value="oldest">最早发布</option>
-                <option value="most_liked">最多点赞</option>
-                <option value="most_commented">最多评论</option>
-              </select>
-              <button className="legacy-action-button" onClick={() => void loadData()} type="button">
-                刷新
-              </button>
-            </div>
+          <div className="legacy-home-filter-row">
+            <input onChange={(event) => setKeyword(event.target.value)} placeholder="按正文关键字搜索..." value={keyword} />
+            <select onChange={(event) => setSort(event.target.value)} value={sort}>
+              <option value="latest">最新发布</option>
+              <option value="oldest">最早发布</option>
+              <option value="most_liked">最多点赞</option>
+              <option value="most_commented">最多评论</option>
+            </select>
+            <button className="legacy-action-button small" onClick={() => void loadData()} type="button">
+              刷新列表
+            </button>
           </div>
 
-          {message ? <div className="legacy-feedback">{message}</div> : null}
+          {message ? <div className="legacy-feedback legacy-home-feedback">{message}</div> : null}
           {loading ? <div className="legacy-feedback">正在加载帖子...</div> : null}
 
           {!session ? (
-            <div className="legacy-feedback legacy-login-tip">
+            <div className="legacy-feedback legacy-login-tip legacy-home-feedback">
               当前可匿名浏览帖子。<Link to="/auth">登录后</Link>可以点赞和评论。
             </div>
           ) : null}

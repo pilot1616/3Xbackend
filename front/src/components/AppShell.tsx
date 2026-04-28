@@ -1,6 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
 
-import { API_BASE_URL } from '../api/client';
 import { clearSession, useSession } from '../lib/session';
 
 function navClassName({ isActive }: { isActive: boolean }) {
@@ -9,10 +8,14 @@ function navClassName({ isActive }: { isActive: boolean }) {
 
 export function AppShell() {
   const session = useSession();
+  const displayName = session?.user.nickname || session?.user.username;
 
   return (
     <div className="legacy-app-shell">
       <div className="header w1000">
+        <div className="menu-btn">
+          <div className="menu"></div>
+        </div>
         <h1 className="logo">
           <Link to="/">
             <span>MYBLOG</span>
@@ -35,12 +38,12 @@ export function AppShell() {
         </div>
         <div className="login-text">
           {session ? (
-            <div className="legacy-session-bar">
-              <span className="legacy-session-user">{session.user.nickname || session.user.username}</span>
+            <>
               <button className="layui-btn layui-btn-danger layui-btn-radius" onClick={() => clearSession()} type="button">
                 退出登录
               </button>
-            </div>
+              <div className="legacy-login-name">当前用户：{displayName}</div>
+            </>
           ) : (
             <Link className="layui-btn layui-btn-radius" to="/auth">
               登录/注册
@@ -61,14 +64,27 @@ export function AppShell() {
               </div>
               <div className="fclWordBoxTwo">
                 <div className="fclwbtWordOne">
-                  TypeScript 重写版前端正在替换原来的 jQuery 示例页面。当前阶段先复用旧 UI，逐步把数据流切换到正式 Go API。
+                  Hidden Hills property with mountain and city view boast <br /> none bedrooms including a master suite with private <br /> terrace and an entertainment.wing which includes a 20- <br /> seat theater.
                 </div>
-                <div className="fclwbtWordTwo iconfont">后端地址: {API_BASE_URL}</div>
-                <div className="fclwbtWordThree iconfont">前端目录: /front</div>
-                <div className="fclwbtWordFourth iconfont">当前策略: 旧视觉 + 新接口</div>
+                <div className="fclwbtWordTwo iconfont">
+                  <i className="layui-icon layui-icon-home" style={{ fontSize: 12 }}></i> 15 Cliff St,New York NY 10038,USA
+                </div>
+                <div className="fclwbtWordThree iconfont">
+                  <i className="layui-icon layui-icon-cellphone" style={{ fontSize: 12 }}></i> +1 212-602-9641
+                </div>
+                <div className="fclwbtWordFourth iconfont">
+                  <i className="layui-icon layui-icon-email" style={{ fontSize: 12 }}></i> info@example.com
+                </div>
+              </div>
+              <div className="fclWordBoxThree">
+                <i className="layui-icon layui-icon-friends" style={{ fontSize: 20 }}></i>
+                <i className="layui-icon layui-icon-login-weibo" style={{ fontSize: 20 }}></i>
+                <i className="layui-icon layui-icon-survey" style={{ fontSize: 20 }}></i>
+                <i className="layui-icon layui-icon-login-wechat" style={{ fontSize: 20 }}></i>
+                <i className="layui-icon layui-icon-login-qq" style={{ fontSize: 20 }}></i>
               </div>
               <img alt="ad" src="/legacy/res/img/ad.jpg" style={{ float: 'right', width: 200 }} />
-              <div className="fbWord">@2026 3X Forum Front Rewrite</div>
+              <div className="fbWord">@2019,Digiqole-News Magazine html Template.All rights reserved.</div>
             </div>
           </div>
         </div>
