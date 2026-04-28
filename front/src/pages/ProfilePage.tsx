@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 
 import { buildAssetUrl } from '../api/client';
 import { getMe, updateMe, uploadAvatar } from '../api/auth';
-import { getMySummary, listMyComments, listMyLikes } from '../api/forum';
+import { getMySummary, listMyComments, listMyLikes, listMyQuestions } from '../api/forum';
 import { updateSessionUser, useSession } from '../lib/session';
-import type { MyCommentListPage, MyLikeListPage, MySummaryResult, User } from '../types/api';
+import type { MyCommentListPage, MyLikeListPage, MySummaryResult, QuestionListPage, User } from '../types/api';
 
 const maxAvatarSize = 5 * 1024 * 1024;
 
@@ -29,12 +29,20 @@ const emptyLikes: MyLikeListPage = {
   records: [],
 };
 
+const emptyQuestions: QuestionListPage = {
+  page: 1,
+  page_size: 6,
+  total: 0,
+  records: [],
+};
+
 export function ProfilePage() {
   const session = useSession();
   const [user, setUser] = useState<User | null>(null);
   const [summary, setSummary] = useState(emptySummary);
   const [comments, setComments] = useState(emptyComments);
   const [likes, setLikes] = useState(emptyLikes);
+  const [questions, setQuestions] = useState(emptyQuestions);
   const [commentPage, setCommentPage] = useState(1);
   const [likePage, setLikePage] = useState(1);
   const [commentKeyword, setCommentKeyword] = useState('');
@@ -69,9 +77,10 @@ export function ProfilePage() {
 
   async function loadBaseProfile() {
     try {
-      const [me, nextSummary] = await Promise.all([getMe(), getMySummary()]);
+      const [me, nextSummary, nextQuestions] = await Promise.all([getMe(), getMySummary(), listMyQuestions({ page: 1, pageSize: 6, sort: 'latest' })]);
       setUser(me);
       setSummary(nextSummary);
+      setQuestions(nextQuestions);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : '加载资料失败');
     }
@@ -326,6 +335,33 @@ export function ProfilePage() {
             </div>
 
             <div className="legacy-profile-records">
+              <section className="item info legacy-record-panel">
+                <div className="title">
+                  <h3>最近帖子</h3>
+                </div>
+                <div className="legacy-card-list">
+                  {questions.records.length === 0 ? <div className="legacy-empty-inline">你还没有发布过帖子。</div> : null}
+                  {questions.records.map((item) => (
+                    <div className="legacy-mini-card" key={item.qid}>
+                      <strong>{item.isUpload ? '已发布' : '未发布'}</strong>
+                      <p>{item.text}</p>
+                      <span>{item.time}</span>
+                      <Link className="legacy-action-button secondary small" to={`/questions/${item.qid}`}>
+                        查看详情
+                      </Link>
+                    </div>
+                  ))}
+                  {questions.total > questions.records.length ? (
+                    <div className="legacy-list-pagination">
+                      <span>已展示最近 {questions.records.length} / {questions.total} 条帖子</span>
+                      <Link className="legacy-action-button secondary small" to="/publish">
+                        去管理全部帖子
+                      </Link>
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+
               <section className="item info legacy-record-panel">
                 <div className="title">
                   <h3>我的评论</h3>
