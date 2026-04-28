@@ -28,6 +28,58 @@ video {
   max-width: 100%;
 }
 
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header .logo,
+.header .nav,
+.header .login-text {
+  position: static;
+  top: auto;
+}
+
+.header .logo {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+.header .logo a {
+  display: inline-flex;
+  align-items: center;
+  height: 120px;
+}
+
+.header .nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.header .nav a {
+  display: inline-flex;
+  align-items: center;
+  height: 120px;
+  white-space: nowrap;
+}
+
+.header .login-text {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 140px;
+  line-height: normal;
+}
+
+.header .login-text .layui-btn,
+.header .login-text a {
+  white-space: nowrap;
+}
+
 .legacy-app-shell {
   min-height: 100vh;
   display: flex;
