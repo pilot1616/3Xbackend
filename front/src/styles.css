@@ -463,6 +463,13 @@ video {
   color: #d94b57;
 }
 
+.forum-summary-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+}
+
 .forum-like-panel {
   margin-top: 12px;
   padding: 14px 16px;

@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { createComment, deleteComment, likeQuestion, listQuestions, unlikeQuestion, updateComment } from '../api/forum';
+import { likeQuestion, listQuestions, unlikeQuestion } from '../api/forum';
 import { LegacyIcon } from '../components/LegacyIcon';
 import { QuestionCard } from '../components/QuestionCard';
 import { useSession } from '../lib/session';
@@ -185,69 +185,6 @@ export function HomePage() {
     }
   }
 
-  async function handleCommentSubmit(question: QuestionRecord, text: string) {
-    if (!session) {
-      setMessage('请先登录后再评论');
-      return;
-    }
-
-    setSubmittingQid(question.qid);
-    setMessage('');
-    try {
-      const updated = await createComment(question.qid, { text });
-      setPage((current) => ({
-        ...current,
-        records: current.records.map((item) => (item.qid === updated.qid ? updated : item)),
-      }));
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : '发表评论失败');
-    } finally {
-      setSubmittingQid(null);
-    }
-  }
-
-  async function handleCommentUpdate(question: QuestionRecord, commentID: number, text: string) {
-    if (!session) {
-      setMessage('请先登录后再操作评论');
-      return;
-    }
-
-    setSubmittingQid(question.qid);
-    setMessage('');
-    try {
-      const updated = await updateComment(question.qid, commentID, { text });
-      setPage((current) => ({
-        ...current,
-        records: current.records.map((item) => (item.qid === updated.qid ? updated : item)),
-      }));
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : '更新评论失败');
-    } finally {
-      setSubmittingQid(null);
-    }
-  }
-
-  async function handleCommentDelete(question: QuestionRecord, commentID: number) {
-    if (!session) {
-      setMessage('请先登录后再操作评论');
-      return;
-    }
-
-    setSubmittingQid(question.qid);
-    setMessage('');
-    try {
-      const updated = await deleteComment(question.qid, commentID);
-      setPage((current) => ({
-        ...current,
-        records: current.records.map((item) => (item.qid === updated.qid ? updated : item)),
-      }));
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : '删除评论失败');
-    } finally {
-      setSubmittingQid(null);
-    }
-  }
-
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFilters({
@@ -314,13 +251,12 @@ export function HomePage() {
             {page.records.map((question) => (
               <QuestionCard
                 canInteract={Boolean(session)}
+                compact
                 currentUsername={session?.user.username}
+                detailPageOnly
                 viewerAvatarPath={session?.user.avatar_path}
                 detailHref={`/questions/${question.qid}`}
                 key={question.qid}
-                onCommentDelete={handleCommentDelete}
-                onCommentSubmit={handleCommentSubmit}
-                onCommentUpdate={handleCommentUpdate}
                 onLikeToggle={handleLikeToggle}
                 question={question}
                 submitting={submittingQid === question.qid}

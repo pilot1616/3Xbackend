@@ -23,6 +23,7 @@ const emptyLikes: LikeListPage = {
 interface QuestionCardProps {
   question: QuestionRecord;
   compact?: boolean;
+  detailPageOnly?: boolean;
   canInteract?: boolean;
   submitting?: boolean;
   currentUsername?: string;
@@ -48,6 +49,7 @@ function avatarSrc(path?: string) {
 export function QuestionCard({
   question,
   compact = false,
+  detailPageOnly = false,
   canInteract = false,
   submitting = false,
   currentUsername,
@@ -201,28 +203,44 @@ export function QuestionCard({
             <LegacyIcon name="praise" size={16} />
             <span>{question.likesNum}</span>
           </p>
-          <p className="edit" onClick={() => setExpanded((current) => !current)}>
-            <LegacyIcon name="reply-fill" size={16} />
-            <span>{question.commentsNum}</span>
-          </p>
-          <p className="off" onClick={() => setExpanded((current) => !current)}>
-            <span>{expanded ? '收起' : '展开'}</span>
-            <LegacyIcon name={expanded ? 'up' : 'down'} size={16} />
-          </p>
-        </div>
-
-        <div className="forum-detail-toolbar">
-          {detailHref ? (
-            <Link className="forum-inline-button" to={detailHref}>
-              查看详情
+          {detailPageOnly && detailHref ? (
+            <Link className="edit forum-summary-link" to={detailHref}>
+              <LegacyIcon name="reply-fill" size={16} />
+              <span>{question.commentsNum}</span>
             </Link>
-          ) : null}
-          <button className="forum-inline-button" onClick={() => setLikesOpen((current) => !current)} type="button">
-            {likesOpen ? '收起点赞列表' : `查看点赞列表 (${question.likesNum})`}
-          </button>
+          ) : (
+            <p className="edit" onClick={() => setExpanded((current) => !current)}>
+              <LegacyIcon name="reply-fill" size={16} />
+              <span>{question.commentsNum}</span>
+            </p>
+          )}
+          {detailPageOnly && detailHref ? (
+            <Link className="off forum-summary-link" to={detailHref}>
+              <span>进入详情</span>
+              <LegacyIcon name="right" size={16} />
+            </Link>
+          ) : (
+            <p className="off" onClick={() => setExpanded((current) => !current)}>
+              <span>{expanded ? '收起' : '展开'}</span>
+              <LegacyIcon name={expanded ? 'up' : 'down'} size={16} />
+            </p>
+          )}
         </div>
 
-        {likesOpen ? (
+        {!detailPageOnly ? (
+          <div className="forum-detail-toolbar">
+            {detailHref ? (
+              <Link className="forum-inline-button" to={detailHref}>
+                查看详情
+              </Link>
+            ) : null}
+            <button className="forum-inline-button" onClick={() => setLikesOpen((current) => !current)} type="button">
+              {likesOpen ? '收起点赞列表' : `查看点赞列表 (${question.likesNum})`}
+            </button>
+          </div>
+        ) : null}
+
+        {likesOpen && !detailPageOnly ? (
           <div className="forum-like-panel">
             {likesMessage ? <div className="forum-empty-likes">{likesMessage}</div> : null}
             {likesLoading ? <div className="forum-empty-likes">正在加载点赞列表...</div> : null}
@@ -261,7 +279,7 @@ export function QuestionCard({
         ) : null}
       </div>
 
-      {expanded ? (
+      {expanded && !detailPageOnly ? (
         <div className="review-version">
           <div className="form">
             <img alt="avatar" className="now-header forum-comment-avatar" src={avatarSrc(viewerAvatarPath)} />
