@@ -8,7 +8,6 @@ function navClassName({ isActive }: { isActive: boolean }) {
 
 export function AppShell() {
   const session = useSession();
-  const displayName = session?.user.nickname || session?.user.username;
 
   return (
     <div className="legacy-app-shell">
@@ -38,12 +37,9 @@ export function AppShell() {
         </div>
         <div className="login-text">
           {session ? (
-            <>
-              <button className="layui-btn layui-btn-danger layui-btn-radius" onClick={() => clearSession()} type="button">
-                退出登录
-              </button>
-              <div className="legacy-login-name">当前用户：{displayName}</div>
-            </>
+            <button className="layui-btn layui-btn-danger layui-btn-radius" onClick={() => clearSession()} type="button">
+              退出登录
+            </button>
           ) : (
             <Link className="layui-btn layui-btn-radius" to="/auth">
               登录/注册

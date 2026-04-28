@@ -20,8 +20,6 @@ export function AuthPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [nickname, setNickname] = useState('');
-  const [sign, setSign] = useState('');
   const [securityQuestion, setSecurityQuestion] = useState('year');
   const [securityQuestionLabel, setSecurityQuestionLabel] = useState('');
   const [securityAnswer, setSecurityAnswer] = useState('');
@@ -52,8 +50,6 @@ export function AuthPage() {
     setMessage(nextMode === 'register' ? '请使用手机号码注册，并且密码必须由字母和数字组成，且长度大于等于6位' : nextMode === 'reset' ? '请输入要更改密码的账号' : '');
     setPassword('');
     setConfirmPassword('');
-    setNickname('');
-    setSign('');
     setSecurityQuestion('year');
     setSecurityQuestionLabel('');
     setSecurityAnswer('');
@@ -70,9 +66,6 @@ export function AuthPage() {
     }
     if (mode !== 'login' && password !== confirmPassword) {
       return '两次输入的密码不一致';
-    }
-    if (mode === 'register' && !nickname.trim()) {
-      return '昵称不能为空';
     }
     if (mode === 'register' && !securityAnswer.trim()) {
       return '密保答案不能为空';
@@ -115,8 +108,8 @@ export function AuthPage() {
         const result = await register({
           username: username.trim(),
           password,
-          nickname: nickname.trim(),
-          sign: sign.trim(),
+          nickname: username.trim(),
+          sign: '',
           security_question: securityQuestion,
           security_answer: securityAnswer.trim(),
         });
@@ -190,10 +183,6 @@ export function AuthPage() {
               ></i>
             </div>
           ) : null}
-
-          {mode === 'register' ? <input onChange={(event) => setNickname(event.target.value)} placeholder="Nickname" type="text" value={nickname} /> : null}
-          {mode === 'register' ? <input onChange={(event) => setSign(event.target.value)} placeholder="Signature" type="text" value={sign} /> : null}
-
           {mode === 'register' ? (
             <div className="layui-form layui-row layui-col-space16 auth-security-box">
               <div className="layui-col-md12">

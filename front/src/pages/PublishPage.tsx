@@ -289,21 +289,6 @@ export function PublishPage() {
   return (
     <section className="content whisper-content leacots-content">
       <div className="cont w1000">
-        <div className="legacy-home-filter-row legacy-publish-filter-row">
-          <input onChange={(event) => setKeyword(event.target.value)} placeholder="按正文关键字筛选我的帖子..." value={keyword} />
-          <select onChange={(event) => setSort(event.target.value)} value={sort}>
-            <option value="latest">按最新</option>
-            <option value="oldest">按最早</option>
-            <option value="most_liked">按点赞数</option>
-            <option value="most_commented">按评论数</option>
-          </select>
-          <select onChange={(event) => setUploadFilter(event.target.value)} value={uploadFilter}>
-            <option value="">全部状态</option>
-            <option value="true">仅看已发布</option>
-            <option value="false">仅看未发布</option>
-          </select>
-        </div>
-
         <div className="review-version">
           <div className="form-box legacy-publish-form-box">
             <div className="form legacy-panel legacy-publish-form-panel">

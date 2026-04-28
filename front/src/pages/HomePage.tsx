@@ -1,6 +1,4 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-
 import { createComment, deleteComment, likeQuestion, listQuestions, unlikeQuestion, updateComment } from '../api/forum';
 import { QuestionCard } from '../components/QuestionCard';
 import { useSession } from '../lib/session';
@@ -155,27 +153,8 @@ export function HomePage() {
 
       <section className="content whisper-content">
         <div className="cont">
-          <div className="legacy-home-filter-row">
-            <input onChange={(event) => setKeyword(event.target.value)} placeholder="按正文关键字搜索..." value={keyword} />
-            <select onChange={(event) => setSort(event.target.value)} value={sort}>
-              <option value="latest">最新发布</option>
-              <option value="oldest">最早发布</option>
-              <option value="most_liked">最多点赞</option>
-              <option value="most_commented">最多评论</option>
-            </select>
-            <button className="legacy-action-button small" onClick={() => void loadData()} type="button">
-              刷新列表
-            </button>
-          </div>
-
           {message ? <div className="legacy-feedback legacy-home-feedback">{message}</div> : null}
           {loading ? <div className="legacy-feedback">正在加载帖子...</div> : null}
-
-          {!session ? (
-            <div className="legacy-feedback legacy-login-tip legacy-home-feedback">
-              当前可匿名浏览帖子。<Link to="/auth">登录后</Link>可以点赞和评论。
-            </div>
-          ) : null}
 
           <div className="whisper-list">
             {!loading && page.records.length === 0 ? <div className="legacy-feedback">当前没有匹配的帖子，换个筛选条件再试。</div> : null}
