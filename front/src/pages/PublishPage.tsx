@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { buildUploadAssetUrl } from '../api/client';
@@ -6,6 +6,12 @@ import { createQuestion, listMyQuestions, uploadQuestionFiles } from '../api/for
 import { LegacyIcon } from '../components/LegacyIcon';
 import { useSession } from '../lib/session';
 import type { QuestionListPage } from '../types/api';
+
+type MyQuestionFilters = {
+  keyword: string;
+  uploadFilter: string;
+  sort: string;
+};
 
 const emptyPage: QuestionListPage = {
   page: 1,
@@ -16,6 +22,12 @@ const emptyPage: QuestionListPage = {
 
 const maxUploadSize = 20 * 1024 * 1024;
 const allowedVideoPattern = /\.mp4$/i;
+const myQuestionPageSize = 20;
+const defaultFilters: MyQuestionFilters = {
+  keyword: '',
+  uploadFilter: '',
+  sort: 'latest',
+};
 
 function isImage(fileName: string) {
   return /\.(png|jpg|jpeg|gif)$/i.test(fileName);
@@ -68,22 +80,128 @@ export function PublishPage() {
   const [text, setText] = useState('');
   const [message, setMessage] = useState('');
   const [page, setPage] = useState(emptyPage);
-  const [sort, setSort] = useState('latest');
-  const [uploadFilter, setUploadFilter] = useState('');
-  const [keyword, setKeyword] = useState('');
+  const [filters, setFilters] = useState<MyQuestionFilters>(defaultFilters);
+  const [sortInput, setSortInput] = useState(defaultFilters.sort);
+  const [uploadFilterInput, setUploadFilterInput] = useState(defaultFilters.uploadFilter);
+  const [keywordInput, setKeywordInput] = useState(defaultFilters.keyword);
   const [createFiles, setCreateFiles] = useState<File[]>([]);
   const [composerUploadProgress, setComposerUploadProgress] = useState<number | null>(null);
   const [composerBusy, setComposerBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (session) {
-      void loadMyQuestions(sort, uploadFilter, keyword);
+      void loadMyQuestions(1, true);
     }
-  }, [session, sort, uploadFilter, keyword]);
+  }, [session, filters]);
 
-  async function loadMyQuestions(currentSort: string, currentUploadFilter: string, currentKeyword: string) {
-    const result = await listMyQuestions({ sort: currentSort, isUpload: currentUploadFilter, keyword: currentKeyword });
-    setPage(result);
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || loading || loadingMore || !hasMore) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (!entry?.isIntersecting) {
+          return;
+        }
+        void loadNextPage();
+      },
+      {
+        rootMargin: '300px 0px',
+      },
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [loading, loadingMore, hasMore, page.page, page.total, filters]);
+
+  async function loadMyQuestions(targetPage = 1, reset = false) {
+    if (reset) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+    setMessage('');
+    try {
+      const result = await listMyQuestions({
+        page: targetPage,
+        pageSize: myQuestionPageSize,
+        sort: filters.sort,
+        isUpload: filters.uploadFilter,
+        keyword: filters.keyword,
+      });
+
+      setPage((current) => {
+        if (reset) {
+          return result;
+        }
+
+        const merged = [...current.records];
+        result.records.forEach((record) => {
+          if (!merged.some((item) => item.qid === record.qid)) {
+            merged.push(record);
+          }
+        });
+
+        return {
+          ...result,
+          records: merged,
+        };
+      });
+      setHasMore(targetPage * result.page_size < result.total);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : '加载我的帖子失败');
+    } finally {
+      if (reset) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
+    }
+  }
+
+  async function loadNextPage() {
+    if (loading || loadingMore || !hasMore) {
+      return;
+    }
+    await loadMyQuestions(page.page + 1, false);
+  }
+
+  async function reloadCurrentWindow() {
+    const loadedPages = Math.max(1, Math.ceil(page.records.length / Math.max(1, myQuestionPageSize)));
+    setLoading(true);
+    setMessage('');
+    try {
+      const results = await Promise.all(
+        Array.from({ length: loadedPages }, (_, index) =>
+          listMyQuestions({
+            page: index + 1,
+            pageSize: myQuestionPageSize,
+            sort: filters.sort,
+            isUpload: filters.uploadFilter,
+            keyword: filters.keyword,
+          }),
+        ),
+      );
+
+      const merged = results.flatMap((result) => result.records);
+      const lastPage = results[results.length - 1] ?? emptyPage;
+      setPage({
+        ...lastPage,
+        records: merged,
+      });
+      setHasMore(loadedPages * lastPage.page_size < lastPage.total);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : '刷新我的帖子失败');
+    } finally {
+      setLoading(false);
+    }
   }
 
   function resetComposer() {
@@ -137,12 +255,28 @@ export function PublishPage() {
       }
       resetComposer();
       setMessage('发帖成功');
-      await loadMyQuestions(sort, uploadFilter, keyword);
+      await loadMyQuestions(1, true);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : '发帖失败');
     } finally {
       setComposerBusy(false);
     }
+  }
+
+  function handleFilterSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFilters({
+      keyword: keywordInput.trim(),
+      uploadFilter: uploadFilterInput,
+      sort: sortInput,
+    });
+  }
+
+  function handleFilterReset() {
+    setKeywordInput(defaultFilters.keyword);
+    setUploadFilterInput(defaultFilters.uploadFilter);
+    setSortInput(defaultFilters.sort);
+    setFilters(defaultFilters);
   }
 
   if (!session) {
@@ -221,10 +355,35 @@ export function PublishPage() {
           我发表的问题 <span>{page.total}</span>
         </div>
 
+        <form className="legacy-home-filter-row legacy-publish-filter-row" onSubmit={handleFilterSubmit}>
+          <input onChange={(event) => setKeywordInput(event.target.value)} placeholder="按帖子内容关键字筛选" value={keywordInput} />
+          <select onChange={(event) => setUploadFilterInput(event.target.value)} value={uploadFilterInput}>
+            <option value="">全部状态</option>
+            <option value="true">仅看已发布</option>
+            <option value="false">仅看未发布</option>
+          </select>
+          <select onChange={(event) => setSortInput(event.target.value)} value={sortInput}>
+            <option value="latest">最新发布</option>
+            <option value="oldest">最早发布</option>
+            <option value="most_liked">点赞最多</option>
+            <option value="most_commented">评论最多</option>
+          </select>
+          <div className="legacy-home-filter-actions">
+            <button className="legacy-action-button small" type="submit">
+              应用筛选
+            </button>
+            <button className="legacy-action-button secondary small" onClick={handleFilterReset} type="button">
+              重置
+            </button>
+          </div>
+        </form>
+
         <div className="whisper-list">
-          {page.records.length === 0 ? (
+          {loading ? <div className="legacy-feedback">正在加载我的帖子...</div> : null}
+
+          {!loading && page.records.length === 0 ? (
             <div className="legacy-feedback">
-              {keyword || uploadFilter ? '当前筛选条件下还没有帖子，换个关键字或发布状态再看。' : '你还没有发过帖子，先在上面发布第一条内容。'}
+              {filters.keyword || filters.uploadFilter ? '当前筛选条件下还没有帖子，换个关键字或发布状态再看。' : '你还没有发过帖子，先在上面发布第一条内容。'}
             </div>
           ) : null}
 
@@ -285,6 +444,21 @@ export function PublishPage() {
               );
             })}
           </div>
+
+          {!loading && page.records.length > 0 ? (
+            <div className="legacy-home-load-status">
+              <span>
+                已加载 {page.records.length} / {page.total} 条帖子
+              </span>
+              <button className="legacy-action-button secondary small" onClick={() => void reloadCurrentWindow()} type="button">
+                刷新当前列表
+              </button>
+            </div>
+          ) : null}
+
+          {loadingMore ? <div className="legacy-feedback legacy-home-feedback">正在继续加载更多帖子...</div> : null}
+          {!loading && !hasMore && page.records.length > 0 ? <div className="legacy-feedback legacy-home-feedback">已经到底了，全部帖子都加载完成。</div> : null}
+          <div className="legacy-home-load-anchor" ref={loadMoreRef}></div>
         </div>
       </div>
     </section>
