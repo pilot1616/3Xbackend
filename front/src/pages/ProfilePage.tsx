@@ -7,6 +7,8 @@ import { getMySummary, listMyComments, listMyLikes } from '../api/forum';
 import { useSession } from '../lib/session';
 import type { MyCommentListPage, MyLikeListPage, MySummaryResult, User } from '../types/api';
 
+const maxAvatarSize = 5 * 1024 * 1024;
+
 const emptySummary: MySummaryResult = {
   questionsCount: 0,
   commentsCount: 0,
@@ -35,6 +37,10 @@ export function ProfilePage() {
   const [likes, setLikes] = useState(emptyLikes);
   const [commentPage, setCommentPage] = useState(1);
   const [likePage, setLikePage] = useState(1);
+  const [commentKeyword, setCommentKeyword] = useState('');
+  const [commentKeywordInput, setCommentKeywordInput] = useState('');
+  const [likeKeyword, setLikeKeyword] = useState('');
+  const [likeKeywordInput, setLikeKeywordInput] = useState('');
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -51,15 +57,15 @@ export function ProfilePage() {
     if (!session) {
       return;
     }
-    void loadCommentsPage(commentPage);
-  }, [session, commentPage]);
+    void loadCommentsPage(commentPage, commentKeyword);
+  }, [session, commentPage, commentKeyword]);
 
   useEffect(() => {
     if (!session) {
       return;
     }
-    void loadLikesPage(likePage);
-  }, [session, likePage]);
+    void loadLikesPage(likePage, likeKeyword);
+  }, [session, likePage, likeKeyword]);
 
   async function loadBaseProfile() {
     try {
@@ -71,18 +77,18 @@ export function ProfilePage() {
     }
   }
 
-  async function loadCommentsPage(page: number) {
+  async function loadCommentsPage(page: number, keyword: string) {
     try {
-      const nextComments = await listMyComments(page);
+      const nextComments = await listMyComments(page, 20, keyword);
       setComments(nextComments);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : '加载我的评论失败');
     }
   }
 
-  async function loadLikesPage(page: number) {
+  async function loadLikesPage(page: number, keyword: string) {
     try {
-      const nextLikes = await listMyLikes(page);
+      const nextLikes = await listMyLikes(page, 20, keyword);
       setLikes(nextLikes);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : '加载我的点赞失败');
@@ -133,6 +139,10 @@ export function ProfilePage() {
       setMessage('头像只支持 png、jpg、jpeg、gif');
       return;
     }
+    if (file.size > maxAvatarSize) {
+      setMessage('头像文件不能超过 5MB');
+      return;
+    }
 
     setAvatarUploading(true);
     setMessage('');
@@ -145,6 +155,56 @@ export function ProfilePage() {
     } finally {
       setAvatarUploading(false);
     }
+  }
+
+  function handleCommentFilterSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextKeyword = commentKeywordInput.trim();
+    if (commentPage !== 1) {
+      setCommentPage(1);
+    }
+    if (nextKeyword !== commentKeyword) {
+      setCommentKeyword(nextKeyword);
+      return;
+    }
+    void loadCommentsPage(1, nextKeyword);
+  }
+
+  function handleCommentFilterReset() {
+    setCommentKeywordInput('');
+    if (commentPage !== 1) {
+      setCommentPage(1);
+    }
+    if (commentKeyword !== '') {
+      setCommentKeyword('');
+      return;
+    }
+    void loadCommentsPage(1, '');
+  }
+
+  function handleLikeFilterSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextKeyword = likeKeywordInput.trim();
+    if (likePage !== 1) {
+      setLikePage(1);
+    }
+    if (nextKeyword !== likeKeyword) {
+      setLikeKeyword(nextKeyword);
+      return;
+    }
+    void loadLikesPage(1, nextKeyword);
+  }
+
+  function handleLikeFilterReset() {
+    setLikeKeywordInput('');
+    if (likePage !== 1) {
+      setLikePage(1);
+    }
+    if (likeKeyword !== '') {
+      setLikeKeyword('');
+      return;
+    }
+    void loadLikesPage(1, '');
   }
 
   const totalCommentPages = Math.max(1, Math.ceil(comments.total / Math.max(1, comments.page_size)));
@@ -268,7 +328,19 @@ export function ProfilePage() {
                   <h3>我的评论</h3>
                 </div>
                 <div className="legacy-card-list">
-                  {comments.records.length === 0 ? <div className="legacy-empty-inline">你还没有发表过评论。</div> : null}
+                  <form className="legacy-home-filter-row legacy-publish-filter-row" onSubmit={handleCommentFilterSubmit}>
+                    <input onChange={(event) => setCommentKeywordInput(event.target.value)} placeholder="按评论内容关键字筛选" value={commentKeywordInput} />
+                    <div className="legacy-home-filter-actions">
+                      <button className="legacy-action-button small" type="submit">
+                        搜索评论
+                      </button>
+                      <button className="legacy-action-button secondary small" onClick={handleCommentFilterReset} type="button">
+                        重置
+                      </button>
+                    </div>
+                  </form>
+
+                  {comments.records.length === 0 ? <div className="legacy-empty-inline">{commentKeyword ? '没有匹配的评论。' : '你还没有发表过评论。'}</div> : null}
                   {comments.records.map((item) => (
                     <div className="legacy-mini-card" key={item.id}>
                       <strong>QID {item.qid}</strong>
@@ -300,7 +372,19 @@ export function ProfilePage() {
                   <h3>我的点赞</h3>
                 </div>
                 <div className="legacy-card-list">
-                  {likes.records.length === 0 ? <div className="legacy-empty-inline">你还没有点赞过任何帖子。</div> : null}
+                  <form className="legacy-home-filter-row legacy-publish-filter-row" onSubmit={handleLikeFilterSubmit}>
+                    <input onChange={(event) => setLikeKeywordInput(event.target.value)} placeholder="按帖子内容关键字筛选" value={likeKeywordInput} />
+                    <div className="legacy-home-filter-actions">
+                      <button className="legacy-action-button small" type="submit">
+                        搜索点赞
+                      </button>
+                      <button className="legacy-action-button secondary small" onClick={handleLikeFilterReset} type="button">
+                        重置
+                      </button>
+                    </div>
+                  </form>
+
+                  {likes.records.length === 0 ? <div className="legacy-empty-inline">{likeKeyword ? '没有匹配的点赞记录。' : '你还没有点赞过任何帖子。'}</div> : null}
                   {likes.records.map((item) => (
                     <div className="legacy-mini-card" key={item.id}>
                       <strong>{item.questionNickName || item.questionUser}</strong>
