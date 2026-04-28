@@ -119,11 +119,17 @@ video {
 
 .legacy-action-button,
 .auth-secondary-button {
-  border: 0;
-  border-radius: 999px;
-  background: #ff7f21;
+  background-color: #1795bb;
+  border-radius: 12px;
+  border: none;
   color: #fff;
-  padding: 10px 18px;
+  padding: 8px 16px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 12px;
+  margin: 4px 2px;
+  transition-duration: 0.4s;
   cursor: pointer;
 }
 
@@ -135,8 +141,8 @@ video {
 
 .legacy-action-button.secondary {
   background: #fff;
-  color: #6b547c;
-  border: 1px solid #d8cde7;
+  color: #1795bb;
+  border: 1px solid #ccc;
 }
 
 .legacy-action-button.danger {
@@ -144,8 +150,21 @@ video {
 }
 
 .legacy-action-button.small {
-  padding: 7px 12px;
-  font-size: 14px;
+  padding: 8px 14px;
+  font-size: 12px;
+}
+
+.legacy-action-button:hover,
+.auth-secondary-button:hover {
+  background-color: #fff;
+  color: #1795bb;
+  border: 1px solid #ccc;
+}
+
+.legacy-action-button.danger:hover {
+  background-color: #fff;
+  color: #d94b57;
+  border: 1px solid #d94b57;
 }
 
 .legacy-feedback {
@@ -187,6 +206,58 @@ video {
 
 .legacy-publish-filter-row {
   margin-bottom: 18px;
+}
+
+.file-upload {
+  position: relative;
+  display: inline-block;
+  background: #d0eeff;
+  border: 1px solid #99d3f5;
+  border-radius: 4px;
+  padding: 4px 12px;
+  overflow: hidden;
+  color: #1e88c7;
+  text-decoration: none;
+  text-indent: 0;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.file-upload input {
+  position: absolute;
+  font-size: 100px;
+  right: 0;
+  top: 0;
+  opacity: 0;
+}
+
+.file-upload:hover {
+  background: #aadffd;
+  border-color: #78c3f3;
+  color: #004974;
+}
+
+.img-upload-btn,
+.comment-upload-btn {
+  background-color: #f2c064;
+  border-radius: 6px;
+  border: none;
+  color: rgb(249, 128, 14);
+  padding: 16px 32px;
+  text-align: center;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  transition-duration: 0.4s;
+  cursor: pointer;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.img-upload-btn:hover,
+.comment-upload-btn:hover {
+  background-color: #f77d0a;
+  color: rgb(243, 98, 15);
 }
 
 .forum-question-card {
@@ -613,6 +684,10 @@ video {
   align-items: center;
 }
 
+.legacy-manage-actions .legacy-action-button {
+  margin: 0;
+}
+
 .legacy-manage-actions input[type='file'] {
   max-width: 100%;
 }
@@ -956,7 +1031,6 @@ video {
 
   .legacy-action-button,
   .auth-secondary-button {
-    width: 100%;
     text-align: center;
   }
 

@@ -320,7 +320,10 @@ export function PublishPage() {
                 </div>
               </div>
               <div className="legacy-upload-row">
-                <input accept=".png,.jpg,.jpeg,.gif,.mp4" multiple onChange={handleCreateFilesChange} type="file" />
+                <label className="file-upload">
+                  选择文件
+                  <input accept=".png,.jpg,.jpeg,.gif,.mp4" multiple onChange={handleCreateFilesChange} type="file" />
+                </label>
                 <span className="legacy-upload-hint">仅支持 png/jpg/jpeg/gif/mp4，单文件最大 20MB</span>
               </div>
               {createFiles.length > 0 ? (
@@ -345,7 +348,7 @@ export function PublishPage() {
               ) : null}
               <div className="layui-form-item">
                 <div className="layui-input-block" style={{ textAlign: 'right' }}>
-                  <button className="legacy-action-button" disabled={composerBusy} type="submit">
+                  <button className="img-upload-btn" disabled={composerBusy} type="submit">
                     {composerBusy ? '发布中...' : '发布帖子'}
                   </button>
                 </div>
@@ -379,13 +382,13 @@ export function PublishPage() {
 
                 <div className="legacy-manage-panel">
                   <div className="legacy-manage-actions">
-                    <button className="legacy-action-button" onClick={() => void handleToggleUpload(question.qid)} type="button">
+                    <button className="legacy-action-button niceButton" onClick={() => void handleToggleUpload(question.qid)} type="button">
                       {isBusy ? '处理中...' : question.isUpload ? '撤销发布' : '重新发布'}
                     </button>
-                    <button className="legacy-action-button secondary" onClick={() => startEditing(question)} type="button">
+                    <button className="legacy-action-button niceButton secondary" onClick={() => startEditing(question)} type="button">
                       编辑正文
                     </button>
-                    <button className="legacy-action-button danger" onClick={() => void handleDeleteQuestion(question.qid)} type="button">
+                    <button className="legacy-action-button niceButton danger" onClick={() => void handleDeleteQuestion(question.qid)} type="button">
                       删除帖子
                     </button>
                   </div>
@@ -394,10 +397,10 @@ export function PublishPage() {
                     <div className="legacy-edit-box">
                       <textarea onChange={(event) => setEditText(event.target.value)} rows={4} value={editText}></textarea>
                       <div className="legacy-manage-actions">
-                        <button className="legacy-action-button" onClick={() => void handleUpdateQuestion(question.qid)} type="button">
+                        <button className="legacy-action-button niceButton" onClick={() => void handleUpdateQuestion(question.qid)} type="button">
                           {isBusy ? '保存中...' : '保存修改'}
                         </button>
-                        <button className="legacy-action-button secondary" onClick={cancelEditing} type="button">
+                        <button className="legacy-action-button niceButton secondary" onClick={cancelEditing} type="button">
                           取消
                         </button>
                       </div>
@@ -407,8 +410,11 @@ export function PublishPage() {
                   <div className="legacy-attachment-box">
                     <div className="legacy-section-title">附件管理</div>
                     <div className="legacy-manage-actions">
-                      <input accept=".png,.jpg,.jpeg,.gif,.mp4" multiple onChange={(event) => handleFileSelection(question.qid, event)} type="file" />
-                      <button className="legacy-action-button" onClick={() => void handleUploadExtraFiles(question.qid)} type="button">
+                      <label className="file-upload">
+                        选择文件
+                        <input accept=".png,.jpg,.jpeg,.gif,.mp4" multiple onChange={(event) => handleFileSelection(question.qid, event)} type="file" />
+                      </label>
+                      <button className="legacy-action-button niceButton" onClick={() => void handleUploadExtraFiles(question.qid)} type="button">
                         {isBusy ? '上传中...' : '上传附件'}
                       </button>
                     </div>
@@ -448,7 +454,7 @@ export function PublishPage() {
                               <strong>{question.imgName[index] || fileName}</strong>
                               <span>{fileName}</span>
                             </div>
-                            <button className="legacy-action-button danger small" onClick={() => void handleDeleteFile(question.qid, fileName)} type="button">
+                            <button className="legacy-action-button niceButton danger small" onClick={() => void handleDeleteFile(question.qid, fileName)} type="button">
                               删除附件
                             </button>
                           </div>
