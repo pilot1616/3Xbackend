@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import type { AuthResult, SessionData } from '../types/api';
+import type { AuthResult, SessionData, User } from '../types/api';
 
 const SESSION_KEY = 'front_session';
 const SESSION_EVENT = 'front-session-change';
@@ -31,6 +31,20 @@ export function saveSession(result: AuthResult): void {
 
 export function clearSession(): void {
   window.localStorage.removeItem(SESSION_KEY);
+  window.dispatchEvent(new Event(SESSION_EVENT));
+}
+
+export function updateSessionUser(user: User): void {
+  const session = getSession();
+  if (!session) {
+    return;
+  }
+
+  const nextSession: SessionData = {
+    ...session,
+    user,
+  };
+  window.localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
   window.dispatchEvent(new Event(SESSION_EVENT));
 }
 

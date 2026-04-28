@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { buildAssetUrl } from '../api/client';
 import { getMe, updateMe, uploadAvatar } from '../api/auth';
 import { getMySummary, listMyComments, listMyLikes } from '../api/forum';
-import { useSession } from '../lib/session';
+import { updateSessionUser, useSession } from '../lib/session';
 import type { MyCommentListPage, MyLikeListPage, MySummaryResult, User } from '../types/api';
 
 const maxAvatarSize = 5 * 1024 * 1024;
@@ -119,6 +119,7 @@ export function ProfilePage() {
         sign: user.sign.trim(),
       });
       setUser(result.user);
+      updateSessionUser(result.user);
       setMessage(result.message);
       setViewMode('show');
     } catch (err) {
@@ -148,7 +149,9 @@ export function ProfilePage() {
     setMessage('');
     try {
       await uploadAvatar(file);
-      await loadBaseProfile();
+      const me = await getMe();
+      setUser(me);
+      updateSessionUser(me);
       setMessage('头像上传成功');
     } catch (err) {
       setMessage(err instanceof Error ? err.message : '头像上传失败');

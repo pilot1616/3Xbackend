@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
 
+import { buildAssetUrl } from '../api/client';
 import { LegacyIcon } from './LegacyIcon';
 import { clearSession, useSession } from '../lib/session';
 
@@ -35,9 +36,18 @@ export function AppShell() {
         </div>
         <div className="login-text">
           {session ? (
-            <button className="layui-btn layui-btn-danger layui-btn-radius" onClick={() => clearSession()} type="button">
-              退出登录
-            </button>
+            <div className="legacy-session-bar">
+              <Link className="legacy-session-link" to="/profile">
+                <img alt={session.user.nickname || session.user.username} className="legacy-session-avatar" src={buildAssetUrl(session.user.avatar_path)} />
+                <div className="legacy-session-copy">
+                  <span className="legacy-session-user">{session.user.nickname || session.user.username}</span>
+                  <span className="legacy-login-name">{session.user.username}</span>
+                </div>
+              </Link>
+              <button className="layui-btn layui-btn-danger layui-btn-radius" onClick={() => clearSession()} type="button">
+                退出登录
+              </button>
+            </div>
           ) : (
             <Link className="layui-btn layui-btn-radius" to="/auth">
               登录/注册

@@ -92,16 +92,43 @@ video {
   align-items: center;
 }
 
+.legacy-session-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: inherit;
+}
+
+.legacy-session-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #efe3d4;
+  background: #fff7ef;
+  flex: 0 0 40px;
+}
+
+.legacy-session-copy {
+  display: grid;
+  min-width: 0;
+}
+
 .legacy-session-user {
   color: #3f2863;
   font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .legacy-login-name {
-  margin-top: 8px;
+  margin-top: 2px;
   color: #8d8d8d;
   font-size: 12px;
-  text-align: right;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .legacy-home-banner {
