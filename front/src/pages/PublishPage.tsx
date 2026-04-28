@@ -234,16 +234,6 @@ export function PublishPage() {
 
               return (
                 <article className="legacy-my-question-card" key={question.qid}>
-                  {previewFile ? (
-                    <div className="legacy-my-question-media">
-                      {isImage(previewFile) ? (
-                        <img alt={previewName} src={buildUploadAssetUrl(previewFile)} />
-                      ) : (
-                        <video controls src={buildUploadAssetUrl(previewFile)} />
-                      )}
-                    </div>
-                  ) : null}
-
                   <div className="legacy-my-question-body">
                     <div className="legacy-my-question-topline">
                       <strong>{question.nickName}</strong>
@@ -262,6 +252,16 @@ export function PublishPage() {
                       </Link>
                     </div>
                   </div>
+
+                  {previewFile ? (
+                    <div className="legacy-my-question-media">
+                      {isImage(previewFile) ? (
+                        <img alt={previewName} src={buildUploadAssetUrl(previewFile)} />
+                      ) : (
+                        <video controls src={buildUploadAssetUrl(previewFile)} />
+                      )}
+                    </div>
+                  ) : null}
                 </article>
               );
             })}
