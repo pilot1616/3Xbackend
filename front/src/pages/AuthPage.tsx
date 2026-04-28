@@ -147,90 +147,94 @@ export function AuthPage() {
     }
   }
 
-  const title = mode === 'login' ? 'Login' : mode === 'register' ? 'Register' : 'Change';
+  const title = mode === 'login' ? '登录' : mode === 'register' ? '注册' : '找回密码';
   const submitLabel = loading ? '处理中...' : mode === 'login' ? '登录' : mode === 'register' ? '注册' : '修改密码';
 
   return (
     <div className="auth-legacy-page">
-      <div className="shell auth-shell-legacy">
-        <h2 className="title auth-title-legacy">{title}</h2>
+      <div className="auth-page-overlay"></div>
+      <div className="auth-page-center">
+        <div className="auth-card-glass">
+          <h2 className="auth-title-legacy">{title}</h2>
 
-        <form className="auth-form-legacy" onSubmit={handleSubmit}>
-          <input className="username" onChange={(event) => setUsername(event.target.value)} placeholder={mode === 'login' ? 'Username' : 'Phone Number'} type="text" value={username} />
+          <form className="auth-form-legacy" onSubmit={handleSubmit}>
+            <input className="username" onChange={(event) => setUsername(event.target.value)} placeholder={mode === 'login' ? '请输入手机号' : '请输入注册手机号'} type="text" value={username} />
 
-          <div className="auth-input-row">
-            <input
-              className="password"
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Password"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-            />
-            <i className={`layui-icon ${showPassword ? 'layui-icon-eye-invisible' : 'layui-icon-eye'}`} onClick={() => setShowPassword((current) => !current)}></i>
-          </div>
-
-          {mode !== 'login' ? (
-            <div className="auth-input-row confirm-password">
+            <div className="auth-input-row">
               <input
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                placeholder="Confirm Password"
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={confirmPassword}
+                className="password"
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="请输入密码"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
               />
-              <i
-                className={`layui-icon ${showConfirmPassword ? 'layui-icon-eye-invisible' : 'layui-icon-eye'}`}
-                onClick={() => setShowConfirmPassword((current) => !current)}
-              ></i>
+              <i className={`layui-icon ${showPassword ? 'layui-icon-eye-invisible' : 'layui-icon-eye'}`} onClick={() => setShowPassword((current) => !current)}></i>
             </div>
-          ) : null}
-          {mode === 'register' ? (
-            <div className="layui-form layui-row layui-col-space16 auth-security-box">
-              <div className="layui-col-md12">
-                <select id="securityQuestion" onChange={(event) => setSecurityQuestion(event.target.value)} value={securityQuestion}>
-                  <option value="">请选择密保问题：</option>
-                  {securityQuestionOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+
+            {mode !== 'login' ? (
+              <div className="auth-input-row confirm-password">
+                <input
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  placeholder="请再次输入密码"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                />
+                <i
+                  className={`layui-icon ${showConfirmPassword ? 'layui-icon-eye-invisible' : 'layui-icon-eye'}`}
+                  onClick={() => setShowConfirmPassword((current) => !current)}
+                ></i>
               </div>
-            </div>
-          ) : null}
+            ) : null}
 
-          {mode === 'reset' ? (
-            <button className="changeBtn auth-fetch-button" disabled={loading} onClick={handleFetchQuestion} type="button">
-              查询密保问题
+            {mode === 'register' ? (
+              <div className="layui-form layui-row layui-col-space16 auth-security-box">
+                <div className="layui-col-md12">
+                  <select id="securityQuestion" onChange={(event) => setSecurityQuestion(event.target.value)} value={securityQuestion}>
+                    <option value="">请选择密保问题</option>
+                    {securityQuestionOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            ) : null}
+
+            {mode === 'reset' ? (
+              <button className="changeBtn auth-fetch-button" disabled={loading} onClick={handleFetchQuestion} type="button">
+                查询密保问题
+              </button>
+            ) : null}
+
+            {mode === 'reset' && securityQuestionLabel ? <div className="auth-question-box">{securityQuestionLabel}</div> : null}
+
+            {mode !== 'login' ? <input className="security" onChange={(event) => setSecurityAnswer(event.target.value)} placeholder="请输入密保答案" type="text" value={securityAnswer} /> : null}
+
+            {message ? <div className="error-message auth-error-legacy">{message}</div> : null}
+
+            <button className="auth-submit-btn" disabled={loading} type="submit">
+              {submitLabel}
             </button>
-          ) : null}
 
-          {mode === 'reset' && securityQuestionLabel ? <div className="auth-question-box">你的密保问题是：{securityQuestionLabel}</div> : null}
-
-          {mode !== 'login' ? <input className="security" onChange={(event) => setSecurityAnswer(event.target.value)} placeholder="输入密保" type="text" value={securityAnswer} /> : null}
-
-          {message ? <div className="error-message auth-error-legacy">{message}</div> : null}
-
-          <input className="loginBtn" disabled={loading} type="submit" value={submitLabel} />
-
-          <div className="footer auth-footer-legacy">
-            {mode === 'login' ? (
+            <div className="footer auth-footer-legacy">
               <div className="Remember">
                 <input checked={rememberMe} id="rememberMe" onChange={(event) => setRememberMe(event.target.checked)} type="checkbox" />
                 <label htmlFor="rememberMe">记住我</label>
               </div>
-            ) : null}
 
-            <button id="Password" onClick={() => resetFields(mode === 'register' ? 'login' : 'register')} type="button">
-              {mode === 'register' ? '去登录' : '去注册'}
-            </button>
-            <button id="forget" onClick={() => resetFields('reset')} type="button">
-              忘记密码
-            </button>
-            <button className="gotoIndex" onClick={() => navigate('/')} type="button">
-              返回首页
-            </button>
-          </div>
-        </form>
+              <button id="forget" onClick={() => resetFields('reset')} type="button">
+                忘记密码
+              </button>
+              <button id="Password" onClick={() => resetFields(mode === 'register' ? 'login' : 'register')} type="button">
+                {mode === 'register' ? '去登录' : '去注册'}
+              </button>
+              <button className="gotoIndex" onClick={() => navigate('/')} type="button">
+                返回首页
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
