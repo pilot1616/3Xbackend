@@ -213,6 +213,39 @@ task compose:up
 - 前端页面会由后端直接托管，不需要再额外启动 Vite
 - 当前后端已支持通过环境变量覆盖 `config/config.yaml` 中的主要配置
 
+## 假数据注入
+
+项目现在提供了独立的种子脚本入口：
+
+- [cmd/seed/main.go](/Users/zhangxinghui/Desktop/web/3Xbackend/cmd/seed/main.go)
+- [SEED.md](/Users/zhangxinghui/Desktop/web/3Xbackend/SEED.md)
+
+它会自动完成以下内容：
+
+- 创建一批演示账号
+- 注入大量帖子、评论、点赞数据
+- 把一批演示图片复制到 `public/images` 和 `public/uploads`
+
+默认会注入千级规模数据。直接执行：
+
+```bash
+task seed
+```
+
+如果你本地 MySQL 依赖 Docker：
+
+```bash
+task seed:docker
+```
+
+种子账号默认密码：
+
+- `Forum123`
+
+种子账号默认密保答案：
+
+- `1999`
+
 ### 3. 可覆盖的常用环境变量
 
 - `SERVER_PORT`

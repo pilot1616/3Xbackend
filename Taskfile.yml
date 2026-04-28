@@ -101,3 +101,23 @@ tasks:
     cmds:
       - go build ./...
       - cd front && npm run build
+
+  seed:
+    desc: 注入一批论坛假数据和演示图片
+    deps: [init]
+    cmds:
+      - |
+        SERVER_PORT="${SERVER_PORT:-3000}" \
+        DATABASE_MYSQL_USER="${DATABASE_MYSQL_USER:-root}" \
+        DATABASE_MYSQL_PASSWORD="${DATABASE_MYSQL_PASSWORD:-root}" \
+        DATABASE_MYSQL_ADDRESS="${DATABASE_MYSQL_ADDRESS:-127.0.0.1}" \
+        DATABASE_MYSQL_PORT="${DATABASE_MYSQL_PORT:-3306}" \
+        DATABASE_MYSQL_SCHEMA="${DATABASE_MYSQL_SCHEMA:-3X}" \
+        AUTH_SECRET="${AUTH_SECRET:-3Xbackend-dev-secret}" \
+        go run ./cmd/seed
+
+  seed:docker:
+    desc: 启动 Docker MySQL 后注入假数据
+    deps: [init, db:up, db:wait]
+    cmds:
+      - task seed
