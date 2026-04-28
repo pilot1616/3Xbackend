@@ -160,12 +160,20 @@ export function QuestionCard({
     <div className="item-box forum-question-card">
       <div className="item">
         <div className="whisper-title">
-          <i className="layui-icon layui-icon-friends" style={{ color: 'gray' }}></i>
-          <span className="nickname">{question.nickName}</span>
-          <br />
-          <i className="layui-icon layui-icon-date"></i>
-          <span className="hour">{question.time.split(' ')[1]?.slice(0, 5) ?? question.time}</span>
-          <span className="date">{question.time.split(' ')[0] ?? ''}</span>
+          <div className="forum-title-bar">
+            <img alt={question.nickName} className="forum-title-avatar" src={avatarSrc(question.avatarPath)} />
+            <div className="forum-title-meta">
+              <div className="forum-title-name-row">
+                <i className="layui-icon layui-icon-friends" style={{ color: 'gray' }}></i>
+                <span className="nickname">{question.nickName}</span>
+              </div>
+              <div className="forum-title-time-row">
+                <i className="layui-icon layui-icon-date"></i>
+                <span className="hour">{question.time.split(' ')[1]?.slice(0, 5) ?? question.time}</span>
+                <span className="date">{question.time.split(' ')[0] ?? ''}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <p className="text-cont">{question.text}</p>

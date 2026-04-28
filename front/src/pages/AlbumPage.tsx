@@ -64,36 +64,30 @@ export function AlbumPage() {
           {message ? <div className="legacy-feedback legacy-home-feedback">{message}</div> : null}
 
           <div className="img-list">
-            <div className="layui-fluid" style={{ padding: 0 }}>
-              <div className="layui-row layui-col-space30 space">
-                {items.length === 0 && !message ? (
-                  <div className="layui-col-xs12">
-                    <div className="legacy-feedback">你还没有上传过附件，先去发布一条带图片或视频的帖子。</div>
-                  </div>
-                ) : null}
+            {items.length === 0 && !message ? <div className="legacy-feedback">你还没有上传过附件，先去发布一条带图片或视频的帖子。</div> : null}
 
+            {items.length > 0 ? (
+              <div className="legacy-album-grid">
                 {items.map((item) => (
-                  <div className="layui-col-xs12 layui-col-sm4 layui-col-md4" key={`${item.qid}-${item.fileName}`}>
-                    <div className="item">
-                      <div className="imgBox legacy-album-media-box" style={{ height: 195, overflow: 'hidden' }}>
-                        {isImage(item.fileName) ? (
-                          <img alt={item.fileName} className="single-img" src={buildUploadAssetUrl(item.fileName)} />
-                        ) : (
-                          <video className="single-img" controls src={buildUploadAssetUrl(item.fileName)} />
-                        )}
-                      </div>
-                      <div className="cont-text">
-                        <div className="data">{item.time.split(' ')[0] ?? item.time}</div>
-                        <p className="briefly">{item.text.length > 17 ? `${item.text.slice(0, 17)}...` : item.text}</p>
-                        <Link className="legacy-inline-link" to={`/questions/${item.qid}`}>
-                          查看原帖
-                        </Link>
-                      </div>
+                  <article className="legacy-album-item" key={`${item.qid}-${item.fileName}`}>
+                    <div className="imgBox legacy-album-media-box">
+                      {isImage(item.fileName) ? (
+                        <img alt={item.fileName} className="single-img" src={buildUploadAssetUrl(item.fileName)} />
+                      ) : (
+                        <video className="single-img" controls src={buildUploadAssetUrl(item.fileName)} />
+                      )}
                     </div>
-                  </div>
+                    <div className="cont-text legacy-album-copy">
+                      <div className="data">{item.time.split(' ')[0] ?? item.time}</div>
+                      <p className="briefly">{item.text.length > 34 ? `${item.text.slice(0, 34)}...` : item.text}</p>
+                      <Link className="legacy-inline-link" to={`/questions/${item.qid}`}>
+                        查看原帖
+                      </Link>
+                    </div>
+                  </article>
                 ))}
               </div>
-            </div>
+            ) : null}
           </div>
         </div>
       ) : null}
