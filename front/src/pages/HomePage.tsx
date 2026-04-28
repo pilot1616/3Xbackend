@@ -5,6 +5,12 @@ import { QuestionCard } from '../components/QuestionCard';
 import { useSession } from '../lib/session';
 import type { QuestionListPage, QuestionRecord } from '../types/api';
 
+type HomeFilters = {
+  keyword: string;
+  author: string;
+  sort: string;
+};
+
 const emptyPage: QuestionListPage = {
   page: 1,
   page_size: 30,
@@ -13,6 +19,11 @@ const emptyPage: QuestionListPage = {
 };
 
 const homePageSize = 30;
+const defaultFilters: HomeFilters = {
+  keyword: '',
+  author: '',
+  sort: 'latest',
+};
 
 export function HomePage() {
   const session = useSession();
@@ -20,16 +31,17 @@ export function HomePage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [message, setMessage] = useState('');
-  const [keyword, setKeyword] = useState('');
-  const [author, setAuthor] = useState('');
-  const [sort, setSort] = useState('latest');
+  const [filters, setFilters] = useState<HomeFilters>(defaultFilters);
+  const [keywordInput, setKeywordInput] = useState(defaultFilters.keyword);
+  const [authorInput, setAuthorInput] = useState(defaultFilters.author);
+  const [sortInput, setSortInput] = useState(defaultFilters.sort);
   const [submittingQid, setSubmittingQid] = useState<number | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
     void loadData(1, true);
-  }, [sort, session?.token]);
+  }, [filters, session?.token]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -52,7 +64,7 @@ export function HomePage() {
 
     observer.observe(target);
     return () => observer.disconnect();
-  }, [loading, loadingMore, hasMore, page.page, page.total, author, keyword, sort]);
+  }, [loading, loadingMore, hasMore, page.page, page.total, filters]);
 
   async function loadData(targetPage = 1, reset = false) {
     if (reset) {
@@ -65,9 +77,9 @@ export function HomePage() {
       const result = await listQuestions({
         page: targetPage,
         pageSize: homePageSize,
-        keyword,
-        author,
-        sort,
+        keyword: filters.keyword,
+        author: filters.author,
+        sort: filters.sort,
         isUpload: 'true',
       });
 
@@ -118,9 +130,9 @@ export function HomePage() {
           listQuestions({
             page: index + 1,
             pageSize: homePageSize,
-            keyword,
-            author,
-            sort,
+            keyword: filters.keyword,
+            author: filters.author,
+            sort: filters.sort,
             isUpload: 'true',
           }),
         ),
@@ -238,7 +250,18 @@ export function HomePage() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void loadData(1, true);
+    setFilters({
+      keyword: keywordInput.trim(),
+      author: authorInput.trim(),
+      sort: sortInput,
+    });
+  }
+
+  function handleReset() {
+    setKeywordInput(defaultFilters.keyword);
+    setAuthorInput(defaultFilters.author);
+    setSortInput(defaultFilters.sort);
+    setFilters(defaultFilters);
   }
 
   return (
@@ -247,9 +270,9 @@ export function HomePage() {
         <form className="search-bar legacy-search-form" onSubmit={handleSubmit}>
           <input
             className="search-txt"
-            onChange={(event) => setAuthor(event.target.value)}
+            onChange={(event) => setAuthorInput(event.target.value)}
             placeholder="输入你想查看的用户昵称或手机号..."
-            value={author}
+            value={authorInput}
           />
           <button className="search-btn legacy-search-button" type="submit">
             <LegacyIcon name="search" size={30} style={{ color: '#fff' }} />
@@ -259,6 +282,29 @@ export function HomePage() {
 
       <section className="content whisper-content">
         <div className="cont">
+          <form className="legacy-home-filter-row" onSubmit={handleSubmit}>
+            <input
+              onChange={(event) => setAuthorInput(event.target.value)}
+              placeholder="按作者昵称或手机号筛选"
+              value={authorInput}
+            />
+            <input onChange={(event) => setKeywordInput(event.target.value)} placeholder="按帖子内容关键字筛选" value={keywordInput} />
+            <select onChange={(event) => setSortInput(event.target.value)} value={sortInput}>
+              <option value="latest">最新发布</option>
+              <option value="oldest">最早发布</option>
+              <option value="most_liked">点赞最多</option>
+              <option value="most_commented">评论最多</option>
+            </select>
+            <div className="legacy-home-filter-actions">
+              <button className="legacy-action-button small" type="submit">
+                应用筛选
+              </button>
+              <button className="legacy-action-button secondary small" onClick={handleReset} type="button">
+                重置
+              </button>
+            </div>
+          </form>
+
           {message ? <div className="legacy-feedback legacy-home-feedback">{message}</div> : null}
           {loading ? <div className="legacy-feedback">正在加载帖子...</div> : null}
 

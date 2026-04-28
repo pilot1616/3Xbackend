@@ -252,6 +252,25 @@ video {
   background: #f8f8f8;
 }
 
+.legacy-home-filter-row input {
+  flex: 1 1 220px;
+}
+
+.legacy-home-filter-row select {
+  flex: 0 0 180px;
+}
+
+.legacy-home-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.legacy-home-filter-actions .legacy-action-button {
+  margin: 0;
+}
+
 .legacy-home-feedback {
   margin-bottom: 20px;
 }
