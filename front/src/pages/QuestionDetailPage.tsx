@@ -464,7 +464,7 @@ export function QuestionDetailPage() {
             />
           </div>
 
-          <aside className="legacy-card-list">
+          <aside className="legacy-card-list question-detail-sidebar">
             <section className="legacy-panel">
               <h2>作者更多帖子</h2>
               {relatedLoading ? <div className="legacy-empty-inline">正在加载更多内容...</div> : null}

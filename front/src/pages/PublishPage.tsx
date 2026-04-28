@@ -231,19 +231,38 @@ export function PublishPage() {
             {page.records.map((question) => {
               const previewFile = question.files[0];
               const previewName = question.imgName[0] || previewFile;
+              const [datePart, timePart = ''] = question.time.split(' ');
 
               return (
-                <article className="legacy-my-question-card" key={question.qid}>
-                  <div className="legacy-my-question-body">
-                    <div className="legacy-my-question-topline">
-                      <strong>{question.nickName}</strong>
-                      <span>{question.isUpload ? '已发布' : '未发布'}</span>
+                <article className="item-box legacy-my-question-card" key={question.qid}>
+                  <div className="item legacy-my-question-item">
+                    <div className="whisper-title legacy-my-question-title">
+                      <div className="legacy-my-question-title-main">
+                        <i className="layui-icon layui-icon-friends" style={{ color: 'gray' }}></i>
+                        <span className="nickname">{question.nickName}</span>
+                        <span className={`legacy-my-question-status${question.isUpload ? ' is-published' : ''}`}>
+                          {question.isUpload ? '已发布' : '未发布'}
+                        </span>
+                      </div>
+                      <div className="legacy-my-question-title-time">
+                        <i className="layui-icon layui-icon-date"></i>
+                        <span className="hour">{timePart.slice(0, 5)}</span>
+                        <span className="date">{datePart}</span>
+                      </div>
                     </div>
-                    <p>{question.text.length > 88 ? `${question.text.slice(0, 88)}...` : question.text}</p>
-                    <div className="legacy-my-question-meta">
-                      <span>{question.time}</span>
-                      <span>{question.files.length} 个附件</span>
-                    </div>
+
+                    <p className="text-cont legacy-my-question-text">{question.text.length > 88 ? `${question.text.slice(0, 88)}...` : question.text}</p>
+
+                    {previewFile ? (
+                      <div className="img-box legacy-my-question-media">
+                        {isImage(previewFile) ? (
+                          <img alt={previewName} src={buildUploadAssetUrl(previewFile)} />
+                        ) : (
+                          <video controls src={buildUploadAssetUrl(previewFile)} />
+                        )}
+                      </div>
+                    ) : null}
+
                     <div className="op-list legacy-my-question-op-list">
                       <p className="like">
                         <i className="layui-icon layui-icon-praise"></i>
@@ -253,23 +272,14 @@ export function PublishPage() {
                         <i className="layui-icon layui-icon-reply-fill"></i>
                         <span>{question.commentsNum}</span>
                       </p>
-                    </div>
-                    <div className="legacy-my-question-actions">
-                      <Link className="legacy-action-button secondary small" to={`/questions/${question.qid}`}>
-                        进入详情页操作
-                      </Link>
+                      <p className="off">
+                        <Link className="legacy-my-question-detail-link" to={`/questions/${question.qid}`}>
+                          <span>进入详情</span>
+                          <i className="layui-icon layui-icon-right"></i>
+                        </Link>
+                      </p>
                     </div>
                   </div>
-
-                  {previewFile ? (
-                    <div className="legacy-my-question-media">
-                      {isImage(previewFile) ? (
-                        <img alt={previewName} src={buildUploadAssetUrl(previewFile)} />
-                      ) : (
-                        <video controls src={buildUploadAssetUrl(previewFile)} />
-                      )}
-                    </div>
-                  ) : null}
                 </article>
               );
             })}
