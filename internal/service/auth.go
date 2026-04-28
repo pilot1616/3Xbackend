@@ -28,7 +28,8 @@ var (
 	ErrInvalidAge           = errors.New("age must be between 0 and 120")
 )
 
-var passwordPattern = regexp.MustCompile(`^(?=.*[A-Za-z])(?=.*\d).{6,}$`)
+var passwordLetterPattern = regexp.MustCompile(`[A-Za-z]`)
+var passwordDigitPattern = regexp.MustCompile(`[0-9]`)
 var phonePattern = regexp.MustCompile(`^\d{11}$`)
 
 type AuthService struct {
@@ -366,7 +367,7 @@ func validateUsername(username string) error {
 }
 
 func validatePassword(password string) error {
-	if !passwordPattern.MatchString(password) {
+	if len(password) < 6 || !passwordLetterPattern.MatchString(password) || !passwordDigitPattern.MatchString(password) {
 		return ErrInvalidPassword
 	}
 	return nil
