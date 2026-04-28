@@ -818,7 +818,7 @@ video {
 }
 
 .legacy-grid.two-column {
-  grid-template-columns: minmax(320px, 420px) 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
 }
 
 .question-detail-layout {
@@ -1162,6 +1162,16 @@ video {
   gap: 12px;
   color: #8d8d8d;
   font-size: 13px;
+}
+
+.legacy-my-question-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legacy-my-question-stat i {
+  color: #d77817;
 }
 
 .legacy-my-question-actions {
