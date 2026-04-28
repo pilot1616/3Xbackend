@@ -12,9 +12,6 @@ export function AppShell() {
   return (
     <div className="legacy-app-shell">
       <div className="header w1000">
-        <div className="menu-btn">
-          <div className="menu"></div>
-        </div>
         <h1 className="logo">
           <Link to="/">
             <span>MYBLOG</span>

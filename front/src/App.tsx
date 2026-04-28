@@ -12,9 +12,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route element={<AuthPage />} path="/auth" />
         <Route element={<AppShell />} path="/">
           <Route element={<HomePage />} index />
-          <Route element={<AuthPage />} path="auth" />
           <Route element={<PublishPage />} path="publish" />
           <Route element={<AlbumPage />} path="album" />
           <Route element={<ProfilePage />} path="profile" />
