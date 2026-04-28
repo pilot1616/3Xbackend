@@ -1,13 +1,77 @@
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { ChangeEvent, useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
-import { createComment, deleteComment, getQuestion, likeQuestion, listQuestions, unlikeQuestion, updateComment } from '../api/forum';
+import { buildUploadAssetUrl } from '../api/client';
+import {
+  createComment,
+  deleteComment,
+  deleteQuestion,
+  deleteQuestionFile,
+  getQuestion,
+  likeQuestion,
+  listQuestions,
+  toggleQuestionUpload,
+  unlikeQuestion,
+  updateComment,
+  updateQuestion,
+  uploadQuestionFiles,
+} from '../api/forum';
 import { QuestionCard } from '../components/QuestionCard';
 import { useSession } from '../lib/session';
 import type { QuestionRecord } from '../types/api';
 
+const maxUploadSize = 20 * 1024 * 1024;
+const allowedVideoPattern = /\.mp4$/i;
+
+function isImage(fileName: string) {
+  return /\.(png|jpg|jpeg|gif)$/i.test(fileName);
+}
+
+function isAllowedUploadFile(file: File) {
+  return isImage(file.name) || allowedVideoPattern.test(file.name);
+}
+
+function formatFileSize(size: number) {
+  if (size >= 1024 * 1024) {
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  return `${Math.max(1, Math.round(size / 1024))} KB`;
+}
+
+function SelectedFilePreviewGrid({ files }: { files: File[] }) {
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+
+  useEffect(() => {
+    const urls = files.map((file) => URL.createObjectURL(file));
+    setPreviewUrls(urls);
+
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [files]);
+
+  if (files.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="legacy-attachment-grid legacy-selected-preview-grid">
+      {files.map((file, index) => (
+        <div className="legacy-attachment-item" key={`${file.name}-${file.size}-${index}`}>
+          {isImage(file.name) ? <img alt={file.name} src={previewUrls[index]} /> : <video controls src={previewUrls[index]} />}
+          <div className="legacy-attachment-meta">
+            <strong>{file.name}</strong>
+            <span>{formatFileSize(file.size)}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function QuestionDetailPage() {
   const { qid } = useParams<{ qid: string }>();
+  const navigate = useNavigate();
   const session = useSession();
   const [question, setQuestion] = useState<QuestionRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -15,6 +79,10 @@ export function QuestionDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [relatedQuestions, setRelatedQuestions] = useState<QuestionRecord[]>([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   useEffect(() => {
     void loadQuestion();
@@ -142,6 +210,151 @@ export function QuestionDetailPage() {
     }
   }
 
+  function normalizeSelectedFiles(fileList: FileList | null) {
+    const allFiles = Array.from(fileList ?? []);
+    const validFiles: File[] = [];
+    const rejectedFiles: string[] = [];
+
+    allFiles.forEach((file) => {
+      if (!isAllowedUploadFile(file)) {
+        rejectedFiles.push(`${file.name}：仅支持 png/jpg/jpeg/gif/mp4`);
+        return;
+      }
+      if (file.size > maxUploadSize) {
+        rejectedFiles.push(`${file.name}：超过 20MB`);
+        return;
+      }
+      validFiles.push(file);
+    });
+
+    if (rejectedFiles.length > 0) {
+      setMessage(`以下文件未加入上传列表：${rejectedFiles.join('；')}`);
+    }
+
+    return validFiles;
+  }
+
+  function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
+    setSelectedFiles(normalizeSelectedFiles(event.target.files));
+  }
+
+  function startEditing() {
+    if (!question) {
+      return;
+    }
+    setEditing(true);
+    setEditText(question.text);
+  }
+
+  function cancelEditing() {
+    setEditing(false);
+    setEditText('');
+  }
+
+  async function handleUpdateQuestion() {
+    if (!question) {
+      return;
+    }
+    if (!editText.trim()) {
+      setMessage('修改内容不能为空');
+      return;
+    }
+
+    setSubmitting(true);
+    setMessage('');
+    try {
+      const updated = await updateQuestion(question.qid, { text: editText });
+      setQuestion(updated);
+      cancelEditing();
+      setMessage('帖子已更新');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : '更新帖子失败');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleToggleUpload() {
+    if (!question) {
+      return;
+    }
+
+    setSubmitting(true);
+    setMessage('');
+    try {
+      await toggleQuestionUpload(question.qid);
+      await loadQuestion();
+      setMessage('发布状态已切换');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : '切换发布状态失败');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDeleteQuestion() {
+    if (!question) {
+      return;
+    }
+    const confirmed = window.confirm('确认删除这条帖子吗？删除后评论、点赞和附件都会一起删除。');
+    if (!confirmed) {
+      return;
+    }
+
+    setSubmitting(true);
+    setMessage('');
+    try {
+      await deleteQuestion(question.qid);
+      navigate('/publish');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : '删除帖子失败');
+      setSubmitting(false);
+    }
+  }
+
+  async function handleUploadExtraFiles() {
+    if (!question) {
+      return;
+    }
+    if (selectedFiles.length === 0) {
+      setMessage('请先选择附件');
+      return;
+    }
+
+    setSubmitting(true);
+    setMessage('');
+    try {
+      setUploadProgress(0);
+      await uploadQuestionFiles(question.qid, selectedFiles, (percent) => setUploadProgress(percent));
+      setSelectedFiles([]);
+      await loadQuestion();
+      setMessage('附件上传成功');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : '上传附件失败');
+    } finally {
+      setUploadProgress(null);
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDeleteFile(fileName: string) {
+    if (!question) {
+      return;
+    }
+
+    setSubmitting(true);
+    setMessage('');
+    try {
+      await deleteQuestionFile(question.qid, fileName);
+      await loadQuestion();
+      setMessage('附件已删除');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : '删除附件失败');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <section className="content whisper-content page-section">
       <div className="legacy-toolbar-card">
@@ -164,6 +377,80 @@ export function QuestionDetailPage() {
       {question ? (
         <div className="legacy-grid two-column question-detail-layout">
           <div className="whisper-list">
+            {question.ownedByMe ? (
+              <div className="legacy-manage-panel legacy-detail-manage-panel">
+                <div className="legacy-section-title">帖子管理</div>
+                <div className="legacy-manage-actions">
+                  <button className="legacy-action-button niceButton" disabled={submitting} onClick={() => void handleToggleUpload()} type="button">
+                    {submitting ? '处理中...' : question.isUpload ? '撤销发布' : '重新发布'}
+                  </button>
+                  <button className="legacy-action-button niceButton secondary" disabled={submitting} onClick={startEditing} type="button">
+                    编辑正文
+                  </button>
+                  <button className="legacy-action-button niceButton danger" disabled={submitting} onClick={() => void handleDeleteQuestion()} type="button">
+                    删除帖子
+                  </button>
+                </div>
+
+                {editing ? (
+                  <div className="legacy-edit-box">
+                    <textarea onChange={(event) => setEditText(event.target.value)} rows={5} value={editText}></textarea>
+                    <div className="legacy-manage-actions">
+                      <button className="legacy-action-button niceButton" disabled={submitting} onClick={() => void handleUpdateQuestion()} type="button">
+                        {submitting ? '保存中...' : '保存修改'}
+                      </button>
+                      <button className="legacy-action-button niceButton secondary" disabled={submitting} onClick={cancelEditing} type="button">
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="legacy-attachment-box">
+                  <div className="legacy-section-title">附件管理</div>
+                  <div className="legacy-manage-actions">
+                    <label className="file-upload">
+                      选择文件
+                      <input accept=".png,.jpg,.jpeg,.gif,.mp4" multiple onChange={handleFileSelection} type="file" />
+                    </label>
+                    <button className="legacy-action-button niceButton" disabled={submitting} onClick={() => void handleUploadExtraFiles()} type="button">
+                      {submitting ? '上传中...' : '上传附件'}
+                    </button>
+                  </div>
+
+                  {selectedFiles.length > 0 ? <SelectedFilePreviewGrid files={selectedFiles} /> : null}
+
+                  {uploadProgress !== null ? (
+                    <div className="legacy-progress-block">
+                      <div className="legacy-progress-label">附件上传进度 {uploadProgress}%</div>
+                      <div className="legacy-progress-track">
+                        <div className="legacy-progress-fill" style={{ width: `${uploadProgress}%` }}></div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {question.files.length > 0 ? (
+                    <div className="legacy-attachment-grid">
+                      {question.files.map((fileName, index) => (
+                        <div className="legacy-attachment-item" key={fileName}>
+                          {isImage(fileName) ? <img alt={fileName} src={buildUploadAssetUrl(fileName)} /> : <video controls src={buildUploadAssetUrl(fileName)} />}
+                          <div className="legacy-attachment-meta">
+                            <strong>{question.imgName[index] || fileName}</strong>
+                            <span>{fileName}</span>
+                          </div>
+                          <button className="legacy-action-button niceButton danger small" disabled={submitting} onClick={() => void handleDeleteFile(fileName)} type="button">
+                            删除附件
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="legacy-empty-inline">当前帖子还没有附件。</div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
             <QuestionCard
               canInteract={Boolean(session)}
               currentUsername={session?.user.username}

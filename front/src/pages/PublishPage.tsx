@@ -2,18 +2,9 @@ import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { buildUploadAssetUrl } from '../api/client';
-import {
-  createQuestion,
-  deleteQuestion,
-  deleteQuestionFile,
-  listMyQuestions,
-  toggleQuestionUpload,
-  updateQuestion,
-  uploadQuestionFiles,
-} from '../api/forum';
-import { QuestionCard } from '../components/QuestionCard';
+import { createQuestion, listMyQuestions, uploadQuestionFiles } from '../api/forum';
 import { useSession } from '../lib/session';
-import type { QuestionListPage, QuestionRecord } from '../types/api';
+import type { QuestionListPage } from '../types/api';
 
 const emptyPage: QuestionListPage = {
   page: 1,
@@ -81,12 +72,7 @@ export function PublishPage() {
   const [keyword, setKeyword] = useState('');
   const [createFiles, setCreateFiles] = useState<File[]>([]);
   const [composerUploadProgress, setComposerUploadProgress] = useState<number | null>(null);
-  const [busyQid, setBusyQid] = useState<number | null>(null);
   const [composerBusy, setComposerBusy] = useState(false);
-  const [editingQid, setEditingQid] = useState<number | null>(null);
-  const [editText, setEditText] = useState('');
-  const [fileSelections, setFileSelections] = useState<Record<number, File[]>>({});
-  const [uploadProgressByQid, setUploadProgressByQid] = useState<Record<number, number>>({});
 
   useEffect(() => {
     if (session) {
@@ -133,24 +119,6 @@ export function PublishPage() {
     setCreateFiles(normalizeSelectedFiles(event.target.files));
   }
 
-  function startEditing(question: QuestionRecord) {
-    setEditingQid(question.qid);
-    setEditText(question.text);
-  }
-
-  function cancelEditing() {
-    setEditingQid(null);
-    setEditText('');
-  }
-
-  function handleFileSelection(qid: number, event: ChangeEvent<HTMLInputElement>) {
-    const validFiles = normalizeSelectedFiles(event.target.files);
-    setFileSelections((current) => ({
-      ...current,
-      [qid]: validFiles,
-    }));
-  }
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!text.trim()) {
@@ -173,102 +141,6 @@ export function PublishPage() {
       setMessage(err instanceof Error ? err.message : '发帖失败');
     } finally {
       setComposerBusy(false);
-    }
-  }
-
-  async function handleUpdateQuestion(qid: number) {
-    if (!editText.trim()) {
-      setMessage('修改内容不能为空');
-      return;
-    }
-
-    setBusyQid(qid);
-    setMessage('');
-    try {
-      await updateQuestion(qid, { text: editText });
-      cancelEditing();
-      setMessage('帖子已更新');
-      await loadMyQuestions(sort, uploadFilter, keyword);
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : '更新帖子失败');
-    } finally {
-      setBusyQid(null);
-    }
-  }
-
-  async function handleToggleUpload(qid: number) {
-    setBusyQid(qid);
-    setMessage('');
-    try {
-      await toggleQuestionUpload(qid);
-      setMessage('发布状态已切换');
-      await loadMyQuestions(sort, uploadFilter, keyword);
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : '切换发布状态失败');
-    } finally {
-      setBusyQid(null);
-    }
-  }
-
-  async function handleDeleteQuestion(qid: number) {
-    const confirmed = window.confirm('确认删除这条帖子吗？删除后评论、点赞和附件都会一起删除。');
-    if (!confirmed) {
-      return;
-    }
-
-    setBusyQid(qid);
-    setMessage('');
-    try {
-      await deleteQuestion(qid);
-      setMessage('帖子已删除');
-      await loadMyQuestions(sort, uploadFilter, keyword);
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : '删除帖子失败');
-    } finally {
-      setBusyQid(null);
-    }
-  }
-
-  async function handleUploadExtraFiles(qid: number) {
-    const files = fileSelections[qid] ?? [];
-    if (files.length === 0) {
-      setMessage('请先选择附件');
-      return;
-    }
-
-    setBusyQid(qid);
-    setMessage('');
-    try {
-      setUploadProgressByQid((current) => ({ ...current, [qid]: 0 }));
-      await uploadQuestionFiles(qid, files, (percent) => {
-        setUploadProgressByQid((current) => ({ ...current, [qid]: percent }));
-      });
-      setFileSelections((current) => ({ ...current, [qid]: [] }));
-      setMessage('附件上传成功');
-      await loadMyQuestions(sort, uploadFilter, keyword);
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : '上传附件失败');
-    } finally {
-      setUploadProgressByQid((current) => {
-        const next = { ...current };
-        delete next[qid];
-        return next;
-      });
-      setBusyQid(null);
-    }
-  }
-
-  async function handleDeleteFile(qid: number, fileName: string) {
-    setBusyQid(qid);
-    setMessage('');
-    try {
-      await deleteQuestionFile(qid, fileName);
-      setMessage('附件已删除');
-      await loadMyQuestions(sort, uploadFilter, keyword);
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : '删除附件失败');
-    } finally {
-      setBusyQid(null);
     }
   }
 
@@ -355,104 +227,45 @@ export function PublishPage() {
             </div>
           ) : null}
 
-          {page.records.map((question) => {
-            const selectedFiles = fileSelections[question.qid] ?? [];
-            const isEditing = editingQid === question.qid;
-            const isBusy = busyQid === question.qid;
-            const uploadProgress = uploadProgressByQid[question.qid];
+          <div className="legacy-my-question-list">
+            {page.records.map((question) => {
+              const previewFile = question.files[0];
+              const previewName = question.imgName[0] || previewFile;
 
-            return (
-              <div className="legacy-manage-group" key={question.qid}>
-                <QuestionCard compact detailHref={`/questions/${question.qid}`} question={question} />
-
-                <div className="legacy-manage-panel">
-                  <div className="legacy-manage-actions">
-                    <button className="legacy-action-button niceButton" onClick={() => void handleToggleUpload(question.qid)} type="button">
-                      {isBusy ? '处理中...' : question.isUpload ? '撤销发布' : '重新发布'}
-                    </button>
-                    <button className="legacy-action-button niceButton secondary" onClick={() => startEditing(question)} type="button">
-                      编辑正文
-                    </button>
-                    <button className="legacy-action-button niceButton danger" onClick={() => void handleDeleteQuestion(question.qid)} type="button">
-                      删除帖子
-                    </button>
-                  </div>
-
-                  {isEditing ? (
-                    <div className="legacy-edit-box">
-                      <textarea onChange={(event) => setEditText(event.target.value)} rows={4} value={editText}></textarea>
-                      <div className="legacy-manage-actions">
-                        <button className="legacy-action-button niceButton" onClick={() => void handleUpdateQuestion(question.qid)} type="button">
-                          {isBusy ? '保存中...' : '保存修改'}
-                        </button>
-                        <button className="legacy-action-button niceButton secondary" onClick={cancelEditing} type="button">
-                          取消
-                        </button>
-                      </div>
+              return (
+                <article className="legacy-my-question-card" key={question.qid}>
+                  {previewFile ? (
+                    <div className="legacy-my-question-media">
+                      {isImage(previewFile) ? (
+                        <img alt={previewName} src={buildUploadAssetUrl(previewFile)} />
+                      ) : (
+                        <video controls src={buildUploadAssetUrl(previewFile)} />
+                      )}
                     </div>
                   ) : null}
 
-                  <div className="legacy-attachment-box">
-                    <div className="legacy-section-title">附件管理</div>
-                    <div className="legacy-manage-actions">
-                      <label className="file-upload">
-                        选择文件
-                        <input accept=".png,.jpg,.jpeg,.gif,.mp4" multiple onChange={(event) => handleFileSelection(question.qid, event)} type="file" />
-                      </label>
-                      <button className="legacy-action-button niceButton" onClick={() => void handleUploadExtraFiles(question.qid)} type="button">
-                        {isBusy ? '上传中...' : '上传附件'}
-                      </button>
+                  <div className="legacy-my-question-body">
+                    <div className="legacy-my-question-topline">
+                      <strong>{question.nickName}</strong>
+                      <span>{question.isUpload ? '已发布' : '未发布'}</span>
                     </div>
-
-                    {selectedFiles.length > 0 ? (
-                      <>
-                        <div className="legacy-file-chip-list">
-                          {selectedFiles.map((file) => (
-                            <span className="legacy-file-chip" key={`${question.qid}-${file.name}`}>
-                              {file.name}
-                            </span>
-                          ))}
-                        </div>
-                        <SelectedFilePreviewGrid files={selectedFiles} />
-                      </>
-                    ) : null}
-
-                    {uploadProgress !== undefined ? (
-                      <div className="legacy-progress-block">
-                        <div className="legacy-progress-label">附件上传进度 {uploadProgress}%</div>
-                        <div className="legacy-progress-track">
-                          <div className="legacy-progress-fill" style={{ width: `${uploadProgress}%` }}></div>
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {question.files.length > 0 ? (
-                      <div className="legacy-attachment-grid">
-                        {question.files.map((fileName, index) => (
-                          <div className="legacy-attachment-item" key={fileName}>
-                            {isImage(fileName) ? (
-                              <img alt={fileName} src={buildUploadAssetUrl(fileName)} />
-                            ) : (
-                              <video controls src={buildUploadAssetUrl(fileName)} />
-                            )}
-                            <div className="legacy-attachment-meta">
-                              <strong>{question.imgName[index] || fileName}</strong>
-                              <span>{fileName}</span>
-                            </div>
-                            <button className="legacy-action-button niceButton danger small" onClick={() => void handleDeleteFile(question.qid, fileName)} type="button">
-                              删除附件
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="legacy-empty-inline">当前帖子还没有附件。</div>
-                    )}
+                    <p>{question.text.length > 88 ? `${question.text.slice(0, 88)}...` : question.text}</p>
+                    <div className="legacy-my-question-meta">
+                      <span>{question.time}</span>
+                      <span>{question.files.length} 个附件</span>
+                      <span>{question.commentsNum} 条评论</span>
+                      <span>{question.likesNum} 个点赞</span>
+                    </div>
+                    <div className="legacy-my-question-actions">
+                      <Link className="legacy-action-button secondary small" to={`/questions/${question.qid}`}>
+                        进入详情页操作
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              </div>
-            );
-          })}
+                </article>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>
