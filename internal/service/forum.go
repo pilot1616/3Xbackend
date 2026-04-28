@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"gorm.io/gorm"
@@ -48,6 +49,8 @@ var questionFileExtensions = map[string]struct{}{
 	".gif":  {},
 	".mp4":  {},
 }
+
+var lastGeneratedQuestionQID atomic.Int64
 
 type ForumService struct {
 	db      *gorm.DB
@@ -607,7 +610,7 @@ func (s *ForumService) GetQuestion(qid int64) (*LegacyQuestionRecord, error) {
 
 func (s *ForumService) CreateQuestion(input QuestionCreateInput) (*LegacyQuestionRecord, error) {
 	if input.QID == 0 {
-		input.QID = time.Now().UnixNano()
+		input.QID = nextQuestionQID(time.Now())
 	}
 	input.Username = strings.TrimSpace(input.Username)
 	input.Nickname = strings.TrimSpace(input.Nickname)
@@ -1393,6 +1396,20 @@ func buildQuestionFileName(qid int64, original string) string {
 		return name
 	}
 	return prefix + name
+}
+
+func nextQuestionQID(now time.Time) int64 {
+	current := now.UnixMilli()
+	for {
+		last := lastGeneratedQuestionQID.Load()
+		next := current
+		if last >= next {
+			next = last + 1
+		}
+		if lastGeneratedQuestionQID.CompareAndSwap(last, next) {
+			return next
+		}
+	}
 }
 
 func buildAvatarFileName(username, original string) string {

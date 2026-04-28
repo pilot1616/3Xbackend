@@ -838,6 +838,7 @@ curl -X POST http://localhost:3000/question_file_upload/ \
 
 - 仅支持 `png/jpg/jpeg/gif/mp4`
 - 单个文件大小最大 `20MB`
+- 服务端新建帖子时会自动生成 `qid`，该值以毫秒时间戳为基准，并保持在 JavaScript 安全整数范围内
 
 ### `POST /comment_upload/`
 
