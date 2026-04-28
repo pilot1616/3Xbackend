@@ -465,7 +465,7 @@ func (s *ForumService) ListMyLikes(userID uint, username string, page, pageSize 
 	questionByID := make(map[uint]database.Question, len(questionIDs))
 	if len(questionIDs) > 0 {
 		var questions []database.Question
-		if err := s.db.Select("id", "qid", "username", "nickname", "text", "is_upload", "likes_num", "comments_num").Where("id IN ?", questionIDs).Find(&questions).Error; err != nil {
+		if err := s.db.Select("id", "q_id", "username", "nickname", "text", "is_upload", "likes_num", "comments_num").Where("id IN ?", questionIDs).Find(&questions).Error; err != nil {
 			return nil, fmt.Errorf("query liked questions failed: %w", err)
 		}
 		for _, question := range questions {
@@ -555,7 +555,7 @@ func (s *ForumService) DecorateQuestionRecordsForUser(records []*LegacyQuestionR
 	likedQIDs := make(map[int64]struct{}, len(qids))
 	if len(qids) > 0 {
 		var likes []database.QuestionLike
-		if err := s.db.Select("qid").Where("username = ? AND qid IN ?", resolvedUsername, qids).Find(&likes).Error; err != nil {
+		if err := s.db.Select("q_id").Where("username = ? AND q_id IN ?", resolvedUsername, qids).Find(&likes).Error; err != nil {
 			return fmt.Errorf("query question like state failed: %w", err)
 		}
 		for _, like := range likes {
@@ -1223,7 +1223,7 @@ func (s *ForumService) getQuestionRecord(qid int64) (*LegacyQuestionRecord, erro
 
 func (s *ForumService) findQuestionByQID(qid int64) (*database.Question, error) {
 	var question database.Question
-	if err := s.db.Preload("Files").Preload("Comments").Where("qid = ?", qid).First(&question).Error; err != nil {
+	if err := s.db.Preload("Files").Preload("Comments").Where("q_id = ?", qid).First(&question).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrQuestionNotFound
 		}
@@ -1421,7 +1421,7 @@ func nextQuestionQID(now time.Time) int64 {
 
 func (s *ForumService) syncQuestionQIDGenerator() error {
 	var maxQID int64
-	if err := s.db.Model(&database.Question{}).Where("qid <= ?", maxSafeQuestionQID).Select("COALESCE(MAX(qid), 0)").Scan(&maxQID).Error; err != nil {
+	if err := s.db.Model(&database.Question{}).Where("q_id <= ?", maxSafeQuestionQID).Select("COALESCE(MAX(q_id), 0)").Scan(&maxQID).Error; err != nil {
 		return fmt.Errorf("query max safe question qid failed: %w", err)
 	}
 	if maxQID > lastGeneratedQuestionQID.Load() {
@@ -1432,18 +1432,18 @@ func (s *ForumService) syncQuestionQIDGenerator() error {
 
 func (s *ForumService) normalizeUnsafeQuestionQIDs() error {
 	var questions []database.Question
-	if err := s.db.Select("id", "qid").Where("qid > ?", maxSafeQuestionQID).Order("id asc").Find(&questions).Error; err != nil {
+	if err := s.db.Select("id", "q_id").Where("q_id > ?", maxSafeQuestionQID).Order("id asc").Find(&questions).Error; err != nil {
 		return fmt.Errorf("query unsafe question qids failed: %w", err)
 	}
 
 	for _, question := range questions {
 		newQID := nextQuestionQID(time.Now())
 		if err := s.db.Transaction(func(tx *gorm.DB) error {
-			if err := tx.Model(&database.Question{}).Where("id = ?", question.ID).Update("qid", newQID).Error; err != nil {
+			if err := tx.Model(&database.Question{}).Where("id = ?", question.ID).Update("q_id", newQID).Error; err != nil {
 				return fmt.Errorf("update question qid failed: %w", err)
 			}
 			for _, model := range []any{&database.QuestionFile{}, &database.Comment{}, &database.QuestionLike{}} {
-				if err := tx.Model(model).Where("question_id = ?", question.ID).Update("qid", newQID).Error; err != nil {
+				if err := tx.Model(model).Where("question_id = ?", question.ID).Update("q_id", newQID).Error; err != nil {
 					return fmt.Errorf("update related qid failed: %w", err)
 				}
 			}
