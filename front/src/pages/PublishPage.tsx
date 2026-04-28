@@ -243,14 +243,16 @@ export function PublishPage() {
                     <div className="legacy-my-question-meta">
                       <span>{question.time}</span>
                       <span>{question.files.length} 个附件</span>
-                      <span className="legacy-my-question-stat">
-                        <i className="layui-icon layui-icon-reply-fill"></i>
-                        {question.commentsNum}
-                      </span>
-                      <span className="legacy-my-question-stat">
+                    </div>
+                    <div className="op-list legacy-my-question-op-list">
+                      <p className="like">
                         <i className="layui-icon layui-icon-praise"></i>
-                        {question.likesNum}
-                      </span>
+                        <span>{question.likesNum}</span>
+                      </p>
+                      <p className="edit">
+                        <i className="layui-icon layui-icon-reply-fill"></i>
+                        <span>{question.commentsNum}</span>
+                      </p>
                     </div>
                     <div className="legacy-my-question-actions">
                       <Link className="legacy-action-button secondary small" to={`/questions/${question.qid}`}>

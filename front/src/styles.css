@@ -1007,6 +1007,13 @@ video {
 .legacy-card-list {
   display: grid;
   gap: 16px;
+  justify-items: end;
+}
+
+.legacy-card-list .legacy-panel {
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
 .legacy-mini-card {
@@ -1164,14 +1171,9 @@ video {
   font-size: 13px;
 }
 
-.legacy-my-question-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.legacy-my-question-stat i {
-  color: #d77817;
+.legacy-my-question-op-list {
+  justify-content: flex-start;
+  margin-top: -2px;
 }
 
 .legacy-my-question-actions {
