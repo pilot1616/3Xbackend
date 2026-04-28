@@ -304,11 +304,14 @@ brew install go-task/tap/go-task
 - `task db:up`
   作用：只启动本地 MySQL 容器
 
+- `task db:wait`
+  作用：等待本地 MySQL 容器真正就绪，适合排查刚启动就连库失败的问题
+
 - `task backend`
   作用：直接 `go run ./cmd` 跑后端，不预编译，不自动拉 Docker
 
 - `task backend:docker`
-  作用：先启动 Docker MySQL，再本地跑后端
+  作用：先启动 Docker MySQL，并等待数据库 ready，再本地跑后端
 
 - `task frontend`
   作用：直接运行前端 Vite 开发服务
@@ -317,7 +320,7 @@ brew install go-task/tap/go-task
   作用：一条命令同时跑后端和前端，不预编译，不自动拉 Docker，适合已有本地 MySQL 或已手动启动数据库的场景
 
 - `task dev:docker`
-  作用：先启动 Docker MySQL，再跑本地前后端联调
+  作用：先启动 Docker MySQL，并等待数据库 ready，再跑本地前后端联调
 
 - `task compose:up`
   作用：启动完整 Docker Compose 环境

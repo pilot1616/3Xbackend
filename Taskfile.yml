@@ -17,6 +17,20 @@ tasks:
     cmds:
       - docker compose up -d mysql
 
+  db:wait:
+    desc: 等待本地 MySQL 容器就绪
+    cmds:
+      - |
+        sh -c 'for i in $(seq 1 60); do \
+        if docker exec 3xbackend-mysql mysqladmin ping -h 127.0.0.1 -uroot -p"${MYSQL_ROOT_PASSWORD:-root}" --silent >/dev/null 2>&1; then \
+          echo "mysql is ready"; \
+          exit 0; \
+        fi; \
+        sleep 2; \
+        done; \
+        echo "mysql did not become ready in time"; \
+        exit 1'
+
   db:down:
     desc: 关闭本地 MySQL 容器
     cmds:
@@ -49,7 +63,7 @@ tasks:
 
   backend:docker:
     desc: 启动 Docker MySQL 后再本地运行后端
-    deps: [init, db:up]
+    deps: [init, db:up, db:wait]
     cmds:
       - task backend
 
@@ -78,7 +92,7 @@ tasks:
 
   dev:docker:
     desc: 启动 Docker MySQL 后进行本地前后端联调
-    deps: [init, db:up]
+    deps: [init, db:up, db:wait]
     cmds:
       - task dev
 
