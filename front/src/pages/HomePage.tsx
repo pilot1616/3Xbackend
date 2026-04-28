@@ -163,6 +163,7 @@ export function HomePage() {
               <QuestionCard
                 canInteract={Boolean(session)}
                 currentUsername={session?.user.username}
+                viewerAvatarPath={session?.user.avatar_path}
                 detailHref={`/questions/${question.qid}`}
                 key={question.qid}
                 onCommentDelete={handleCommentDelete}

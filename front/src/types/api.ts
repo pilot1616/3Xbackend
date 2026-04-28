@@ -35,6 +35,7 @@ export interface CommentRecord {
   nickName: string;
   time: string;
   text: string;
+  avatarPath?: string;
 }
 
 export interface QuestionRecord {

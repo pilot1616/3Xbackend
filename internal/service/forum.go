@@ -174,11 +174,12 @@ type LegacyQuestionRecord struct {
 }
 
 type LegacyCommentRecord struct {
-	ID       uint   `json:"id"`
-	User     string `json:"user"`
-	NickName string `json:"nickName"`
-	Time     string `json:"time"`
-	Text     string `json:"text"`
+	ID         uint   `json:"id"`
+	User       string `json:"user"`
+	NickName   string `json:"nickName"`
+	Time       string `json:"time"`
+	Text       string `json:"text"`
+	AvatarPath string `json:"avatarPath,omitempty"`
 }
 
 type LegacyLikeRecord struct {
@@ -531,6 +532,9 @@ func (s *ForumService) DecorateQuestionRecordsForUser(records []*LegacyQuestionR
 	if err := s.attachQuestionAvatarPaths(records); err != nil {
 		return err
 	}
+	if err := s.attachCommentAvatarPaths(records); err != nil {
+		return err
+	}
 
 	resolvedUsername, err := s.resolveUsername(userID, username)
 	if err != nil {
@@ -619,6 +623,64 @@ func (s *ForumService) attachQuestionAvatarPaths(records []*LegacyQuestionRecord
 	return nil
 }
 
+func (s *ForumService) attachCommentAvatarPaths(records []*LegacyQuestionRecord) error {
+	usernames := make([]string, 0)
+	seen := make(map[string]struct{})
+	for _, record := range records {
+		if record == nil {
+			continue
+		}
+		for i := range record.Comments {
+			username := strings.TrimSpace(record.Comments[i].User)
+			if username == "" {
+				continue
+			}
+			if _, exists := seen[username]; exists {
+				continue
+			}
+			seen[username] = struct{}{}
+			usernames = append(usernames, username)
+		}
+	}
+
+	if len(usernames) == 0 {
+		return nil
+	}
+
+	var users []database.User
+	if err := s.db.Select("username", "avatar_path").Where("username IN ?", usernames).Find(&users).Error; err != nil {
+		return fmt.Errorf("query comment avatars failed: %w", err)
+	}
+
+	avatarByUsername := make(map[string]string, len(users))
+	for _, user := range users {
+		avatarByUsername[user.Username] = user.AvatarPath
+	}
+
+	for _, record := range records {
+		if record == nil {
+			continue
+		}
+		for i := range record.Comments {
+			if strings.TrimSpace(record.Comments[i].AvatarPath) != "" {
+				continue
+			}
+			record.Comments[i].AvatarPath = avatarByUsername[strings.TrimSpace(record.Comments[i].User)]
+		}
+	}
+
+	return nil
+}
+
+func (s *ForumService) attachCommentListAvatarPaths(records []LegacyCommentRecord) error {
+	questions := []*LegacyQuestionRecord{{Comments: records}}
+	if err := s.attachCommentAvatarPaths(questions); err != nil {
+		return err
+	}
+	copy(records, questions[0].Comments)
+	return nil
+}
+
 func (s *ForumService) ListCommentsPaged(input CommentListInput) (*CommentListPage, error) {
 	question, err := s.findQuestionByQID(input.QID)
 	if err != nil {
@@ -652,6 +714,9 @@ func (s *ForumService) ListCommentsPaged(input CommentListInput) (*CommentListPa
 	records := make([]LegacyCommentRecord, 0, len(comments))
 	for _, comment := range comments {
 		records = append(records, buildCommentRecord(comment))
+	}
+	if err := s.attachCommentListAvatarPaths(records); err != nil {
+		return nil, err
 	}
 
 	return &CommentListPage{Page: page, PageSize: pageSize, Total: total, Records: records}, nil

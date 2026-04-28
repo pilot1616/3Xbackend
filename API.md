@@ -400,7 +400,8 @@ GET /api/v1/questions?page=1&page_size=10&author=pilot1616&keyword=hello&sort=mo
           "user": "13800138001",
           "nickName": "tom",
           "time": "2026-04-27 10:05:00",
-          "text": "nice"
+          "text": "nice",
+          "avatarPath": "/public/images/13800138001.jpg"
         }
       ]
     }
@@ -525,7 +526,8 @@ Authorization: Bearer <token>
       "user": "13800138001",
       "nickName": "tom",
       "time": "2026-04-27 10:05:00",
-      "text": "nice"
+      "text": "nice",
+      "avatarPath": "/public/images/13800138001.jpg"
     }
   ]
 }

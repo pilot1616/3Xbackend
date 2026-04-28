@@ -167,6 +167,7 @@ export function QuestionDetailPage() {
             <QuestionCard
               canInteract={Boolean(session)}
               currentUsername={session?.user.username}
+              viewerAvatarPath={session?.user.avatar_path}
               onCommentDelete={handleCommentDelete}
               onCommentSubmit={handleCommentSubmit}
               onCommentUpdate={handleCommentUpdate}

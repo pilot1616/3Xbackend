@@ -25,6 +25,7 @@ interface QuestionCardProps {
   canInteract?: boolean;
   submitting?: boolean;
   currentUsername?: string;
+  viewerAvatarPath?: string;
   detailHref?: string;
   onLikeToggle?: (question: QuestionRecord) => Promise<void> | void;
   onCommentSubmit?: (question: QuestionRecord, text: string) => Promise<void> | void;
@@ -49,6 +50,7 @@ export function QuestionCard({
   canInteract = false,
   submitting = false,
   currentUsername,
+  viewerAvatarPath,
   detailHref,
   onLikeToggle,
   onCommentSubmit,
@@ -253,7 +255,7 @@ export function QuestionCard({
       {expanded ? (
         <div className="review-version">
           <div className="form">
-            <img alt="avatar" className="now-header forum-comment-avatar" src={avatarSrc(question.avatarPath)} />
+            <img alt="avatar" className="now-header forum-comment-avatar" src={avatarSrc(viewerAvatarPath)} />
             <form className="layui-form" onSubmit={handleCommentSubmit}>
               <div className="layui-form-item layui-form-text">
                 <div className="layui-input-block">
@@ -290,7 +292,7 @@ export function QuestionCard({
                   <div className="forum-comment-card">
                     <div className="forum-comment-head">
                       <div className="forum-comment-user">
-                        <img alt={comment.nickName} className="header-img" src="/legacy/res/img/userImgDefault.png" />
+                        <img alt={comment.nickName} className="header-img" src={avatarSrc(comment.avatarPath)} />
                         <div>
                           <strong>{comment.nickName}</strong>
                           <span>{comment.user}</span>
