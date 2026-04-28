@@ -389,6 +389,7 @@ GET /api/v1/questions?page=1&page_size=10&author=pilot1616&keyword=hello&sort=mo
       "text": "hello world",
       "files": ["1745720000000_demo.jpg"],
       "imgName": ["demo.jpg"],
+      "avatarPath": "/public/images/13800138000.jpg",
       "likesNum": 1,
       "commentsNum": 1,
       "likedByMe": false,
@@ -409,6 +410,7 @@ GET /api/v1/questions?page=1&page_size=10&author=pilot1616&keyword=hello&sort=mo
 
 说明:
 
+- 帖子对象中的 `avatarPath` 表示发帖用户头像路径，前端可直接拼接静态资源域名访问
 - 帖子对象中的 `likedByMe` 表示当前请求用户是否已点赞该帖子
 - 帖子对象中的 `ownedByMe` 表示当前请求用户是否是该帖子作者
 

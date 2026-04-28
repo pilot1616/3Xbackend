@@ -21,6 +21,10 @@ export function buildAssetUrl(path: string) {
   return `${ASSET_BASE_URL}${normalized}`;
 }
 
+export function buildUploadAssetUrl(fileName: string) {
+  return buildAssetUrl(`/public/uploads/${encodeURIComponent(fileName)}`);
+}
+
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers ?? {});
   const session = getSession();

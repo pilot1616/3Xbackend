@@ -1,7 +1,7 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { buildAssetUrl } from '../api/client';
+import { buildUploadAssetUrl } from '../api/client';
 import {
   createQuestion,
   deleteQuestion,
@@ -431,9 +431,9 @@ export function PublishPage() {
                         {question.files.map((fileName, index) => (
                           <div className="legacy-attachment-item" key={fileName}>
                             {isImage(fileName) ? (
-                              <img alt={fileName} src={buildAssetUrl(`/public/uploads/${fileName}`)} />
+                              <img alt={fileName} src={buildUploadAssetUrl(fileName)} />
                             ) : (
-                              <video controls src={buildAssetUrl(`/public/uploads/${fileName}`)} />
+                              <video controls src={buildUploadAssetUrl(fileName)} />
                             )}
                             <div className="legacy-attachment-meta">
                               <strong>{question.imgName[index] || fileName}</strong>

@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { buildAssetUrl } from '../api/client';
+import { buildAssetUrl, buildUploadAssetUrl } from '../api/client';
 import { listQuestionComments, listQuestionLikes } from '../api/forum';
 import type { CommentListPage, LikeListPage, QuestionRecord } from '../types/api';
 
@@ -172,9 +172,9 @@ export function QuestionCard({
           <div className="img-box forum-media-grid">
             {question.files.slice(0, compact ? 4 : question.files.length).map((fileName) =>
               isImage(fileName) ? (
-                <img key={fileName} alt={fileName} src={buildAssetUrl(`/public/uploads/${fileName}`)} />
+                <img key={fileName} alt={fileName} src={buildUploadAssetUrl(fileName)} />
               ) : (
-                <video key={fileName} controls src={buildAssetUrl(`/public/uploads/${fileName}`)} />
+                <video key={fileName} controls src={buildUploadAssetUrl(fileName)} />
               ),
             )}
           </div>

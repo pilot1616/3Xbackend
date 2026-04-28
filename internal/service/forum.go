@@ -528,6 +528,10 @@ func (s *ForumService) DecorateQuestionRecordsForUser(records []*LegacyQuestionR
 		return nil
 	}
 
+	if err := s.attachQuestionAvatarPaths(records); err != nil {
+		return err
+	}
+
 	resolvedUsername, err := s.resolveUsername(userID, username)
 	if err != nil {
 		return err
@@ -568,6 +572,48 @@ func (s *ForumService) DecorateQuestionRecordsForUser(records []*LegacyQuestionR
 			continue
 		}
 		_, record.LikedByMe = likedQIDs[record.QID]
+	}
+
+	return nil
+}
+
+func (s *ForumService) attachQuestionAvatarPaths(records []*LegacyQuestionRecord) error {
+	usernames := make([]string, 0, len(records))
+	seen := make(map[string]struct{}, len(records))
+	for _, record := range records {
+		if record == nil {
+			continue
+		}
+		username := strings.TrimSpace(record.User)
+		if username == "" {
+			continue
+		}
+		if _, exists := seen[username]; exists {
+			continue
+		}
+		seen[username] = struct{}{}
+		usernames = append(usernames, username)
+	}
+
+	if len(usernames) == 0 {
+		return nil
+	}
+
+	var users []database.User
+	if err := s.db.Select("username", "avatar_path").Where("username IN ?", usernames).Find(&users).Error; err != nil {
+		return fmt.Errorf("query question avatars failed: %w", err)
+	}
+
+	avatarByUsername := make(map[string]string, len(users))
+	for _, user := range users {
+		avatarByUsername[user.Username] = user.AvatarPath
+	}
+
+	for _, record := range records {
+		if record == nil || strings.TrimSpace(record.AvatarPath) != "" {
+			continue
+		}
+		record.AvatarPath = avatarByUsername[strings.TrimSpace(record.User)]
 	}
 
 	return nil

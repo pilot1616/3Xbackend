@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { buildAssetUrl } from '../api/client';
+import { buildUploadAssetUrl } from '../api/client';
 import { listMyQuestions } from '../api/forum';
 import { useSession } from '../lib/session';
 
@@ -77,9 +77,9 @@ export function AlbumPage() {
                     <div className="item">
                       <div className="imgBox legacy-album-media-box" style={{ height: 195, overflow: 'hidden' }}>
                         {isImage(item.fileName) ? (
-                          <img alt={item.fileName} className="single-img" src={buildAssetUrl(`/public/uploads/${item.fileName}`)} />
+                          <img alt={item.fileName} className="single-img" src={buildUploadAssetUrl(item.fileName)} />
                         ) : (
-                          <video className="single-img" controls src={buildAssetUrl(`/public/uploads/${item.fileName}`)} />
+                          <video className="single-img" controls src={buildUploadAssetUrl(item.fileName)} />
                         )}
                       </div>
                       <div className="cont-text">
