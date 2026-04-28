@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { getSecurityQuestion, login, register, resetPassword } from '../api/auth';
+import { LegacyIcon } from '../components/LegacyIcon';
 import { saveSession } from '../lib/session';
 
 type Mode = 'login' | 'register' | 'reset';
@@ -168,7 +169,9 @@ export function AuthPage() {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
               />
-              <i className={`layui-icon ${showPassword ? 'layui-icon-eye-invisible' : 'layui-icon-eye'}`} onClick={() => setShowPassword((current) => !current)}></i>
+              <button className="auth-toggle-visibility" onClick={() => setShowPassword((current) => !current)} type="button">
+                <LegacyIcon name={showPassword ? 'eye-invisible' : 'eye'} size={18} />
+              </button>
             </div>
 
             {mode !== 'login' ? (
@@ -179,10 +182,9 @@ export function AuthPage() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                 />
-                <i
-                  className={`layui-icon ${showConfirmPassword ? 'layui-icon-eye-invisible' : 'layui-icon-eye'}`}
-                  onClick={() => setShowConfirmPassword((current) => !current)}
-                ></i>
+                <button className="auth-toggle-visibility" onClick={() => setShowConfirmPassword((current) => !current)} type="button">
+                  <LegacyIcon name={showConfirmPassword ? 'eye-invisible' : 'eye'} size={18} />
+                </button>
               </div>
             ) : null}
 

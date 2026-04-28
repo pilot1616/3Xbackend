@@ -356,8 +356,9 @@ export function QuestionDetailPage() {
   }
 
   return (
-    <section className="content whisper-content page-section">
-      <div className="legacy-toolbar-card">
+    <section className="content whisper-content">
+      <div className="question-detail-shell">
+      <div className="legacy-toolbar-card question-detail-toolbar-card">
         <div>
           <h2>帖子详情</h2>
           <p>这里展示单条帖子内容，并承接点赞、评论、评论编辑和删除。</p>
@@ -375,7 +376,8 @@ export function QuestionDetailPage() {
       {!loading && !question && !message ? <div className="legacy-feedback">没有找到对应帖子。</div> : null}
 
       {question ? (
-        <div className="legacy-grid two-column question-detail-layout">
+        <div className="question-detail-stage">
+          <div className="cont question-detail-main">
           <div className="whisper-list">
             {question.ownedByMe ? (
               <div className="legacy-manage-panel legacy-detail-manage-panel">
@@ -463,6 +465,7 @@ export function QuestionDetailPage() {
               submitting={submitting}
             />
           </div>
+          </div>
 
           <aside className="legacy-card-list question-detail-sidebar">
             <section className="legacy-panel">
@@ -483,6 +486,7 @@ export function QuestionDetailPage() {
           </aside>
         </div>
       ) : null}
+      </div>
     </section>
   );
 }

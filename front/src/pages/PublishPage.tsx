@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import { buildUploadAssetUrl } from '../api/client';
 import { createQuestion, listMyQuestions, uploadQuestionFiles } from '../api/forum';
+import { LegacyIcon } from '../components/LegacyIcon';
 import { useSession } from '../lib/session';
 import type { QuestionListPage } from '../types/api';
 
@@ -238,14 +239,14 @@ export function PublishPage() {
                   <div className="item legacy-my-question-item">
                     <div className="whisper-title legacy-my-question-title">
                       <div className="legacy-my-question-title-main">
-                        <i className="layui-icon layui-icon-friends" style={{ color: 'gray' }}></i>
+                        <LegacyIcon name="friends" size={16} style={{ color: 'gray' }} />
                         <span className="nickname">{question.nickName}</span>
                         <span className={`legacy-my-question-status${question.isUpload ? ' is-published' : ''}`}>
                           {question.isUpload ? '已发布' : '未发布'}
                         </span>
                       </div>
                       <div className="legacy-my-question-title-time">
-                        <i className="layui-icon layui-icon-date"></i>
+                        <LegacyIcon name="date" size={16} />
                         <span className="hour">{timePart.slice(0, 5)}</span>
                         <span className="date">{datePart}</span>
                       </div>
@@ -265,17 +266,17 @@ export function PublishPage() {
 
                     <div className="op-list legacy-my-question-op-list">
                       <p className="like">
-                        <i className="layui-icon layui-icon-praise"></i>
+                        <LegacyIcon name="praise" size={16} />
                         <span>{question.likesNum}</span>
                       </p>
                       <p className="edit">
-                        <i className="layui-icon layui-icon-reply-fill"></i>
+                        <LegacyIcon name="reply-fill" size={16} />
                         <span>{question.commentsNum}</span>
                       </p>
                       <p className="off">
                         <Link className="legacy-my-question-detail-link" to={`/questions/${question.qid}`}>
                           <span>进入详情</span>
-                          <i className="layui-icon layui-icon-right"></i>
+                          <LegacyIcon name="right" size={16} />
                         </Link>
                       </p>
                     </div>

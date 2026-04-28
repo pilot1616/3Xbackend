@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { createComment, deleteComment, likeQuestion, listQuestions, unlikeQuestion, updateComment } from '../api/forum';
+import { LegacyIcon } from '../components/LegacyIcon';
 import { QuestionCard } from '../components/QuestionCard';
 import { useSession } from '../lib/session';
 import type { QuestionListPage, QuestionRecord } from '../types/api';
@@ -146,7 +147,7 @@ export function HomePage() {
             value={author}
           />
           <button className="search-btn legacy-search-button" type="submit">
-            <i className="layui-icon layui-icon-search" style={{ fontSize: 30, color: '#fff' }}></i>
+            <LegacyIcon name="search" size={30} style={{ color: '#fff' }} />
           </button>
         </form>
       </div>

@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
 
+import { LegacyIcon } from './LegacyIcon';
 import { clearSession, useSession } from '../lib/session';
 
 function navClassName({ isActive }: { isActive: boolean }) {
@@ -60,21 +61,21 @@ export function AppShell() {
                   Hidden Hills property with mountain and city view boast <br /> none bedrooms including a master suite with private <br /> terrace and an entertainment.wing which includes a 20- <br /> seat theater.
                 </div>
                 <div className="fclwbtWordTwo iconfont">
-                  <i className="layui-icon layui-icon-home" style={{ fontSize: 12 }}></i> 15 Cliff St,New York NY 10038,USA
+                  <LegacyIcon name="home" size={12} /> 15 Cliff St,New York NY 10038,USA
                 </div>
                 <div className="fclwbtWordThree iconfont">
-                  <i className="layui-icon layui-icon-cellphone" style={{ fontSize: 12 }}></i> +1 212-602-9641
+                  <LegacyIcon name="cellphone" size={12} /> +1 212-602-9641
                 </div>
                 <div className="fclwbtWordFourth iconfont">
-                  <i className="layui-icon layui-icon-email" style={{ fontSize: 12 }}></i> info@example.com
+                  <LegacyIcon name="email" size={12} /> info@example.com
                 </div>
               </div>
               <div className="fclWordBoxThree">
-                <i className="layui-icon layui-icon-friends" style={{ fontSize: 20 }}></i>
-                <i className="layui-icon layui-icon-login-weibo" style={{ fontSize: 20 }}></i>
-                <i className="layui-icon layui-icon-survey" style={{ fontSize: 20 }}></i>
-                <i className="layui-icon layui-icon-login-wechat" style={{ fontSize: 20 }}></i>
-                <i className="layui-icon layui-icon-login-qq" style={{ fontSize: 20 }}></i>
+                <LegacyIcon name="friends" size={20} />
+                <LegacyIcon name="weibo" size={20} />
+                <LegacyIcon name="survey" size={20} />
+                <LegacyIcon name="wechat" size={20} />
+                <LegacyIcon name="qq" size={20} />
               </div>
               <img alt="ad" src="/legacy/res/img/ad.jpg" style={{ float: 'right', width: 200 }} />
               <div className="fbWord">@2019,Digiqole-News Magazine html Template.All rights reserved.</div>

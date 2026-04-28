@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import { buildAssetUrl, buildUploadAssetUrl } from '../api/client';
 import { listQuestionComments, listQuestionLikes } from '../api/forum';
+import { LegacyIcon } from './LegacyIcon';
 import type { CommentListPage, LikeListPage, QuestionRecord } from '../types/api';
 
 const emptyComments: CommentListPage = {
@@ -164,11 +165,11 @@ export function QuestionCard({
             <img alt={question.nickName} className="forum-title-avatar" src={avatarSrc(question.avatarPath)} />
             <div className="forum-title-meta">
               <div className="forum-title-name-row">
-                <i className="layui-icon layui-icon-friends" style={{ color: 'gray' }}></i>
+                <LegacyIcon name="friends" size={16} style={{ color: 'gray' }} />
                 <span className="nickname">{question.nickName}</span>
               </div>
               <div className="forum-title-time-row">
-                <i className="layui-icon layui-icon-date"></i>
+                <LegacyIcon name="date" size={16} />
                 <span className="hour">{question.time.split(' ')[1]?.slice(0, 5) ?? question.time}</span>
                 <span className="date">{question.time.split(' ')[0] ?? ''}</span>
               </div>
@@ -197,16 +198,16 @@ export function QuestionCard({
 
         <div className="op-list">
           <p className={`like${question.likedByMe ? ' active' : ''}`} onClick={() => onLikeToggle?.(question)}>
-            <i className="layui-icon layui-icon-praise"></i>
+            <LegacyIcon name="praise" size={16} />
             <span>{question.likesNum}</span>
           </p>
           <p className="edit" onClick={() => setExpanded((current) => !current)}>
-            <i className="layui-icon layui-icon-reply-fill"></i>
+            <LegacyIcon name="reply-fill" size={16} />
             <span>{question.commentsNum}</span>
           </p>
           <p className="off" onClick={() => setExpanded((current) => !current)}>
             <span>{expanded ? '收起' : '展开'}</span>
-            <i className={`layui-icon ${expanded ? 'layui-icon-up' : 'layui-icon-down'}`}></i>
+            <LegacyIcon name={expanded ? 'up' : 'down'} size={16} />
           </p>
         </div>
 
