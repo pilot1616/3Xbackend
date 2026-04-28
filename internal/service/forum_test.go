@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-const maxSafeJSInteger int64 = 9007199254740991
-
 func TestNextQuestionQIDStaysInJSSafeRange(t *testing.T) {
 	lastGeneratedQuestionQID.Store(0)
 
@@ -14,7 +12,7 @@ func TestNextQuestionQIDStaysInJSSafeRange(t *testing.T) {
 	if qid <= 0 {
 		t.Fatalf("expected positive qid, got %d", qid)
 	}
-	if qid > maxSafeJSInteger {
+	if qid > maxSafeQuestionQID {
 		t.Fatalf("expected qid to stay within JS safe integer range, got %d", qid)
 	}
 }

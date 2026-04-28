@@ -33,6 +33,7 @@ const (
 	maxCommentTextLength  = 1000
 	maxAvatarFileSize     = 5 << 20
 	maxQuestionFileSize   = 20 << 20
+	maxSafeQuestionQID    = 9007199254740991
 )
 
 var avatarExtensions = map[string]struct{}{
@@ -246,6 +247,12 @@ func NewForumService(db *gorm.DB, storage config.Storage) (*ForumService, error)
 		}
 	}
 	if err := service.ensureDefaultAvatar(); err != nil {
+		return nil, err
+	}
+	if err := service.syncQuestionQIDGenerator(); err != nil {
+		return nil, err
+	}
+	if err := service.normalizeUnsafeQuestionQIDs(); err != nil {
 		return nil, err
 	}
 	return service, nil
@@ -1410,6 +1417,43 @@ func nextQuestionQID(now time.Time) int64 {
 			return next
 		}
 	}
+}
+
+func (s *ForumService) syncQuestionQIDGenerator() error {
+	var maxQID int64
+	if err := s.db.Model(&database.Question{}).Where("qid <= ?", maxSafeQuestionQID).Select("COALESCE(MAX(qid), 0)").Scan(&maxQID).Error; err != nil {
+		return fmt.Errorf("query max safe question qid failed: %w", err)
+	}
+	if maxQID > lastGeneratedQuestionQID.Load() {
+		lastGeneratedQuestionQID.Store(maxQID)
+	}
+	return nil
+}
+
+func (s *ForumService) normalizeUnsafeQuestionQIDs() error {
+	var questions []database.Question
+	if err := s.db.Select("id", "qid").Where("qid > ?", maxSafeQuestionQID).Order("id asc").Find(&questions).Error; err != nil {
+		return fmt.Errorf("query unsafe question qids failed: %w", err)
+	}
+
+	for _, question := range questions {
+		newQID := nextQuestionQID(time.Now())
+		if err := s.db.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Model(&database.Question{}).Where("id = ?", question.ID).Update("qid", newQID).Error; err != nil {
+				return fmt.Errorf("update question qid failed: %w", err)
+			}
+			for _, model := range []any{&database.QuestionFile{}, &database.Comment{}, &database.QuestionLike{}} {
+				if err := tx.Model(model).Where("question_id = ?", question.ID).Update("qid", newQID).Error; err != nil {
+					return fmt.Errorf("update related qid failed: %w", err)
+				}
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func buildAvatarFileName(username, original string) string {
