@@ -33,6 +33,9 @@ video {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  min-height: 120px;
+  padding: 20px 0 16px;
+  line-height: normal;
 }
 
 .header .logo,
@@ -46,12 +49,30 @@ video {
   display: flex;
   align-items: center;
   margin: 0;
+  flex: 0 0 auto;
 }
 
 .header .logo a {
   display: inline-flex;
   align-items: center;
-  height: 120px;
+  gap: 12px;
+  min-height: 60px;
+  padding-right: 8px;
+  color: #231538;
+}
+
+.header .logo span {
+  display: block;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.legacy-brand-mark {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 16px rgba(63, 40, 99, 0.12));
 }
 
 .header .nav {
@@ -60,20 +81,39 @@ video {
   justify-content: center;
   flex: 1;
   min-width: 0;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fffaf5 0%, #fff2e6 100%);
+  border: 1px solid #f4d8bf;
+  box-shadow: 0 12px 32px rgba(255, 127, 33, 0.08);
 }
 
 .header .nav a {
   display: inline-flex;
   align-items: center;
-  height: 120px;
+  justify-content: center;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
   white-space: nowrap;
+  color: #5c486f;
+  font-weight: 700;
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.header .nav a:hover {
+  color: #2e1a48;
+  background: rgba(255, 255, 255, 0.75);
+  transform: translateY(-1px);
 }
 
 .header .login-text {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  min-width: 140px;
+  flex: 0 0 auto;
+  min-width: 150px;
   line-height: normal;
 }
 
@@ -81,56 +121,97 @@ video {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  flex: 0 1 280px;
-  min-width: 220px;
+  flex: 0 1 360px;
+  min-width: 300px;
 }
 
 .legacy-header-search {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: #fff8f3;
-  border: 1px solid #ffe2cc;
+  gap: 10px;
+  padding: 6px 6px 6px 10px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #f0dbc7;
+  box-shadow: 0 14px 34px rgba(63, 40, 99, 0.08);
 }
 
 .legacy-header-search input {
   width: 100%;
+  height: 42px;
   min-width: 0;
   border: none;
   background: transparent;
   outline: none;
-  color: #3f2863;
+  color: #2f1f45;
+  font-size: 14px;
 }
 
-.legacy-header-search select {
-  border: none;
-  background: transparent;
-  color: #7e6b91;
+.legacy-header-search-mode {
+  flex: 0 0 auto;
+  height: 42px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f7f0ff 0%, #ede0fb 100%);
+  color: #4a2f6f;
   outline: none;
   cursor: pointer;
+  font-weight: 700;
+}
+
+.legacy-header-search-divider {
+  width: 1px;
+  height: 22px;
+  background: #ead8c8;
 }
 
 .legacy-header-search input::placeholder {
-  color: #a793b8;
+  color: #a38da8;
 }
 
 .legacy-header-search .legacy-search-button {
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  color: #1795bb;
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, #ff8c32 0%, #ff6f1f 100%);
+  box-shadow: 0 10px 22px rgba(255, 127, 33, 0.24);
   cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.legacy-header-search .legacy-search-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(255, 127, 33, 0.32);
 }
 
 .header .login-text .layui-btn,
 .header .login-text a {
   white-space: nowrap;
+}
+
+.header .nav a.active {
+  color: #fff;
+  background: linear-gradient(135deg, #3f2863 0%, #5a3a86 100%);
+  box-shadow: 0 10px 24px rgba(63, 40, 99, 0.2);
+}
+
+.header .login-text .layui-btn {
+  height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #3f2863 0%, #5b3d87 100%);
+  box-shadow: 0 10px 24px rgba(63, 40, 99, 0.18);
+}
+
+.header .login-text .layui-btn:hover {
+  opacity: 0.94;
 }
 
 .legacy-app-shell {
@@ -141,7 +222,7 @@ video {
 
 .legacy-session-bar {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
 }
 
@@ -151,6 +232,10 @@ video {
   gap: 10px;
   min-width: 0;
   color: inherit;
+  padding: 6px 12px 6px 6px;
+  border-radius: 16px;
+  background: #fff8f1;
+  border: 1px solid #f1decf;
 }
 
 .legacy-session-avatar {
@@ -169,7 +254,7 @@ video {
 }
 
 .legacy-session-user {
-  color: #3f2863;
+  color: #2f1f45;
   font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1698,18 +1783,31 @@ video {
   .header {
     flex-wrap: wrap;
     justify-content: center;
+    gap: 16px;
+    padding: 18px 0 12px;
   }
 
+  .header .logo,
   .legacy-header-tools,
-  .header .login-text {
+  .header .login-text,
+  .header .nav {
     flex: 1 1 100%;
     justify-content: center;
   }
 
   .header .nav {
-    order: 3;
+    order: 2;
     width: 100%;
     flex-wrap: wrap;
+  }
+
+  .legacy-header-tools {
+    order: 3;
+    min-width: 0;
+  }
+
+  .header .login-text {
+    order: 4;
   }
 
   .legacy-toolbar-card,
@@ -1759,12 +1857,39 @@ video {
 
 @media screen and (max-width: 768px) {
   .legacy-header-search {
-    padding: 8px 10px;
+    padding: 8px;
+    border-radius: 16px;
+    flex-wrap: wrap;
+  }
+
+  .legacy-header-search-mode,
+  .legacy-header-search input,
+  .legacy-header-search .legacy-search-button {
+    width: 100%;
+  }
+
+  .legacy-header-search-mode,
+  .legacy-header-search input,
+  .legacy-header-search .legacy-search-button {
+    height: 44px;
+  }
+
+  .legacy-header-search-divider {
+    display: none;
+  }
+
+  .legacy-header-search .legacy-search-button {
+    border-radius: 12px;
   }
 
   .legacy-session-bar {
     flex-direction: column;
-    align-items: flex-end;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .legacy-session-link {
+    width: 100%;
   }
 
   .auth-card-glass,

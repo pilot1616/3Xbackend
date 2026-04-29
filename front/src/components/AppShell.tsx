@@ -79,7 +79,7 @@ export function AppShell() {
         <h1 className="logo">
           <Link to="/">
             <span>MYBLOG</span>
-            <img alt="3X" src="/legacy/res/img/logo.png" style={{ width: 80 }} />
+            <img alt="3X" className="legacy-brand-mark" src="/legacy/res/img/logo.png" />
           </Link>
         </h1>
         <div className="nav">
@@ -98,12 +98,13 @@ export function AppShell() {
         </div>
         <div className="legacy-header-tools">
           <form className="legacy-header-search" onSubmit={handleHeaderSearchSubmit}>
-            <select onChange={(event) => setSearchMode(event.target.value as GlobalSearchMode)} value={searchMode}>
+            <select aria-label="搜索类型" className="legacy-header-search-mode" onChange={(event) => setSearchMode(event.target.value as GlobalSearchMode)} value={searchMode}>
               <option value="content">按内容</option>
               <option value="author">按作者</option>
               <option value="phone">按手机号</option>
             </select>
-            <input onChange={(event) => setSearchKeyword(event.target.value)} placeholder={searchPlaceholderMap[searchMode]} type="search" value={searchKeyword} />
+            <span className="legacy-header-search-divider" aria-hidden="true"></span>
+            <input aria-label="搜索内容" onChange={(event) => setSearchKeyword(event.target.value)} placeholder={searchPlaceholderMap[searchMode]} type="search" value={searchKeyword} />
             <button className="legacy-search-button" type="submit">
               <LegacyIcon name="search" size={18} />
             </button>
