@@ -1153,10 +1153,75 @@ video {
   background: #fff;
   border: 1px solid #ece4f1;
   border-radius: 12px;
+  display: grid;
+  gap: 12px;
 }
 
 .legacy-mini-card p {
-  margin: 8px 0;
+  margin: 0;
+}
+
+.legacy-mini-card-header,
+.legacy-mini-card-footer,
+.legacy-mini-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.legacy-mini-card-title {
+  font-size: 15px;
+  color: #3b2f47;
+}
+
+.legacy-mini-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legacy-mini-card-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.legacy-mini-card-badge.is-published {
+  background: #fff2e2;
+  color: #d87a1c;
+}
+
+.legacy-mini-card-badge.is-draft {
+  background: #f3eef9;
+  color: #7c6993;
+}
+
+.legacy-mini-card-main {
+  color: #41364d;
+  line-height: 1.7;
+}
+
+.legacy-mini-card-quote {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #faf7fc;
+  border: 1px solid #efe7f5;
+  color: #766885;
+  line-height: 1.6;
+}
+
+.legacy-mini-card-meta {
+  justify-content: flex-start;
+}
+
+.legacy-mini-card-meta span {
+  color: #8d8d8d;
+  font-size: 13px;
 }
 
 .legacy-list-pagination {

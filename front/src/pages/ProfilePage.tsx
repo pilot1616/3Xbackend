@@ -9,6 +9,17 @@ import type { MyCommentListPage, MyLikeListPage, MySummaryResult, QuestionListPa
 
 const maxAvatarSize = 5 * 1024 * 1024;
 
+function buildExcerpt(text: string | undefined, fallback: string, maxLength = 88) {
+  const content = (text ?? '').trim();
+  if (!content) {
+    return fallback;
+  }
+  if (content.length <= maxLength) {
+    return content;
+  }
+  return `${content.slice(0, maxLength).trimEnd()}...`;
+}
+
 const emptySummary: MySummaryResult = {
   questionsCount: 0,
   commentsCount: 0,
@@ -343,12 +354,25 @@ export function ProfilePage() {
                   {questions.records.length === 0 ? <div className="legacy-empty-inline">你还没有发布过帖子。</div> : null}
                   {questions.records.map((item) => (
                     <div className="legacy-mini-card" key={item.qid}>
-                      <strong>{item.isUpload ? '已发布' : '未发布'}</strong>
-                      <p>{item.text}</p>
-                      <span>{item.time}</span>
-                      <Link className="legacy-action-button secondary small" to={`/questions/${item.qid}`}>
-                        查看详情
-                      </Link>
+                      <div className="legacy-mini-card-header">
+                        <strong className="legacy-mini-card-title">QID {item.qid}</strong>
+                        <div className="legacy-mini-card-badges">
+                          <span className={`legacy-mini-card-badge ${item.isUpload ? 'is-published' : 'is-draft'}`}>{item.isUpload ? '已发布' : '未发布'}</span>
+                        </div>
+                      </div>
+                      <p className="legacy-mini-card-main" title={item.text}>
+                        {buildExcerpt(item.text, '该帖子暂无正文内容。')}
+                      </p>
+                      <div className="legacy-mini-card-meta">
+                        <span>点赞 {item.likesNum}</span>
+                        <span>评论 {item.commentsNum}</span>
+                        <span>{item.time}</span>
+                      </div>
+                      <div className="legacy-mini-card-footer">
+                        <Link className="legacy-action-button secondary small" to={`/questions/${item.qid}`}>
+                          查看详情
+                        </Link>
+                      </div>
                     </div>
                   ))}
                   {questions.total > questions.records.length ? (
@@ -382,12 +406,23 @@ export function ProfilePage() {
                   {comments.records.length === 0 ? <div className="legacy-empty-inline">{commentKeyword ? '没有匹配的评论。' : '你还没有发表过评论。'}</div> : null}
                   {comments.records.map((item) => (
                     <div className="legacy-mini-card" key={item.id}>
-                      <strong>QID {item.qid}</strong>
-                      <p>{item.text}</p>
-                      <span>{item.time}</span>
-                      <Link className="legacy-action-button secondary small" to={`/questions/${item.qid}`}>
-                        查看原帖
-                      </Link>
+                      <div className="legacy-mini-card-header">
+                        <strong className="legacy-mini-card-title">评论于帖子 #{item.qid}</strong>
+                      </div>
+                      <p className="legacy-mini-card-quote" title={item.questionText || ''}>
+                        原帖摘要：{buildExcerpt(item.questionText, '原帖摘要暂不可用。', 72)}
+                      </p>
+                      <p className="legacy-mini-card-main" title={item.text}>
+                        我的评论：{buildExcerpt(item.text, '该评论内容为空。', 72)}
+                      </p>
+                      <div className="legacy-mini-card-meta">
+                        <span>{item.time}</span>
+                      </div>
+                      <div className="legacy-mini-card-footer">
+                        <Link className="legacy-action-button secondary small" to={`/questions/${item.qid}`}>
+                          查看原帖
+                        </Link>
+                      </div>
                     </div>
                   ))}
                   {comments.total > comments.page_size ? (
@@ -426,12 +461,25 @@ export function ProfilePage() {
                   {likes.records.length === 0 ? <div className="legacy-empty-inline">{likeKeyword ? '没有匹配的点赞记录。' : '你还没有点赞过任何帖子。'}</div> : null}
                   {likes.records.map((item) => (
                     <div className="legacy-mini-card" key={item.id}>
-                      <strong>{item.questionNickName || item.questionUser}</strong>
-                      <p>{item.questionText}</p>
-                      <span>{item.likedAt}</span>
-                      <Link className="legacy-action-button secondary small" to={`/questions/${item.qid}`}>
-                        查看原帖
-                      </Link>
+                      <div className="legacy-mini-card-header">
+                        <strong className="legacy-mini-card-title">{item.questionNickName || item.questionUser || `帖子 #${item.qid}`}</strong>
+                        <div className="legacy-mini-card-badges">
+                          <span className={`legacy-mini-card-badge ${item.isUpload ? 'is-published' : 'is-draft'}`}>{item.isUpload ? '已发布' : '未发布'}</span>
+                        </div>
+                      </div>
+                      <p className="legacy-mini-card-main" title={item.questionText || ''}>
+                        {buildExcerpt(item.questionText, '该帖子正文暂不可用。')}
+                      </p>
+                      <div className="legacy-mini-card-meta">
+                        <span>点赞于 {item.likedAt}</span>
+                        <span>总点赞 {item.likesNum}</span>
+                        <span>总评论 {item.commentsNum}</span>
+                      </div>
+                      <div className="legacy-mini-card-footer">
+                        <Link className="legacy-action-button secondary small" to={`/questions/${item.qid}`}>
+                          查看原帖
+                        </Link>
+                      </div>
                     </div>
                   ))}
                   {likes.total > likes.page_size ? (
