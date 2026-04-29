@@ -818,15 +818,16 @@ video {
   grid-template-columns: 1fr auto;
   gap: 20px;
   padding: 24px 28px;
-  background: #fff8f3;
-  border: 1px solid #ffe2cc;
+  background: linear-gradient(160deg, rgba(12, 22, 38, 0.94) 0%, rgba(13, 27, 47, 0.9) 58%, rgba(21, 35, 56, 0.94) 100%);
+  border: 1px solid rgba(126, 201, 255, 0.14);
+  box-shadow: 0 24px 58px rgba(1, 8, 20, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -18px 32px rgba(0, 0, 0, 0.14);
 }
 
 .legacy-toolbar-card h2,
 .legacy-panel h2,
 .legacy-empty-card h2 {
   margin: 0 0 10px;
-  color: #3f2863;
+  color: #f2f9ff;
 }
 
 .legacy-toolbar-card p,
@@ -915,7 +916,7 @@ video {
 
 .legacy-login-tip a {
   margin: 0 4px;
-  color: #ff7f21;
+  color: #8ff1ff;
   font-weight: 700;
 }
 
@@ -926,8 +927,10 @@ video {
   align-items: center;
   margin: 0 auto 22px;
   padding: 18px 24px;
-  background: #fff;
-  border-radius: 6px;
+  background: linear-gradient(160deg, rgba(12, 22, 38, 0.92) 0%, rgba(13, 27, 47, 0.88) 58%, rgba(21, 35, 56, 0.92) 100%);
+  border-radius: 22px;
+  border: 1px solid rgba(126, 201, 255, 0.14);
+  box-shadow: 0 24px 58px rgba(1, 8, 20, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -18px 32px rgba(0, 0, 0, 0.14);
 }
 
 .legacy-home-filter-copy {
@@ -937,12 +940,12 @@ video {
 }
 
 .legacy-home-filter-copy strong {
-  color: #3f2863;
+  color: #f2f9ff;
   font-size: 18px;
 }
 
 .legacy-home-filter-copy span {
-  color: #8d8d8d;
+  color: rgba(196, 222, 248, 0.74);
   font-size: 14px;
 }
 
@@ -951,8 +954,9 @@ video {
   min-width: 180px;
   height: 40px;
   padding: 0 14px;
-  border: 1px solid #e6e6e6;
-  background: #f8f8f8;
+  border: 1px solid rgba(128, 201, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #eff7ff;
 }
 
 .legacy-home-filter-row input {
@@ -1236,7 +1240,7 @@ video {
   display: flex;
   gap: 18px;
   margin-top: 10px;
-  color: #8d8d8d;
+  color: rgba(196, 222, 248, 0.74);
 }
 
 .forum-detail-toolbar {
@@ -1247,12 +1251,12 @@ video {
   padding: 0;
   border: 0;
   background: transparent;
-  color: #8c5317;
+  color: #8ff1ff;
   cursor: pointer;
 }
 
 .forum-inline-button.danger {
-  color: #d94b57;
+  color: #ff9bb4;
 }
 
 .forum-summary-link {
@@ -1281,9 +1285,10 @@ video {
 .forum-like-panel {
   margin-top: 12px;
   padding: 14px 16px;
-  background: #fff8f0;
-  border: 1px solid #f4dec2;
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(148, 213, 255, 0.14);
+  border-radius: 20px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .forum-like-list {
@@ -1297,18 +1302,18 @@ video {
   gap: 4px;
   min-width: 150px;
   padding: 10px 12px;
-  background: #fff;
-  border: 1px solid #ecdcc7;
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(157, 216, 255, 0.14);
+  border-radius: 14px;
 }
 
 .forum-like-chip strong {
-  color: #3f2863;
+  color: #eff7ff;
 }
 
 .forum-like-chip span,
 .forum-empty-likes {
-  color: #8d8d8d;
+  color: rgba(194, 220, 248, 0.7);
   font-size: 13px;
 }
 
@@ -1321,7 +1326,7 @@ video {
 }
 
 .forum-like-pagination span {
-  color: #8d8d8d;
+  color: rgba(194, 220, 248, 0.7);
   font-size: 14px;
 }
 
@@ -1355,7 +1360,7 @@ video {
 }
 
 .forum-empty-comments {
-  color: #777;
+  color: rgba(194, 220, 248, 0.7);
   padding: 12px 0;
 }
 
@@ -1369,8 +1374,10 @@ video {
   width: 100%;
   min-height: 88px;
   padding: 10px 12px;
-  border: 1px solid #d8cde7;
-  border-radius: 8px;
+  border: 1px solid rgba(128, 201, 255, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #eff7ff;
   resize: vertical;
 }
 
@@ -1423,9 +1430,10 @@ video {
 
 .forum-comment-card {
   padding: 14px 16px;
-  background: #fff;
-  border: 1px solid #efe4da;
-  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(148, 213, 255, 0.14);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .forum-comment-head {
@@ -1443,18 +1451,18 @@ video {
 
 .forum-comment-user strong {
   display: block;
-  color: #3f2863;
+  color: #f2f9ff;
 }
 
 .forum-comment-user span,
 .forum-comment-time {
-  color: #8d8d8d;
+  color: rgba(194, 220, 248, 0.66);
   font-size: 13px;
 }
 
 .forum-comment-body {
   margin: 14px 0 0;
-  color: #3a3a3a;
+  color: rgba(233, 243, 255, 0.9);
   line-height: 1.75;
   white-space: pre-wrap;
 }
