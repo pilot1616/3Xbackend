@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { getSecurityQuestion, login, register, resetPassword } from '../api/auth';
 import { LegacyIcon } from '../components/LegacyIcon';
-import { saveSession } from '../lib/session';
+import { saveSession, useSession } from '../lib/session';
 
 type Mode = 'login' | 'register' | 'reset';
 
@@ -17,6 +17,7 @@ const phonePattern = /^1\d{10}$/;
 const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
 
 export function AuthPage() {
+  const session = useSession();
   const [mode, setMode] = useState<Mode>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -45,6 +46,13 @@ export function AuthPage() {
       localStorage.removeItem('front-auth-remember');
     }
   }, []);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+    navigate('/');
+  }, [navigate, session]);
 
   function resetFields(nextMode: Mode) {
     setMode(nextMode);
@@ -120,11 +128,8 @@ export function AuthPage() {
       }
 
       const result = await resetPassword({ username: username.trim(), password, security_answer: securityAnswer.trim() });
+      resetFields('login');
       setMessage(result.message);
-      setMode('login');
-      setSecurityQuestionLabel('');
-      setSecurityAnswer('');
-      setConfirmPassword('');
     } catch (err) {
       setMessage(err instanceof Error ? err.message : '操作失败');
     } finally {
