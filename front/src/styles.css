@@ -1443,6 +1443,14 @@ video {
   border-radius: 14px;
 }
 
+.legacy-album-media-trigger {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+}
+
 .legacy-inline-link {
   color: #ff7f21;
 }

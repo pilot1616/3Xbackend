@@ -64,7 +64,18 @@ export function AlbumPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  const visibleItems = items.filter((item) => {
+    if (filters.mediaType === 'all') {
+      return true;
+    }
+    return filters.mediaType === 'image' ? isImage(item.fileName) : !isImage(item.fileName);
+  });
+
+  const imageCount = visibleItems.filter((item) => isImage(item.fileName)).length;
+  const videoCount = visibleItems.length - imageCount;
 
   useEffect(() => {
     if (!session) {
@@ -95,6 +106,43 @@ export function AlbumPage() {
     observer.observe(target);
     return () => observer.disconnect();
   }, [loading, loadingMore, hasMore, pageInfo.page, pageInfo.total]);
+
+  useEffect(() => {
+    setPreviewIndex(null);
+  }, [filters, session]);
+
+  useEffect(() => {
+    if (previewIndex === null) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setPreviewIndex(null);
+        return;
+      }
+      if (event.key === 'ArrowLeft') {
+        setPreviewIndex((current) => {
+          if (current === null || current <= 0) {
+            return current;
+          }
+          return current - 1;
+        });
+        return;
+      }
+      if (event.key === 'ArrowRight') {
+        setPreviewIndex((current) => {
+          if (current === null || current >= visibleItems.length - 1) {
+            return current;
+          }
+          return current + 1;
+        });
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewIndex, visibleItems.length]);
 
   async function loadAlbum(targetPage = 1, reset = false) {
     if (reset) {
@@ -217,16 +265,6 @@ export function AlbumPage() {
     setFilters(defaultFilters);
   }
 
-  const visibleItems = items.filter((item) => {
-    if (filters.mediaType === 'all') {
-      return true;
-    }
-    return filters.mediaType === 'image' ? isImage(item.fileName) : !isImage(item.fileName);
-  });
-
-  const imageCount = visibleItems.filter((item) => isImage(item.fileName)).length;
-  const videoCount = visibleItems.length - imageCount;
-
   return (
     <>
       {!session ? (
@@ -289,11 +327,13 @@ export function AlbumPage() {
                 {visibleItems.map((item) => (
                   <article className="legacy-album-item" key={`${item.qid}-${item.fileName}`}>
                     <div className="imgBox legacy-album-media-box">
-                      {isImage(item.fileName) ? (
-                        <img alt={item.fileName} className="single-img" src={buildUploadAssetUrl(item.fileName)} />
-                      ) : (
-                        <video className="single-img" controls src={buildUploadAssetUrl(item.fileName)} />
-                      )}
+                      <button className="legacy-album-media-trigger" onClick={() => setPreviewIndex(visibleItems.findIndex((current) => current.qid === item.qid && current.fileName === item.fileName))} type="button">
+                        {isImage(item.fileName) ? (
+                          <img alt={item.fileName} className="single-img" src={buildUploadAssetUrl(item.fileName)} />
+                        ) : (
+                          <video className="single-img" muted src={buildUploadAssetUrl(item.fileName)} />
+                        )}
+                      </button>
                     </div>
                     <div className="cont-text legacy-album-copy">
                       <div className="legacy-album-copy-top">
@@ -321,6 +361,37 @@ export function AlbumPage() {
             {!loading && !hasMore && visibleItems.length > 0 ? <div className="legacy-feedback legacy-home-feedback">已经到底了，全部相册内容都加载完成。</div> : null}
             <div className="legacy-home-load-anchor" ref={loadMoreRef}></div>
           </div>
+
+          {previewIndex !== null && visibleItems[previewIndex] ? (
+            <div className="forum-media-preview" onClick={() => setPreviewIndex(null)} role="presentation">
+              <button aria-label="关闭预览" className="forum-media-preview-close" onClick={() => setPreviewIndex(null)} type="button">
+                x
+              </button>
+              <div className="forum-media-preview-stage" onClick={(event) => event.stopPropagation()} role="presentation">
+                {previewIndex > 0 ? (
+                  <button className="forum-media-preview-nav is-prev" onClick={() => setPreviewIndex((current) => (current === null ? current : Math.max(0, current - 1)))} type="button">
+                    <span>&lt;</span>
+                  </button>
+                ) : null}
+                {isImage(visibleItems[previewIndex].fileName) ? (
+                  <img alt={visibleItems[previewIndex].fileName} src={buildUploadAssetUrl(visibleItems[previewIndex].fileName)} />
+                ) : (
+                  <video autoPlay controls src={buildUploadAssetUrl(visibleItems[previewIndex].fileName)} />
+                )}
+                {previewIndex < visibleItems.length - 1 ? (
+                  <button className="forum-media-preview-nav is-next" onClick={() => setPreviewIndex((current) => (current === null ? current : Math.min(visibleItems.length - 1, current + 1)))} type="button">
+                    <span>&gt;</span>
+                  </button>
+                ) : null}
+                <div className="forum-media-preview-caption">
+                  <span>
+                    {previewIndex + 1} / {visibleItems.length}
+                  </span>
+                  <strong>{visibleItems[previewIndex].fileName}</strong>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </>
