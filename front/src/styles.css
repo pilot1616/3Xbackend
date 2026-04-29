@@ -9,7 +9,7 @@
 body {
   margin: 0;
   color: #222;
-  background: #fff;
+  background: #07111f;
 }
 
 a {
@@ -23,9 +23,37 @@ select {
   font: inherit;
 }
 
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+.file-upload:focus-within,
+.forum-media-trigger:focus-visible,
+.legacy-album-media-trigger:focus-visible,
+.legacy-session-link:focus-visible,
+.legacy-session-action:focus-visible,
+.legacy-action-button:focus-visible,
+.img-upload-btn:focus-visible,
+.comment-upload-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(118, 230, 255, 0.22), 0 0 0 1px rgba(159, 226, 255, 0.34);
+}
+
 img,
 video {
   max-width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .header {
