@@ -9,7 +9,6 @@ type HomeFilters = {
   keyword: string;
   author: string;
   searchType: 'content' | 'author' | 'phone';
-  sort: string;
 };
 
 const emptyPage: QuestionListPage = {
@@ -24,18 +23,9 @@ const defaultFilters: HomeFilters = {
   keyword: '',
   author: '',
   searchType: 'content',
-  sort: 'latest',
-};
-
-const sortLabelMap: Record<string, string> = {
-  latest: '最新发布',
-  oldest: '最早发布',
-  most_liked: '点赞最多',
-  most_commented: '评论最多',
 };
 
 function readFiltersFromSearchParams(searchParams: URLSearchParams): HomeFilters {
-  const nextSort = searchParams.get('sort')?.trim() ?? defaultFilters.sort;
   const nextKeyword = searchParams.get('keyword')?.trim() ?? defaultFilters.keyword;
   const nextAuthor = searchParams.get('author')?.trim() ?? defaultFilters.author;
   const nextSearchType = nextAuthor ? (searchParams.get('searchType') === 'phone' ? 'phone' : 'author') : 'content';
@@ -43,7 +33,6 @@ function readFiltersFromSearchParams(searchParams: URLSearchParams): HomeFilters
     keyword: nextKeyword,
     author: nextAuthor,
     searchType: nextSearchType,
-    sort: sortLabelMap[nextSort] ? nextSort : defaultFilters.sort,
   };
 }
 
@@ -64,9 +53,7 @@ export function HomePage() {
   useEffect(() => {
     const nextFilters = readFiltersFromSearchParams(searchParams);
     setFilters((current) =>
-      current.keyword === nextFilters.keyword && current.author === nextFilters.author && current.searchType === nextFilters.searchType && current.sort === nextFilters.sort
-        ? current
-        : nextFilters,
+      current.keyword === nextFilters.keyword && current.author === nextFilters.author && current.searchType === nextFilters.searchType ? current : nextFilters,
     );
   }, [searchParams]);
 
@@ -110,7 +97,6 @@ export function HomePage() {
         pageSize: homePageSize,
         keyword: filters.keyword,
         author: filters.author,
-        sort: filters.sort,
         isUpload: 'true',
       });
 
@@ -163,7 +149,6 @@ export function HomePage() {
             pageSize: homePageSize,
             keyword: filters.keyword,
             author: filters.author,
-            sort: filters.sort,
             isUpload: 'true',
           }),
         ),
@@ -220,7 +205,7 @@ export function HomePage() {
     setSearchParams({});
   }
 
-  function clearFilter(key: 'keyword' | 'author' | 'sort' | 'searchType') {
+  function clearFilter(key: 'keyword' | 'author' | 'searchType') {
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
       next.delete(key);
@@ -232,7 +217,7 @@ export function HomePage() {
     });
   }
 
-  const hasActiveFilters = Boolean(filters.keyword || filters.author || filters.sort !== defaultFilters.sort);
+  const hasActiveFilters = Boolean(filters.keyword || filters.author);
 
   return (
     <>
@@ -248,11 +233,6 @@ export function HomePage() {
               {filters.author ? (
                 <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearFilter('author')} type="button">
                   {filters.searchType === 'phone' ? '手机号' : '作者'}：{filters.author} ×
-                </button>
-              ) : null}
-              {filters.sort !== defaultFilters.sort ? (
-                <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearFilter('sort')} type="button">
-                  排序：{sortLabelMap[filters.sort]} ×
                 </button>
               ) : null}
               <button className="legacy-action-button secondary small" onClick={handleReset} type="button">
