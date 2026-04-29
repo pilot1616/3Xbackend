@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { buildUploadAssetUrl } from '../api/client';
 import { createQuestion, listMyQuestions, uploadQuestionFiles } from '../api/forum';
@@ -28,6 +28,28 @@ const defaultFilters: MyQuestionFilters = {
   uploadFilter: '',
   sort: 'latest',
 };
+
+const publishSortLabelMap: Record<string, string> = {
+  latest: '最新发布',
+  oldest: '最早发布',
+  most_liked: '点赞最多',
+  most_commented: '评论最多',
+};
+
+const uploadFilterLabelMap: Record<string, string> = {
+  true: '仅看已发布',
+  false: '仅看未发布',
+};
+
+function readMyQuestionFiltersFromSearchParams(searchParams: URLSearchParams): MyQuestionFilters {
+  const nextSort = searchParams.get('sort')?.trim() ?? defaultFilters.sort;
+  const nextUploadFilter = searchParams.get('uploadFilter')?.trim() ?? defaultFilters.uploadFilter;
+  return {
+    keyword: searchParams.get('keyword')?.trim() ?? defaultFilters.keyword,
+    uploadFilter: nextUploadFilter === 'true' || nextUploadFilter === 'false' ? nextUploadFilter : defaultFilters.uploadFilter,
+    sort: publishSortLabelMap[nextSort] ? nextSort : defaultFilters.sort,
+  };
+}
 
 function isDefaultMyQuestionFilters(filters: MyQuestionFilters) {
   return filters.keyword === defaultFilters.keyword && filters.uploadFilter === defaultFilters.uploadFilter && filters.sort === defaultFilters.sort;
@@ -92,6 +114,7 @@ function SelectedFilePreviewGrid({ files }: { files: File[] }) {
 
 export function PublishPage() {
   const session = useSession();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [text, setText] = useState('');
   const [message, setMessage] = useState('');
   const [page, setPage] = useState(emptyPage);
@@ -107,6 +130,16 @@ export function PublishPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const nextFilters = readMyQuestionFiltersFromSearchParams(searchParams);
+    setKeywordInput(nextFilters.keyword);
+    setUploadFilterInput(nextFilters.uploadFilter);
+    setSortInput(nextFilters.sort);
+    setFilters((current) =>
+      current.keyword === nextFilters.keyword && current.uploadFilter === nextFilters.uploadFilter && current.sort === nextFilters.sort ? current : nextFilters,
+    );
+  }, [searchParams]);
 
   useEffect(() => {
     if (session) {
@@ -290,10 +323,25 @@ export function PublishPage() {
 
   function handleFilterSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setFilters({
-      keyword: keywordInput.trim(),
-      uploadFilter: uploadFilterInput,
-      sort: sortInput,
+    const nextKeyword = keywordInput.trim();
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (nextKeyword) {
+        next.set('keyword', nextKeyword);
+      } else {
+        next.delete('keyword');
+      }
+      if (uploadFilterInput) {
+        next.set('uploadFilter', uploadFilterInput);
+      } else {
+        next.delete('uploadFilter');
+      }
+      if (sortInput !== defaultFilters.sort) {
+        next.set('sort', sortInput);
+      } else {
+        next.delete('sort');
+      }
+      return next;
     });
   }
 
@@ -301,7 +349,15 @@ export function PublishPage() {
     setKeywordInput(defaultFilters.keyword);
     setUploadFilterInput(defaultFilters.uploadFilter);
     setSortInput(defaultFilters.sort);
-    setFilters(defaultFilters);
+    setSearchParams({});
+  }
+
+  function clearFilter(key: 'keyword' | 'uploadFilter' | 'sort') {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete(key);
+      return next;
+    });
   }
 
   if (!session) {
@@ -410,6 +466,29 @@ export function PublishPage() {
             </button>
           </div>
         </form>
+
+        {filters.keyword || filters.uploadFilter || filters.sort !== defaultFilters.sort ? (
+          <div className="legacy-active-filters">
+            {filters.keyword ? (
+              <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearFilter('keyword')} type="button">
+                关键字：{filters.keyword} ×
+              </button>
+            ) : null}
+            {filters.uploadFilter ? (
+              <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearFilter('uploadFilter')} type="button">
+                状态：{uploadFilterLabelMap[filters.uploadFilter]} ×
+              </button>
+            ) : null}
+            {filters.sort !== defaultFilters.sort ? (
+              <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearFilter('sort')} type="button">
+                排序：{publishSortLabelMap[filters.sort]} ×
+              </button>
+            ) : null}
+            <button className="legacy-action-button secondary small" onClick={handleFilterReset} type="button">
+              清除全部
+            </button>
+          </div>
+        ) : null}
 
         <div className="whisper-list">
           {loading ? <div className="legacy-feedback">正在加载我的帖子...</div> : null}
