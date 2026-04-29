@@ -13,6 +13,14 @@ export class ApiError extends Error {
   }
 }
 
+function safeParseJson(text: string) {
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return null;
+  }
+}
+
 export function buildAssetUrl(path: string) {
   if (/^https?:\/\//i.test(path)) {
     return path;
@@ -41,7 +49,8 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   });
 
   const isJson = response.headers.get('content-type')?.includes('application/json');
-  const payload = isJson ? await response.json() : null;
+  const rawText = await response.text();
+  const payload = isJson && rawText ? safeParseJson(rawText) : null;
 
   if (!response.ok) {
     if (response.status === 401) {
@@ -75,7 +84,7 @@ export function uploadRequest<T>(path: string, body: FormData, onProgress?: (per
     xhr.addEventListener('load', () => {
       const contentType = xhr.getResponseHeader('content-type') ?? '';
       const isJson = contentType.includes('application/json');
-      const payload = isJson && xhr.responseText ? JSON.parse(xhr.responseText) : null;
+      const payload = isJson && xhr.responseText ? safeParseJson(xhr.responseText) : null;
 
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(payload as T);
