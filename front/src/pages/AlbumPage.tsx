@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { buildUploadAssetUrl } from '../api/client';
 import { listMyQuestions } from '../api/forum';
@@ -16,6 +16,20 @@ const defaultFilters: AlbumFilters = {
   keyword: '',
   mediaType: 'all',
 };
+
+const albumMediaTypeLabelMap: Record<AlbumFilters['mediaType'], string> = {
+  all: '全部类型',
+  image: '仅看图片',
+  video: '仅看视频',
+};
+
+function readAlbumFiltersFromSearchParams(searchParams: URLSearchParams): AlbumFilters {
+  const nextMediaType = searchParams.get('mediaType');
+  return {
+    keyword: searchParams.get('keyword')?.trim() ?? defaultFilters.keyword,
+    mediaType: nextMediaType === 'image' || nextMediaType === 'video' ? nextMediaType : defaultFilters.mediaType,
+  };
+}
 
 type AlbumQuestionPageInfo = {
   page: number;
@@ -55,6 +69,7 @@ function isImage(fileName: string) {
 
 export function AlbumPage() {
   const session = useSession();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<AlbumItem[]>([]);
   const [message, setMessage] = useState('');
   const [filters, setFilters] = useState<AlbumFilters>(defaultFilters);
@@ -76,6 +91,13 @@ export function AlbumPage() {
 
   const imageCount = visibleItems.filter((item) => isImage(item.fileName)).length;
   const videoCount = visibleItems.length - imageCount;
+
+  useEffect(() => {
+    const nextFilters = readAlbumFiltersFromSearchParams(searchParams);
+    setKeywordInput(nextFilters.keyword);
+    setMediaTypeInput(nextFilters.mediaType);
+    setFilters((current) => (current.keyword === nextFilters.keyword && current.mediaType === nextFilters.mediaType ? current : nextFilters));
+  }, [searchParams]);
 
   useEffect(() => {
     if (!session) {
@@ -253,16 +275,35 @@ export function AlbumPage() {
 
   function handleFilterSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setFilters({
-      keyword: keywordInput.trim(),
-      mediaType: mediaTypeInput,
+    const nextKeyword = keywordInput.trim();
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (nextKeyword) {
+        next.set('keyword', nextKeyword);
+      } else {
+        next.delete('keyword');
+      }
+      if (mediaTypeInput !== defaultFilters.mediaType) {
+        next.set('mediaType', mediaTypeInput);
+      } else {
+        next.delete('mediaType');
+      }
+      return next;
     });
   }
 
   function handleFilterReset() {
     setKeywordInput(defaultFilters.keyword);
     setMediaTypeInput(defaultFilters.mediaType);
-    setFilters(defaultFilters);
+    setSearchParams({});
+  }
+
+  function clearFilter(key: 'keyword' | 'mediaType') {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete(key);
+      return next;
+    });
   }
 
   return (
@@ -304,6 +345,24 @@ export function AlbumPage() {
                 </button>
               </div>
             </form>
+
+            {filters.keyword || filters.mediaType !== defaultFilters.mediaType ? (
+              <div className="legacy-active-filters">
+                {filters.keyword ? (
+                  <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearFilter('keyword')} type="button">
+                    关键字：{filters.keyword} ×
+                  </button>
+                ) : null}
+                {filters.mediaType !== defaultFilters.mediaType ? (
+                  <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearFilter('mediaType')} type="button">
+                    类型：{albumMediaTypeLabelMap[filters.mediaType]} ×
+                  </button>
+                ) : null}
+                <button className="legacy-action-button secondary small" onClick={handleFilterReset} type="button">
+                  清除全部
+                </button>
+              </div>
+            ) : null}
 
             {loading ? <div className="legacy-feedback">正在加载相册...</div> : null}
 
