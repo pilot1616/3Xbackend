@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { buildUploadAssetUrl } from '../api/client';
@@ -6,6 +6,16 @@ import { listMyQuestions } from '../api/forum';
 import { useSession } from '../lib/session';
 
 const albumQuestionPageSize = 20;
+
+type AlbumFilters = {
+  keyword: string;
+  mediaType: 'all' | 'image' | 'video';
+};
+
+const defaultFilters: AlbumFilters = {
+  keyword: '',
+  mediaType: 'all',
+};
 
 type AlbumQuestionPageInfo = {
   page: number;
@@ -36,6 +46,9 @@ export function AlbumPage() {
   const session = useSession();
   const [items, setItems] = useState<AlbumItem[]>([]);
   const [message, setMessage] = useState('');
+  const [filters, setFilters] = useState<AlbumFilters>(defaultFilters);
+  const [keywordInput, setKeywordInput] = useState(defaultFilters.keyword);
+  const [mediaTypeInput, setMediaTypeInput] = useState<AlbumFilters['mediaType']>(defaultFilters.mediaType);
   const [pageInfo, setPageInfo] = useState<AlbumQuestionPageInfo>(emptyPageInfo);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -47,7 +60,7 @@ export function AlbumPage() {
       return;
     }
     void loadAlbum(1, true);
-  }, [session]);
+  }, [session, filters.keyword]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -84,6 +97,7 @@ export function AlbumPage() {
       const page = await listMyQuestions({
         page: targetPage,
         pageSize: albumQuestionPageSize,
+        keyword: filters.keyword,
         sort: 'latest',
       });
       const nextItems = page.records.flatMap((question) =>
@@ -144,6 +158,7 @@ export function AlbumPage() {
           listMyQuestions({
             page: index + 1,
             pageSize: albumQuestionPageSize,
+            keyword: filters.keyword,
             sort: 'latest',
           }),
         ),
@@ -177,6 +192,30 @@ export function AlbumPage() {
     }
   }
 
+  function handleFilterSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFilters({
+      keyword: keywordInput.trim(),
+      mediaType: mediaTypeInput,
+    });
+  }
+
+  function handleFilterReset() {
+    setKeywordInput(defaultFilters.keyword);
+    setMediaTypeInput(defaultFilters.mediaType);
+    setFilters(defaultFilters);
+  }
+
+  const visibleItems = items.filter((item) => {
+    if (filters.mediaType === 'all') {
+      return true;
+    }
+    return filters.mediaType === 'image' ? isImage(item.fileName) : !isImage(item.fileName);
+  });
+
+  const imageCount = visibleItems.filter((item) => isImage(item.fileName)).length;
+  const videoCount = visibleItems.length - imageCount;
+
   return (
     <>
       {!session ? (
@@ -196,12 +235,33 @@ export function AlbumPage() {
           {message ? <div className="legacy-feedback legacy-home-feedback">{message}</div> : null}
 
           <div className="img-list">
+            <form className="legacy-home-filter-row legacy-publish-filter-row" onSubmit={handleFilterSubmit}>
+              <div className="legacy-home-filter-copy">
+                <strong>相册筛选</strong>
+                <span>按帖子关键字筛选附件来源，并按图片或视频类型查看相册内容。</span>
+              </div>
+              <input onChange={(event) => setKeywordInput(event.target.value)} placeholder="按帖子内容关键字筛选" value={keywordInput} />
+              <select onChange={(event) => setMediaTypeInput(event.target.value as AlbumFilters['mediaType'])} value={mediaTypeInput}>
+                <option value="all">全部类型</option>
+                <option value="image">仅看图片</option>
+                <option value="video">仅看视频</option>
+              </select>
+              <div className="legacy-home-filter-actions">
+                <button className="legacy-action-button small" type="submit">
+                  应用筛选
+                </button>
+                <button className="legacy-action-button secondary small" onClick={handleFilterReset} type="button">
+                  重置
+                </button>
+              </div>
+            </form>
+
             {loading ? <div className="legacy-feedback">正在加载相册...</div> : null}
 
             {!loading && pageInfo.loaded > 0 ? (
               <div className="legacy-home-load-status">
                 <span>
-                  已收集 {items.length} 个附件，已扫描 {pageInfo.loaded} / {pageInfo.total} 条帖子
+                  当前展示 {visibleItems.length} 个附件，图片 {imageCount} 个，视频 {videoCount} 个；已扫描 {pageInfo.loaded} / {pageInfo.total} 条帖子
                 </span>
                 <button className="legacy-action-button secondary small" onClick={() => void reloadCurrentWindow()} type="button">
                   刷新当前相册
@@ -209,11 +269,13 @@ export function AlbumPage() {
               </div>
             ) : null}
 
-            {!loading && !loadingMore && !hasMore && items.length === 0 && !message ? <div className="legacy-feedback">你还没有上传过附件，先去发布一条带图片或视频的帖子。</div> : null}
+            {!loading && !loadingMore && !hasMore && visibleItems.length === 0 && !message ? (
+              <div className="legacy-feedback">{filters.keyword || filters.mediaType !== 'all' ? '当前筛选条件下没有匹配的相册内容。' : '你还没有上传过附件，先去发布一条带图片或视频的帖子。'}</div>
+            ) : null}
 
-            {items.length > 0 ? (
+            {visibleItems.length > 0 ? (
               <div className="legacy-album-grid">
-                {items.map((item) => (
+                {visibleItems.map((item) => (
                   <article className="legacy-album-item" key={`${item.qid}-${item.fileName}`}>
                     <div className="imgBox legacy-album-media-box">
                       {isImage(item.fileName) ? (
@@ -235,7 +297,7 @@ export function AlbumPage() {
             ) : null}
 
             {loadingMore ? <div className="legacy-feedback legacy-home-feedback">正在继续加载更多相册内容...</div> : null}
-            {!loading && !hasMore && items.length > 0 ? <div className="legacy-feedback legacy-home-feedback">已经到底了，全部相册内容都加载完成。</div> : null}
+            {!loading && !hasMore && visibleItems.length > 0 ? <div className="legacy-feedback legacy-home-feedback">已经到底了，全部相册内容都加载完成。</div> : null}
             <div className="legacy-home-load-anchor" ref={loadMoreRef}></div>
           </div>
         </div>
