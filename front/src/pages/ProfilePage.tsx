@@ -248,12 +248,34 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="about-content">
+    <div className="about-content profile-scene">
       <div className="w1000 legacy-profile-page">
         {message ? <div className="legacy-feedback legacy-home-feedback">{message}</div> : null}
 
         {user ? (
           <>
+            <div className="legacy-profile-stage">
+              <div className="legacy-profile-stage-copy">
+                <span className="legacy-home-stage-kicker">3X Personal Hub</span>
+                <h2>把你的资料、互动和历史内容集中到一块个人工作台</h2>
+                <p>这里承接头像、个人信息、最近帖子、评论和点赞记录，帮助你在同一块空间里回看自己的社区轨迹。</p>
+              </div>
+              <div className="legacy-profile-stage-metrics">
+                <article className="legacy-home-stage-card">
+                  <strong>{summary.questionsCount}</strong>
+                  <span>发布帖子</span>
+                </article>
+                <article className="legacy-home-stage-card">
+                  <strong>{summary.commentsCount}</strong>
+                  <span>参与评论</span>
+                </article>
+                <article className="legacy-home-stage-card">
+                  <strong>{summary.likesCount}</strong>
+                  <span>累计点赞</span>
+                </article>
+              </div>
+            </div>
+
             <div className="item info" id="showInfo" style={{ display: viewMode === 'show' ? 'block' : 'none', position: 'relative' }}>
               <div className="title">
                 <h3>我的介绍</h3>

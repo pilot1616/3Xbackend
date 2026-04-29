@@ -1893,6 +1893,233 @@ video {
   color: #8ff1ff;
 }
 
+.profile-scene {
+  position: relative;
+  overflow: hidden;
+  padding: 28px 0 84px;
+  background:
+    radial-gradient(circle at 14% 10%, rgba(65, 225, 255, 0.14), transparent 24%),
+    radial-gradient(circle at 88% 8%, rgba(147, 112, 255, 0.14), transparent 18%),
+    linear-gradient(180deg, #08111d 0%, #0b1726 36%, #111b28 100%);
+}
+
+.profile-scene::before,
+.profile-scene::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.profile-scene::before {
+  background:
+    linear-gradient(rgba(120, 176, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 176, 255, 0.06) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.88), transparent 86%);
+}
+
+.profile-scene::after {
+  background: radial-gradient(circle at 50% 100%, rgba(27, 99, 184, 0.24), transparent 0 26%);
+}
+
+.profile-scene .legacy-profile-page {
+  position: relative;
+  z-index: 1;
+  width: min(1120px, calc(100vw - 40px));
+  margin: 0 auto;
+}
+
+.legacy-profile-stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.9fr);
+  gap: 24px;
+  margin: 0 auto 26px;
+  padding: 30px;
+  border-radius: 28px;
+  background: linear-gradient(160deg, rgba(12, 22, 38, 0.95) 0%, rgba(13, 27, 47, 0.9) 58%, rgba(21, 35, 56, 0.94) 100%);
+  border: 1px solid rgba(126, 201, 255, 0.14);
+  box-shadow: 0 28px 70px rgba(1, 8, 20, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.07), inset 0 -18px 32px rgba(0, 0, 0, 0.16);
+}
+
+.legacy-profile-stage::before {
+  content: '';
+  position: absolute;
+  inset: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(151, 223, 255, 0.08);
+  pointer-events: none;
+}
+
+.legacy-profile-stage-copy,
+.legacy-profile-stage-metrics {
+  position: relative;
+  z-index: 1;
+}
+
+.legacy-profile-stage-copy {
+  display: grid;
+  gap: 14px;
+  align-content: center;
+}
+
+.legacy-profile-stage-copy h2 {
+  margin: 0;
+  color: #f5fbff;
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1.06;
+  letter-spacing: -0.03em;
+}
+
+.legacy-profile-stage-copy p {
+  max-width: 620px;
+  margin: 0;
+  color: rgba(215, 231, 255, 0.78);
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.legacy-profile-stage-metrics {
+  display: grid;
+  gap: 14px;
+  perspective: 1200px;
+}
+
+.profile-scene #showInfo,
+.profile-scene #editInfo,
+.profile-scene .legacy-record-panel,
+.profile-scene .legacy-feedback {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(160deg, rgba(12, 22, 38, 0.92) 0%, rgba(13, 27, 47, 0.88) 58%, rgba(21, 35, 56, 0.92) 100%);
+  border: 1px solid rgba(126, 201, 255, 0.14);
+  border-radius: 28px;
+  box-shadow: 0 24px 58px rgba(1, 8, 20, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -18px 32px rgba(0, 0, 0, 0.14);
+}
+
+.profile-scene #showInfo::before,
+.profile-scene #editInfo::before,
+.profile-scene .legacy-record-panel::before,
+.profile-scene .legacy-feedback::before {
+  content: '';
+  position: absolute;
+  inset: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(151, 223, 255, 0.08);
+  pointer-events: none;
+}
+
+.profile-scene #showInfo,
+.profile-scene #editInfo {
+  padding: 28px;
+}
+
+.profile-scene .title h3,
+.profile-scene #editInfo h3,
+.profile-scene .legacy-record-panel h3,
+.profile-scene .legacy-summary-chip,
+.profile-scene .legacy-mini-card-title,
+.profile-scene .legacy-mini-card-badge,
+.profile-scene .layui-form-label,
+.profile-scene .name,
+.profile-scene .age,
+.profile-scene .interest,
+.profile-scene .Career {
+  color: #f2f9ff;
+}
+
+.profile-scene .per-info p,
+.profile-scene .legacy-feedback,
+.profile-scene .legacy-empty-inline,
+.profile-scene .legacy-list-pagination span,
+.profile-scene .legacy-mini-card-meta span,
+.profile-scene .legacy-mini-card-quote,
+.profile-scene .legacy-mini-card-main,
+.profile-scene .legacy-login-tip,
+.profile-scene .upload-text,
+.profile-scene .legacy-upload-hint {
+  color: rgba(196, 222, 248, 0.74);
+}
+
+.profile-scene .legacy-profile-info-wrap {
+  align-items: center;
+  gap: 28px;
+}
+
+.profile-scene #showUserImg,
+.profile-scene #userImg {
+  border: 1px solid rgba(144, 222, 255, 0.18);
+  box-shadow: 0 22px 40px rgba(1, 8, 20, 0.24);
+}
+
+.profile-scene .legacy-summary-chip {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(123, 206, 255, 0.14);
+}
+
+.profile-scene .legacy-profile-form,
+.profile-scene .legacy-profile-upload-col,
+.profile-scene .legacy-mini-card,
+.profile-scene .legacy-mini-card-quote,
+.profile-scene .upload-dragger {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(148, 213, 255, 0.14);
+  border-radius: 20px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.profile-scene .legacy-profile-form {
+  padding: 22px;
+}
+
+.profile-scene .legacy-profile-upload-col {
+  padding: 22px;
+}
+
+.profile-scene .upload-dragger {
+  min-height: 220px;
+}
+
+.profile-scene .layui-input,
+.profile-scene .layui-textarea,
+.profile-scene .legacy-home-filter-row input {
+  border: 1px solid rgba(128, 201, 255, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #eff7ff;
+}
+
+.profile-scene .legacy-home-filter-row {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(148, 213, 255, 0.14);
+  border-radius: 20px;
+}
+
+.profile-scene .legacy-action-button,
+.profile-scene .layui-btn {
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(54, 236, 255, 0.18) 0%, rgba(129, 116, 255, 0.22) 100%);
+  color: #ecf9ff;
+  border: 1px solid rgba(128, 205, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.profile-scene .legacy-action-button:hover,
+.profile-scene .layui-btn:hover {
+  transform: translateY(-2px);
+}
+
+.profile-scene .legacy-mini-card-badge {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(123, 206, 255, 0.14);
+}
+
+.profile-scene .legacy-mini-card-badge.is-published {
+  background: linear-gradient(135deg, rgba(35, 223, 255, 0.18), rgba(96, 124, 255, 0.18));
+  color: #8ff1ff;
+}
+
 .auth-legacy-page {
   position: relative;
   min-height: 100vh;
@@ -2737,6 +2964,19 @@ video {
 }
 
 @media screen and (max-width: 900px) {
+  .profile-scene {
+    padding: 22px 0 64px;
+  }
+
+  .profile-scene .legacy-profile-page {
+    width: min(100vw - 32px, 1120px);
+  }
+
+  .legacy-profile-stage {
+    grid-template-columns: 1fr;
+    padding: 24px 20px;
+  }
+
   .publish-scene,
   .album-scene.legacy-album-page {
     padding: 22px 0 64px;
@@ -2846,6 +3086,26 @@ video {
 }
 
 @media screen and (max-width: 768px) {
+  .profile-scene .legacy-profile-page {
+    width: min(100vw - 24px, 1120px);
+  }
+
+  .legacy-profile-stage,
+  .profile-scene #showInfo,
+  .profile-scene #editInfo,
+  .profile-scene .legacy-record-panel {
+    padding: 20px 16px;
+    border-radius: 22px;
+  }
+
+  .legacy-profile-stage-copy h2 {
+    font-size: 28px;
+  }
+
+  .legacy-profile-stage-copy p {
+    font-size: 14px;
+  }
+
   .publish-scene .cont,
   .album-scene.legacy-album-page {
     width: min(100vw - 24px, 1120px);
