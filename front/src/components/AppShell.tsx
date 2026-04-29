@@ -21,6 +21,7 @@ export function AppShell() {
   const session = useSession();
   const location = useLocation();
   const navigate = useNavigate();
+  const showHeaderSearch = location.pathname === '/';
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchMode, setSearchMode] = useState<GlobalSearchMode>('content');
 
@@ -75,7 +76,7 @@ export function AppShell() {
 
   return (
     <div className="legacy-app-shell">
-      <div className="header w1000">
+      <div className={`header w1000${showHeaderSearch ? ' legacy-header-with-search' : ' legacy-header-compact'}`}>
         <h1 className="logo">
           <Link to="/">
             <img alt="3X" className="legacy-brand-mark" src="/legacy/res/img/logo.png" />
@@ -95,20 +96,22 @@ export function AppShell() {
             我的资料
           </NavLink>
         </div>
-        <div className="legacy-header-tools">
-          <form className="legacy-header-search" onSubmit={handleHeaderSearchSubmit}>
-            <select aria-label="搜索类型" className="legacy-header-search-mode" onChange={(event) => setSearchMode(event.target.value as GlobalSearchMode)} value={searchMode}>
-              <option value="content">按内容</option>
-              <option value="author">按作者</option>
-              <option value="phone">按手机号</option>
-            </select>
-            <span className="legacy-header-search-divider" aria-hidden="true"></span>
-            <input aria-label="搜索内容" onChange={(event) => setSearchKeyword(event.target.value)} placeholder={searchPlaceholderMap[searchMode]} type="search" value={searchKeyword} />
-            <button className="legacy-search-button" type="submit">
-              <LegacyIcon name="search" size={18} />
-            </button>
-          </form>
-        </div>
+        {showHeaderSearch ? (
+          <div className="legacy-header-tools">
+            <form className="legacy-header-search" onSubmit={handleHeaderSearchSubmit}>
+              <select aria-label="搜索类型" className="legacy-header-search-mode" onChange={(event) => setSearchMode(event.target.value as GlobalSearchMode)} value={searchMode}>
+                <option value="content">按内容</option>
+                <option value="author">按作者</option>
+                <option value="phone">按手机号</option>
+              </select>
+              <span className="legacy-header-search-divider" aria-hidden="true"></span>
+              <input aria-label="搜索内容" onChange={(event) => setSearchKeyword(event.target.value)} placeholder={searchPlaceholderMap[searchMode]} type="search" value={searchKeyword} />
+              <button className="legacy-search-button" type="submit">
+                <LegacyIcon name="search" size={18} />
+              </button>
+            </form>
+          </div>
+        ) : null}
         <div className="login-text">
           {session ? (
             <div className="legacy-session-bar">

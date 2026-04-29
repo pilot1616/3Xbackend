@@ -31,14 +31,21 @@ video {
 .header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas:
-    'logo nav auth'
-    'search search search';
   align-items: center;
   gap: 24px;
   min-height: 120px;
   padding: 20px 0 16px;
   line-height: normal;
+}
+
+.legacy-header-with-search {
+  grid-template-areas:
+    'logo nav auth'
+    'search search search';
+}
+
+.legacy-header-compact {
+  grid-template-areas: 'logo nav auth';
 }
 
 .header .logo,
