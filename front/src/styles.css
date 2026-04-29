@@ -2575,6 +2575,12 @@ video {
 .profile-scene .legacy-profile-form-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
+}
+
+.profile-scene .legacy-profile-reset-button {
+  background: rgba(255, 255, 255, 0.06);
+  color: #d6ebff;
 }
 
 .profile-scene .legacy-profile-upload-col {

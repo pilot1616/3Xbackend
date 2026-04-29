@@ -47,6 +47,17 @@ const emptyQuestions: QuestionListPage = {
   records: [],
 };
 
+type EditableProfileSnapshot = Pick<User, 'nickname' | 'age' | 'hobby' | 'sign'>;
+
+function toEditableProfileSnapshot(user: User): EditableProfileSnapshot {
+  return {
+    nickname: user.nickname,
+    age: user.age,
+    hobby: user.hobby,
+    sign: user.sign,
+  };
+}
+
 export function ProfilePage() {
   const session = useSession();
   const [user, setUser] = useState<User | null>(null);
@@ -54,6 +65,7 @@ export function ProfilePage() {
   const [comments, setComments] = useState(emptyComments);
   const [likes, setLikes] = useState(emptyLikes);
   const [questions, setQuestions] = useState(emptyQuestions);
+  const [savedProfile, setSavedProfile] = useState<EditableProfileSnapshot | null>(null);
   const [commentPage, setCommentPage] = useState(1);
   const [likePage, setLikePage] = useState(1);
   const [commentKeyword, setCommentKeyword] = useState('');
@@ -86,10 +98,28 @@ export function ProfilePage() {
     void loadLikesPage(likePage, likeKeyword);
   }, [session, likePage, likeKeyword]);
 
+  useEffect(() => {
+    if (!user || !savedProfile || viewMode !== 'edit') {
+      return;
+    }
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      if (!isProfileDirty) {
+        return;
+      }
+      event.preventDefault();
+      event.returnValue = '';
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [savedProfile, user, viewMode]);
+
   async function loadBaseProfile() {
     try {
       const [me, nextSummary, nextQuestions] = await Promise.all([getMe(), getMySummary(), listMyQuestions({ page: 1, pageSize: 6, sort: 'latest' })]);
       setUser(me);
+      setSavedProfile(toEditableProfileSnapshot(me));
       setSummary(nextSummary);
       setQuestions(nextQuestions);
     } catch (err) {
@@ -139,6 +169,7 @@ export function ProfilePage() {
         sign: user.sign.trim(),
       });
       setUser(result.user);
+      setSavedProfile(toEditableProfileSnapshot(result.user));
       updateSessionUser(result.user);
       setMessage(result.message);
       setViewMode('show');
@@ -171,6 +202,7 @@ export function ProfilePage() {
       await uploadAvatar(file);
       const me = await getMe();
       setUser(me);
+      setSavedProfile(toEditableProfileSnapshot(me));
       updateSessionUser(me);
       setMessage('头像上传成功');
     } catch (err) {
@@ -232,6 +264,28 @@ export function ProfilePage() {
 
   const totalCommentPages = Math.max(1, Math.ceil(comments.total / Math.max(1, comments.page_size)));
   const totalLikePages = Math.max(1, Math.ceil(likes.total / Math.max(1, likes.page_size)));
+  const isProfileDirty = Boolean(user && savedProfile && JSON.stringify(toEditableProfileSnapshot(user)) !== JSON.stringify(savedProfile));
+
+  function handleReturnToShow() {
+    if (isProfileDirty) {
+      const confirmed = window.confirm('当前资料修改还没有保存，确认放弃这些改动吗？');
+      if (!confirmed) {
+        return;
+      }
+      if (user && savedProfile) {
+        setUser({ ...user, ...savedProfile });
+      }
+    }
+    setViewMode('show');
+  }
+
+  function handleResetProfileChanges() {
+    if (!user || !savedProfile) {
+      return;
+    }
+    setUser({ ...user, ...savedProfile });
+    setMessage('已撤销未保存的资料修改');
+  }
 
   if (!session) {
     return (
@@ -356,6 +410,11 @@ export function ProfilePage() {
                 </div>
                 <div className="layui-form-item">
                   <div className="layui-input-block legacy-profile-form-actions">
+                    {isProfileDirty ? (
+                      <button className="layui-btn legacy-profile-reset-button" onClick={handleResetProfileChanges} type="button">
+                        撤销修改
+                      </button>
+                    ) : null}
                     <button className="layui-btn" disabled={saving} type="submit">
                       {saving ? '保存中...' : '保存'}
                     </button>
@@ -363,7 +422,7 @@ export function ProfilePage() {
                 </div>
               </form>
 
-              <button className="layui-btn layui-btn-normal layui-btn-radius legacy-profile-toggle" id="gotoShow" onClick={() => setViewMode('show')} type="button">
+              <button className="layui-btn layui-btn-normal layui-btn-radius legacy-profile-toggle" id="gotoShow" onClick={handleReturnToShow} type="button">
                 显示信息
               </button>
             </div>
