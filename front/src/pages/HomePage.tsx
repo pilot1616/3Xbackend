@@ -51,7 +51,6 @@ export function HomePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [message, setMessage] = useState('');
   const [filters, setFilters] = useState<HomeFilters>(defaultFilters);
-  const [authorInput, setAuthorInput] = useState(defaultFilters.author);
   const [sortInput, setSortInput] = useState(defaultFilters.sort);
   const [submittingQid, setSubmittingQid] = useState<number | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -59,7 +58,6 @@ export function HomePage() {
 
   useEffect(() => {
     const nextFilters = readFiltersFromSearchParams(searchParams);
-    setAuthorInput(nextFilters.author);
     setSortInput(nextFilters.sort);
     setFilters((current) =>
       current.keyword === nextFilters.keyword && current.author === nextFilters.author && current.sort === nextFilters.sort ? current : nextFilters,
@@ -214,14 +212,8 @@ export function HomePage() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const nextAuthor = authorInput.trim();
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
-      if (nextAuthor) {
-        next.set('author', nextAuthor);
-      } else {
-        next.delete('author');
-      }
       if (sortInput !== defaultFilters.sort) {
         next.set('sort', sortInput);
       } else {
@@ -232,7 +224,6 @@ export function HomePage() {
   }
 
   function handleReset() {
-    setAuthorInput(defaultFilters.author);
     setSortInput(defaultFilters.sort);
     setSearchParams({});
   }
@@ -256,12 +247,7 @@ export function HomePage() {
       <section className="content whisper-content">
         <div className="cont">
           <form className="legacy-home-filter-row is-compact" onSubmit={handleSubmit}>
-            <span className="legacy-home-filter-label">作者筛选</span>
-            <input
-              onChange={(event) => setAuthorInput(event.target.value)}
-              placeholder="按作者昵称或手机号筛选"
-              value={authorInput}
-            />
+            <span className="legacy-home-filter-label">排序方式</span>
             <select onChange={(event) => setSortInput(event.target.value)} value={sortInput}>
               <option value="latest">最新发布</option>
               <option value="oldest">最早发布</option>
