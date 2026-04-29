@@ -73,6 +73,7 @@ export function QuestionCard({
   const [likesLoading, setLikesLoading] = useState(false);
   const [likesMessage, setLikesMessage] = useState('');
   const [likesPage, setLikesPage] = useState(emptyLikes);
+  const [previewFile, setPreviewFile] = useState<string | null>(null);
 
   useEffect(() => {
     if (!expanded) {
@@ -164,6 +165,7 @@ export function QuestionCard({
 
   const totalCommentPages = Math.max(1, Math.ceil((commentsPage.total || 0) / Math.max(1, commentsPage.page_size || 10)));
   const totalLikePages = Math.max(1, Math.ceil((likesPage.total || 0) / Math.max(1, likesPage.page_size || 8)));
+  const visibleFiles = question.files.slice(0, compact ? 4 : question.files.length);
 
   return (
     <div className="item-box forum-question-card">
@@ -189,13 +191,11 @@ export function QuestionCard({
 
         {question.files.length > 0 ? (
           <div className="img-box forum-media-grid">
-            {question.files.slice(0, compact ? 4 : question.files.length).map((fileName) =>
-              isImage(fileName) ? (
-                <img key={fileName} alt={fileName} src={buildUploadAssetUrl(fileName)} />
-              ) : (
-                <video key={fileName} controls src={buildUploadAssetUrl(fileName)} />
-              ),
-            )}
+            {visibleFiles.map((fileName) => (
+              <button className="forum-media-trigger" key={fileName} onClick={() => setPreviewFile(fileName)} type="button">
+                {isImage(fileName) ? <img alt={fileName} src={buildUploadAssetUrl(fileName)} /> : <video muted src={buildUploadAssetUrl(fileName)} />}
+              </button>
+            ))}
           </div>
         ) : null}
 
@@ -384,6 +384,17 @@ export function QuestionCard({
                 </button>
               </div>
             ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {previewFile ? (
+        <div className="forum-media-preview" onClick={() => setPreviewFile(null)} role="presentation">
+          <button aria-label="关闭预览" className="forum-media-preview-close" onClick={() => setPreviewFile(null)} type="button">
+            x
+          </button>
+          <div className="forum-media-preview-stage" onClick={(event) => event.stopPropagation()} role="presentation">
+            {isImage(previewFile) ? <img alt={previewFile} src={buildUploadAssetUrl(previewFile)} /> : <video autoPlay controls src={buildUploadAssetUrl(previewFile)} />}
           </div>
         </div>
       ) : null}
