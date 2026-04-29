@@ -1,4 +1,5 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { FormEvent, useEffect, useState } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { buildAssetUrl } from '../api/client';
 import { LegacyIcon } from './LegacyIcon';
@@ -10,6 +11,34 @@ function navClassName({ isActive }: { isActive: boolean }) {
 
 export function AppShell() {
   const session = useSession();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchKeyword, setSearchKeyword] = useState('');
+
+  useEffect(() => {
+    if (location.pathname !== '/') {
+      return;
+    }
+    const params = new URLSearchParams(location.search);
+    setSearchKeyword(params.get('keyword') ?? '');
+  }, [location.pathname, location.search]);
+
+  function handleHeaderSearchSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const keyword = searchKeyword.trim();
+    const params = location.pathname === '/' ? new URLSearchParams(location.search) : new URLSearchParams();
+
+    if (keyword) {
+      params.set('keyword', keyword);
+    } else {
+      params.delete('keyword');
+    }
+
+    navigate({
+      pathname: '/',
+      search: params.toString() ? `?${params.toString()}` : '',
+    });
+  }
 
   return (
     <div className="legacy-app-shell">
@@ -33,6 +62,14 @@ export function AppShell() {
           <NavLink className={navClassName} to="/profile">
             我的资料
           </NavLink>
+        </div>
+        <div className="legacy-header-tools">
+          <form className="legacy-header-search" onSubmit={handleHeaderSearchSubmit}>
+            <input onChange={(event) => setSearchKeyword(event.target.value)} placeholder="全站搜帖子内容" type="search" value={searchKeyword} />
+            <button className="legacy-search-button" type="submit">
+              <LegacyIcon name="search" size={18} />
+            </button>
+          </form>
         </div>
         <div className="login-text">
           {session ? (

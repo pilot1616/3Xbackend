@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { likeQuestion, listQuestions, unlikeQuestion } from '../api/forum';
 import { QuestionCard } from '../components/QuestionCard';
 import { useSession } from '../lib/session';
@@ -24,8 +25,25 @@ const defaultFilters: HomeFilters = {
   sort: 'latest',
 };
 
+const sortLabelMap: Record<string, string> = {
+  latest: '最新发布',
+  oldest: '最早发布',
+  most_liked: '点赞最多',
+  most_commented: '评论最多',
+};
+
+function readFiltersFromSearchParams(searchParams: URLSearchParams): HomeFilters {
+  const nextSort = searchParams.get('sort')?.trim() ?? defaultFilters.sort;
+  return {
+    keyword: searchParams.get('keyword')?.trim() ?? defaultFilters.keyword,
+    author: searchParams.get('author')?.trim() ?? defaultFilters.author,
+    sort: sortLabelMap[nextSort] ? nextSort : defaultFilters.sort,
+  };
+}
+
 export function HomePage() {
   const session = useSession();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(emptyPage);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -37,6 +55,16 @@ export function HomePage() {
   const [submittingQid, setSubmittingQid] = useState<number | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [hasMore, setHasMore] = useState(true);
+
+  useEffect(() => {
+    const nextFilters = readFiltersFromSearchParams(searchParams);
+    setKeywordInput(nextFilters.keyword);
+    setAuthorInput(nextFilters.author);
+    setSortInput(nextFilters.sort);
+    setFilters((current) =>
+      current.keyword === nextFilters.keyword && current.author === nextFilters.author && current.sort === nextFilters.sort ? current : nextFilters,
+    );
+  }, [searchParams]);
 
   useEffect(() => {
     void loadData(1, true);
@@ -100,7 +128,7 @@ export function HomePage() {
         };
       });
 
-      setHasMore(targetPage*result.page_size < result.total);
+      setHasMore(targetPage * result.page_size < result.total);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : '加载帖子失败');
     } finally {
@@ -186,10 +214,26 @@ export function HomePage() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setFilters({
-      keyword: keywordInput.trim(),
-      author: authorInput.trim(),
-      sort: sortInput,
+    const nextKeyword = keywordInput.trim();
+    const nextAuthor = authorInput.trim();
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (nextKeyword) {
+        next.set('keyword', nextKeyword);
+      } else {
+        next.delete('keyword');
+      }
+      if (nextAuthor) {
+        next.set('author', nextAuthor);
+      } else {
+        next.delete('author');
+      }
+      if (sortInput !== defaultFilters.sort) {
+        next.set('sort', sortInput);
+      } else {
+        next.delete('sort');
+      }
+      return next;
     });
   }
 
@@ -197,8 +241,14 @@ export function HomePage() {
     setKeywordInput(defaultFilters.keyword);
     setAuthorInput(defaultFilters.author);
     setSortInput(defaultFilters.sort);
-    setFilters(defaultFilters);
+    setSearchParams({});
   }
+
+  const activeFilterEntries = [
+    filters.keyword ? `关键字：${filters.keyword}` : '',
+    filters.author ? `作者：${filters.author}` : '',
+    filters.sort !== defaultFilters.sort ? `排序：${sortLabelMap[filters.sort]}` : '',
+  ].filter(Boolean);
 
   return (
     <>
@@ -230,6 +280,16 @@ export function HomePage() {
               </button>
             </div>
           </form>
+
+          {activeFilterEntries.length > 0 ? (
+            <div className="legacy-active-filters">
+              {activeFilterEntries.map((entry) => (
+                <span className="legacy-summary-chip" key={entry}>
+                  {entry}
+                </span>
+              ))}
+            </div>
+          ) : null}
 
           {message ? <div className="legacy-feedback legacy-home-feedback">{message}</div> : null}
           {loading ? <div className="legacy-feedback">正在加载帖子...</div> : null}
