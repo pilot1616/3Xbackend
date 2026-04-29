@@ -1304,6 +1304,20 @@ video {
   padding-top: 14px;
 }
 
+.legacy-album-copy-top,
+.legacy-album-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.legacy-album-copy-top strong {
+  color: #3b2f47;
+  font-size: 15px;
+}
+
 .legacy-album-copy .data {
   color: #9b835d;
   font-size: 13px;
@@ -1314,6 +1328,13 @@ video {
   color: #43324f;
   line-height: 1.7;
   min-height: 48px;
+}
+
+.legacy-album-file-name {
+  margin: 0;
+  color: #8d8d8d;
+  font-size: 12px;
+  word-break: break-all;
 }
 
 .legacy-my-question-list {

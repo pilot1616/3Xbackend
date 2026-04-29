@@ -38,6 +38,17 @@ interface AlbumItem {
   time: string;
 }
 
+function buildExcerpt(text: string, maxLength = 40) {
+  const content = text.trim();
+  if (!content) {
+    return '这条帖子没有可展示的正文摘要。';
+  }
+  if (content.length <= maxLength) {
+    return content;
+  }
+  return `${content.slice(0, maxLength).trimEnd()}...`;
+}
+
 function isImage(fileName: string) {
   return /\.(png|jpg|jpeg|gif)$/i.test(fileName);
 }
@@ -285,11 +296,21 @@ export function AlbumPage() {
                       )}
                     </div>
                     <div className="cont-text legacy-album-copy">
-                      <div className="data">{item.time.split(' ')[0] ?? item.time}</div>
-                      <p className="briefly">{item.text.length > 34 ? `${item.text.slice(0, 34)}...` : item.text}</p>
-                      <Link className="legacy-inline-link" to={`/questions/${item.qid}`}>
-                        查看原帖
-                      </Link>
+                      <div className="legacy-album-copy-top">
+                        <strong>帖子 #{item.qid}</strong>
+                        <span className={`legacy-mini-card-badge ${isImage(item.fileName) ? 'is-published' : 'is-draft'}`}>{isImage(item.fileName) ? '图片' : '视频'}</span>
+                      </div>
+                      <div className="data">{item.time}</div>
+                      <p className="briefly" title={item.text}>{buildExcerpt(item.text)}</p>
+                      <p className="legacy-album-file-name" title={item.fileName}>{item.fileName}</p>
+                      <div className="legacy-album-actions">
+                        <a className="legacy-inline-link" href={buildUploadAssetUrl(item.fileName)} rel="noreferrer" target="_blank">
+                          查看原文件
+                        </a>
+                        <Link className="legacy-inline-link" to={`/questions/${item.qid}`}>
+                          查看原帖
+                        </Link>
+                      </div>
                     </div>
                   </article>
                 ))}
