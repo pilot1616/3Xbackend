@@ -93,6 +93,25 @@ export function QuestionCard({
     void loadLikes(1);
   }, [likesOpen, question.qid, question.likesNum]);
 
+  useEffect(() => {
+    setPreviewFile(null);
+  }, [question.qid]);
+
+  useEffect(() => {
+    if (!previewFile) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setPreviewFile(null);
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewFile]);
+
   async function handleCommentSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = commentText.trim();
