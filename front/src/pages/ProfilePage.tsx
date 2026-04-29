@@ -277,12 +277,12 @@ export function ProfilePage() {
               </div>
             </div>
 
-            <div className="item info" id="showInfo" style={{ display: viewMode === 'show' ? 'block' : 'none', position: 'relative' }}>
+            <div className={`item info legacy-profile-panel${viewMode === 'show' ? '' : ' is-hidden'}`} id="showInfo">
               <div className="title">
                 <h3>我的介绍</h3>
               </div>
               <div className="cont legacy-profile-info-wrap">
-                <img alt={user.nickname} id="showUserImg" src={buildAssetUrl(user.avatar_path)} style={{ borderRadius: 20, maxWidth: 300 }} />
+                <img alt={user.nickname} className="legacy-profile-avatar-preview" id="showUserImg" src={buildAssetUrl(user.avatar_path)} />
                 <div className="per-info">
                   <p>
                     昵称：<span className="name">{user.nickname || '无'}</span>
@@ -301,16 +301,16 @@ export function ProfilePage() {
                   </div>
                 </div>
               </div>
-              <button className="layui-btn layui-btn-normal layui-btn-radius" id="gotoEdit" onClick={() => setViewMode('edit')} style={{ position: 'absolute', right: 0, top: 0 }} type="button">
+              <button className="layui-btn layui-btn-normal layui-btn-radius legacy-profile-toggle" id="gotoEdit" onClick={() => setViewMode('edit')} type="button">
                 编辑信息
               </button>
             </div>
 
-            <div className="item info" id="editInfo" style={{ display: viewMode === 'edit' ? 'flex' : 'none', position: 'relative' }}>
+            <div className={`item info legacy-profile-panel legacy-profile-editor${viewMode === 'edit' ? '' : ' is-hidden'}`} id="editInfo">
               <div className="layui-form-item legacy-profile-upload-col">
                 <h3>个人头像</h3>
                 <div className="layui-input-inline sortable-container legacy-sortable-container">
-                  <img alt={user.nickname} id="userImg" src={buildAssetUrl(user.avatar_path)} style={{ borderRadius: 20, maxWidth: 300 }} />
+                  <img alt={user.nickname} className="legacy-profile-avatar-preview" id="userImg" src={buildAssetUrl(user.avatar_path)} />
                   <label className="upload-dragger" htmlFor="upload-input">
                     <svg className="upload-icon" height="65" viewBox="0 0 1024 1024" width="65">
                       <path d="M815.104 363.008a307.2 307.2 0 0 0-606.72 0A256 256 0 0 0 256 870.4h204.8v-204.8H358.4l153.6-204.8 153.6 204.8h-102.4v204.8h204.8a256 256 0 0 0 47.104-507.392z" fill="#8a8a8a"></path>
@@ -355,7 +355,7 @@ export function ProfilePage() {
                   </div>
                 </div>
                 <div className="layui-form-item">
-                  <div className="layui-input-block">
+                  <div className="layui-input-block legacy-profile-form-actions">
                     <button className="layui-btn" disabled={saving} type="submit">
                       {saving ? '保存中...' : '保存'}
                     </button>
@@ -363,7 +363,7 @@ export function ProfilePage() {
                 </div>
               </form>
 
-              <button className="layui-btn layui-btn-normal layui-btn-radius" id="gotoShow" onClick={() => setViewMode('show')} style={{ position: 'absolute', top: 0, right: 0 }} type="button">
+              <button className="layui-btn layui-btn-normal layui-btn-radius legacy-profile-toggle" id="gotoShow" onClick={() => setViewMode('show')} type="button">
                 显示信息
               </button>
             </div>

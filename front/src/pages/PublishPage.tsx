@@ -453,16 +453,16 @@ export function PublishPage() {
                 </div>
               ) : null}
               <div className="layui-form-item">
-                <div className="layui-input-block" style={{ textAlign: 'right' }}>
+                <div className="layui-input-block legacy-publish-submit-wrap">
                   <button className="img-upload-btn" disabled={composerBusy} type="submit">
                     {composerBusy ? '发布中...' : '发布帖子'}
                   </button>
                 </div>
               </div>
             </form>
-            {message ? <div className="legacy-feedback" style={{ marginTop: 16 }}>{message}</div> : null}
+            {message ? <div className="legacy-feedback legacy-publish-feedback">{message}</div> : null}
             {latestCreatedQid ? (
-              <div className="legacy-home-load-status" style={{ marginTop: 12, padding: 0 }}>
+              <div className="legacy-home-load-status legacy-publish-status-link">
                 <span>已创建帖子 #{latestCreatedQid}，可以直接进入详情继续管理内容。</span>
                 <Link className="legacy-action-button secondary small" to={`/questions/${latestCreatedQid}`}>
                   查看刚发布的帖子
@@ -544,7 +544,7 @@ export function PublishPage() {
                   <div className="item legacy-my-question-item">
                     <div className="whisper-title legacy-my-question-title">
                       <div className="legacy-my-question-title-main">
-                        <LegacyIcon name="friends" size={16} style={{ color: 'gray' }} />
+                        <LegacyIcon className="legacy-my-question-title-icon" name="friends" size={16} />
                         <span className="nickname">{question.nickName}</span>
                         <span className="legacy-my-question-qid">QID {question.qid}</span>
                         <span className={`legacy-my-question-status${question.isUpload ? ' is-published' : ''}`}>

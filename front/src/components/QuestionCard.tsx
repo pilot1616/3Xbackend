@@ -212,7 +212,7 @@ export function QuestionCard({
             <img alt={question.nickName} className="forum-title-avatar" src={avatarSrc(question.avatarPath)} />
             <div className="forum-title-meta">
               <div className="forum-title-name-row">
-                <LegacyIcon name="friends" size={16} style={{ color: 'gray' }} />
+                <LegacyIcon className="forum-title-badge-icon" name="friends" size={16} />
                 <span className="nickname">{question.nickName}</span>
               </div>
               <div className="forum-title-time-row">
@@ -323,10 +323,10 @@ export function QuestionCard({
       </div>
 
       {expanded && !detailPageOnly ? (
-        <div className="review-version">
-          <div className="form">
+          <div className="review-version">
+          <div className="form forum-comment-composer">
             <img alt="avatar" className="now-header forum-comment-avatar" src={avatarSrc(viewerAvatarPath)} />
-            <form className="layui-form" onSubmit={handleCommentSubmit}>
+            <form className="layui-form forum-comment-form" onSubmit={handleCommentSubmit}>
               <div className="layui-form-item layui-form-text">
                 <div className="layui-input-block">
                   <textarea

@@ -209,7 +209,7 @@ export function AuthPage() {
             {mode === 'register' ? (
               <div className="layui-form layui-row layui-col-space16 auth-security-box">
                 <div className="layui-col-md12">
-                  <select id="securityQuestion" onChange={(event) => setSecurityQuestion(event.target.value)} value={securityQuestion}>
+                  <select className="auth-select-legacy" id="securityQuestion" onChange={(event) => setSecurityQuestion(event.target.value)} value={securityQuestion}>
                     <option value="">请选择密保问题</option>
                     {securityQuestionOptions.map((option) => (
                       <option key={option.value} value={option.value}>
