@@ -264,11 +264,22 @@ export function HomePage() {
             </div>
           ) : null}
 
-          {message ? <div className="legacy-feedback legacy-home-feedback">{message}</div> : null}
-          {loading ? <div className="legacy-feedback">正在加载帖子...</div> : null}
+          {message ? <div className="legacy-feedback legacy-home-feedback legacy-home-status-card">{message}</div> : null}
+          {loading ? <div className="legacy-feedback legacy-home-status-card">正在加载帖子...</div> : null}
 
           <div className="whisper-list legacy-home-deck">
-            {!loading && page.records.length === 0 ? <div className="legacy-feedback">当前没有匹配的帖子，换个筛选条件再试。</div> : null}
+            {!loading && page.records.length === 0 ? (
+              <div className="legacy-home-empty-state">
+                <span className="legacy-home-stage-kicker">No Signal</span>
+                <h3>{hasActiveFilters ? '当前筛选条件下没有匹配帖子' : '广场里暂时还没有公开帖子'}</h3>
+                <p>{hasActiveFilters ? '可以清空搜索条件，或者切换作者 / 手机号 / 内容重新检索。' : '等第一批公开帖子进入广场后，这里会开始持续滚动加载。'}</p>
+                {hasActiveFilters ? (
+                  <button className="legacy-action-button secondary" onClick={handleReset} type="button">
+                    清空当前筛选
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
 
             {page.records.map((question) => (
               <QuestionCard
@@ -286,7 +297,7 @@ export function HomePage() {
             ))}
 
             {!loading && page.records.length > 0 ? (
-              <div className="legacy-home-load-status">
+              <div className="legacy-home-load-status legacy-home-status-card">
                 <span>
                   已加载 {page.records.length} / {page.total} 条帖子
                 </span>
@@ -296,8 +307,8 @@ export function HomePage() {
               </div>
             ) : null}
 
-            {loadingMore ? <div className="legacy-feedback legacy-home-feedback">正在继续加载更多帖子...</div> : null}
-            {!loading && !hasMore && page.records.length > 0 ? <div className="legacy-feedback legacy-home-feedback">已经到底了，全部帖子都加载完成。</div> : null}
+            {loadingMore ? <div className="legacy-feedback legacy-home-feedback legacy-home-status-card">正在继续加载更多帖子...</div> : null}
+            {!loading && !hasMore && page.records.length > 0 ? <div className="legacy-feedback legacy-home-feedback legacy-home-status-card">已经到底了，全部帖子都加载完成。</div> : null}
             <div className="legacy-home-load-anchor" ref={loadMoreRef}></div>
           </div>
         </div>

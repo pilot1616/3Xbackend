@@ -436,15 +436,31 @@ export function QuestionDetailPage() {
   return (
     <section className="content whisper-content question-detail-scene">
       <div className="question-detail-shell">
-      <div className="legacy-toolbar-card question-detail-toolbar-card">
-        <div>
-          <h2>帖子详情</h2>
-          <p>这里展示单条帖子内容，并承接点赞、评论、评论编辑和删除。</p>
+      <div className="legacy-toolbar-card question-detail-toolbar-card question-detail-stage-banner">
+        <div className="question-detail-stage-copy">
+          <span className="legacy-home-stage-kicker">3X Detail Deck</span>
+          <h2>帖子详情控制台</h2>
+          <p>这里承接正文、附件、点赞、评论与作者更多帖子。所有深度操作都被集中到这块单帖工作台里。</p>
         </div>
-        <div className="legacy-toolbar-actions">
+        <div className="question-detail-stage-metrics">
+          <article className="legacy-home-stage-card">
+            <strong>{question ? `#${question.qid}` : '--'}</strong>
+            <span>当前帖子编号</span>
+          </article>
+          <article className="legacy-home-stage-card">
+            <strong>{question ? question.likesNum : '--'}</strong>
+            <span>累计点赞</span>
+          </article>
+          <article className="legacy-home-stage-card">
+            <strong>{question ? question.commentsNum : '--'}</strong>
+            <span>累计评论</span>
+          </article>
+        </div>
+        <div className="legacy-toolbar-actions question-detail-stage-actions">
           <Link className="legacy-action-button secondary" to="/">
             返回广场
           </Link>
+          {question ? <span className={`legacy-mini-card-badge ${question.isUpload ? 'is-published' : 'is-draft'}`}>{question.isUpload ? '已发布' : '未发布'}</span> : null}
         </div>
       </div>
 
@@ -548,7 +564,10 @@ export function QuestionDetailPage() {
 
           <aside className="legacy-card-list question-detail-sidebar">
             <section className="legacy-panel">
-              <h2>作者更多帖子</h2>
+              <div className="question-detail-sidebar-head">
+                <h2>作者更多帖子</h2>
+                {!relatedLoading && relatedQuestionsPage.total > 0 ? <span className="legacy-summary-chip">共 {relatedQuestionsPage.total} 条</span> : null}
+              </div>
               <form className="legacy-home-filter-row legacy-sidebar-filter-row" onSubmit={handleRelatedFilterSubmit}>
                 <input onChange={(event) => setRelatedKeywordInput(event.target.value)} placeholder="按正文关键字筛选" value={relatedKeywordInput} />
                 <select onChange={(event) => setRelatedSortInput(event.target.value)} value={relatedSortInput}>
