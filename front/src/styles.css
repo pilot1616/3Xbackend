@@ -1522,6 +1522,11 @@ video {
   font-weight: 700;
 }
 
+.legacy-summary-chip-button {
+  border: none;
+  cursor: pointer;
+}
+
 .legacy-profile-page {
   padding: 35px 0 70px;
 }

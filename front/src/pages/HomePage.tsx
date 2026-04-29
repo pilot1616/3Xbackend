@@ -244,6 +244,14 @@ export function HomePage() {
     setSearchParams({});
   }
 
+  function clearFilter(key: 'keyword' | 'author' | 'sort') {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete(key);
+      return next;
+    });
+  }
+
   const activeFilterEntries = [
     filters.keyword ? `关键字：${filters.keyword}` : '',
     filters.author ? `作者：${filters.author}` : '',
@@ -283,11 +291,24 @@ export function HomePage() {
 
           {activeFilterEntries.length > 0 ? (
             <div className="legacy-active-filters">
-              {activeFilterEntries.map((entry) => (
-                <span className="legacy-summary-chip" key={entry}>
-                  {entry}
-                </span>
-              ))}
+              {filters.keyword ? (
+                <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearFilter('keyword')} type="button">
+                  关键字：{filters.keyword} ×
+                </button>
+              ) : null}
+              {filters.author ? (
+                <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearFilter('author')} type="button">
+                  作者：{filters.author} ×
+                </button>
+              ) : null}
+              {filters.sort !== defaultFilters.sort ? (
+                <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearFilter('sort')} type="button">
+                  排序：{sortLabelMap[filters.sort]} ×
+                </button>
+              ) : null}
+              <button className="legacy-action-button secondary small" onClick={handleReset} type="button">
+                清除全部
+              </button>
             </div>
           ) : null}
 
