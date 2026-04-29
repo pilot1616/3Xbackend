@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { getSecurityQuestion, login, register, resetPassword } from '../api/auth';
 import { LegacyIcon } from '../components/LegacyIcon';
@@ -16,8 +16,16 @@ const securityQuestionOptions = [
 const phonePattern = /^1\d{10}$/;
 const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
 
+function normalizeRedirectPath(value: string | null) {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) {
+    return '/';
+  }
+  return value;
+}
+
 export function AuthPage() {
   const session = useSession();
+  const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<Mode>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -31,6 +39,7 @@ export function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
+  const redirectPath = useMemo(() => normalizeRedirectPath(searchParams.get('redirect')), [searchParams]);
 
   useEffect(() => {
     const raw = localStorage.getItem('front-auth-remember');
@@ -55,8 +64,8 @@ export function AuthPage() {
     if (!session) {
       return;
     }
-    navigate('/');
-  }, [navigate, session]);
+    navigate(redirectPath);
+  }, [navigate, redirectPath, session]);
 
   function resetFields(nextMode: Mode) {
     setMode(nextMode);
@@ -113,7 +122,7 @@ export function AuthPage() {
         } else {
           localStorage.removeItem('front-auth-remember');
         }
-        navigate('/');
+        navigate(redirectPath);
         return;
       }
 
@@ -127,7 +136,7 @@ export function AuthPage() {
           security_answer: securityAnswer.trim(),
         });
         saveSession(result);
-        navigate('/');
+        navigate(redirectPath);
         return;
       }
 

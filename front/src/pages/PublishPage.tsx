@@ -310,7 +310,7 @@ export function PublishPage() {
         <div id="loginReminder" style={{ textAlign: 'center', padding: 50 }}>
           <h2>请先登录</h2>
           <p>当前页面需要登录才能访问，请先登录。</p>
-          <Link className="legacy-action-button" to="/auth">
+          <Link className="legacy-action-button" to="/auth?redirect=/publish">
             去登录
           </Link>
         </div>
