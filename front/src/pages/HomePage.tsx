@@ -1,6 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { likeQuestion, listQuestions, unlikeQuestion } from '../api/forum';
-import { LegacyIcon } from '../components/LegacyIcon';
 import { QuestionCard } from '../components/QuestionCard';
 import { useSession } from '../lib/session';
 import type { QuestionListPage, QuestionRecord } from '../types/api';
@@ -203,23 +202,13 @@ export function HomePage() {
 
   return (
     <>
-      <div className="container legacy-home-banner">
-        <form className="search-bar legacy-search-form" onSubmit={handleSubmit}>
-          <input
-            className="search-txt"
-            onChange={(event) => setAuthorInput(event.target.value)}
-            placeholder="输入你想查看的用户昵称或手机号..."
-            value={authorInput}
-          />
-          <button className="search-btn legacy-search-button" type="submit">
-            <LegacyIcon name="search" size={30} style={{ color: '#fff' }} />
-          </button>
-        </form>
-      </div>
-
       <section className="content whisper-content">
         <div className="cont">
           <form className="legacy-home-filter-row" onSubmit={handleSubmit}>
+            <div className="legacy-home-filter-copy">
+              <strong>帖子筛选</strong>
+              <span>在这里统一按作者、正文关键字和排序方式筛选首页内容。</span>
+            </div>
             <input
               onChange={(event) => setAuthorInput(event.target.value)}
               placeholder="按作者昵称或手机号筛选"

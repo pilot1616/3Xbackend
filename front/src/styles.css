@@ -270,6 +270,22 @@ video {
   border-radius: 6px;
 }
 
+.legacy-home-filter-copy {
+  display: grid;
+  gap: 4px;
+  flex: 1 0 100%;
+}
+
+.legacy-home-filter-copy strong {
+  color: #3f2863;
+  font-size: 18px;
+}
+
+.legacy-home-filter-copy span {
+  color: #8d8d8d;
+  font-size: 14px;
+}
+
 .legacy-home-filter-row input,
 .legacy-home-filter-row select {
   min-width: 180px;
