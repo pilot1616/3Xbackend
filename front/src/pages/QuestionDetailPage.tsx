@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { buildUploadAssetUrl } from '../api/client';
@@ -29,6 +29,16 @@ const emptyAuthorPage: QuestionListPage = {
   page_size: authorMorePageSize,
   total: 0,
   records: [],
+};
+
+type RelatedFilters = {
+  keyword: string;
+  sort: string;
+};
+
+const defaultRelatedFilters: RelatedFilters = {
+  keyword: '',
+  sort: 'latest',
 };
 
 function isImage(fileName: string) {
@@ -88,6 +98,9 @@ export function QuestionDetailPage() {
   const [relatedQuestionsPage, setRelatedQuestionsPage] = useState<QuestionListPage>(emptyAuthorPage);
   const [relatedLoading, setRelatedLoading] = useState(false);
   const [relatedPage, setRelatedPage] = useState(1);
+  const [relatedFilters, setRelatedFilters] = useState<RelatedFilters>(defaultRelatedFilters);
+  const [relatedKeywordInput, setRelatedKeywordInput] = useState(defaultRelatedFilters.keyword);
+  const [relatedSortInput, setRelatedSortInput] = useState(defaultRelatedFilters.sort);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -102,11 +115,14 @@ export function QuestionDetailPage() {
       setRelatedQuestionsPage(emptyAuthorPage);
       return;
     }
-    void loadRelatedQuestions(question.user, question.qid, relatedPage);
-  }, [question?.user, question?.qid, relatedPage, session?.token]);
+    void loadRelatedQuestions(question.user, question.qid, relatedPage, relatedFilters);
+  }, [question?.user, question?.qid, relatedPage, relatedFilters, session?.token]);
 
   useEffect(() => {
     setRelatedPage(1);
+    setRelatedFilters(defaultRelatedFilters);
+    setRelatedKeywordInput(defaultRelatedFilters.keyword);
+    setRelatedSortInput(defaultRelatedFilters.sort);
   }, [question?.user, question?.qid]);
 
   async function loadQuestion() {
@@ -129,12 +145,13 @@ export function QuestionDetailPage() {
     }
   }
 
-  async function loadRelatedQuestions(author: string, currentQid: number, page: number) {
+  async function loadRelatedQuestions(author: string, currentQid: number, page: number, filters: RelatedFilters) {
     setRelatedLoading(true);
     try {
       const result = await listQuestions({
         author,
-        sort: 'latest',
+        keyword: filters.keyword,
+        sort: filters.sort,
         isUpload: 'true',
         page,
         pageSize: authorMorePageSize,
@@ -150,6 +167,45 @@ export function QuestionDetailPage() {
       setRelatedQuestionsPage(emptyAuthorPage);
     } finally {
       setRelatedLoading(false);
+    }
+  }
+
+  function handleRelatedFilterSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextFilters = {
+      keyword: relatedKeywordInput.trim(),
+      sort: relatedSortInput,
+    };
+
+    if (relatedPage !== 1) {
+      setRelatedPage(1);
+    }
+
+    if (nextFilters.keyword !== relatedFilters.keyword || nextFilters.sort !== relatedFilters.sort) {
+      setRelatedFilters(nextFilters);
+      return;
+    }
+
+    if (question?.user) {
+      void loadRelatedQuestions(question.user, question.qid, 1, nextFilters);
+    }
+  }
+
+  function handleRelatedFilterReset() {
+    setRelatedKeywordInput(defaultRelatedFilters.keyword);
+    setRelatedSortInput(defaultRelatedFilters.sort);
+
+    if (relatedPage !== 1) {
+      setRelatedPage(1);
+    }
+
+    if (relatedFilters.keyword !== defaultRelatedFilters.keyword || relatedFilters.sort !== defaultRelatedFilters.sort) {
+      setRelatedFilters(defaultRelatedFilters);
+      return;
+    }
+
+    if (question?.user) {
+      void loadRelatedQuestions(question.user, question.qid, 1, defaultRelatedFilters);
     }
   }
 
@@ -491,17 +547,47 @@ export function QuestionDetailPage() {
           <aside className="legacy-card-list question-detail-sidebar">
             <section className="legacy-panel">
               <h2>作者更多帖子</h2>
+              <form className="legacy-home-filter-row legacy-sidebar-filter-row" onSubmit={handleRelatedFilterSubmit}>
+                <input onChange={(event) => setRelatedKeywordInput(event.target.value)} placeholder="按正文关键字筛选" value={relatedKeywordInput} />
+                <select onChange={(event) => setRelatedSortInput(event.target.value)} value={relatedSortInput}>
+                  <option value="latest">最新发布</option>
+                  <option value="oldest">最早发布</option>
+                  <option value="most_liked">点赞最多</option>
+                  <option value="most_commented">评论最多</option>
+                </select>
+                <div className="legacy-home-filter-actions">
+                  <button className="legacy-action-button small" type="submit">
+                    筛选
+                  </button>
+                  <button className="legacy-action-button secondary small" onClick={handleRelatedFilterReset} type="button">
+                    重置
+                  </button>
+                </div>
+              </form>
               {relatedLoading ? <div className="legacy-empty-inline">正在加载更多内容...</div> : null}
-              {!relatedLoading && relatedQuestionsPage.records.length === 0 ? <div className="legacy-empty-inline">当前没有更多可展示的帖子。</div> : null}
+              {!relatedLoading && relatedQuestionsPage.records.length === 0 ? (
+                <div className="legacy-empty-inline">{relatedFilters.keyword ? '当前筛选条件下没有匹配帖子。' : '当前没有更多可展示的帖子。'}</div>
+              ) : null}
               {!relatedLoading && relatedQuestionsPage.total > 0 ? <div className="legacy-empty-inline">共 {relatedQuestionsPage.total} 条，当前第 {relatedPage} / {relatedTotalPages} 页。</div> : null}
               {relatedQuestionsPage.records.map((item) => (
                 <article className="legacy-mini-card" key={item.qid}>
-                  <strong>{item.nickName}</strong>
-                  <p>{item.text}</p>
-                  <span>{item.time}</span>
-                  <Link className="legacy-action-button secondary small" to={`/questions/${item.qid}`}>
-                    查看这条
-                  </Link>
+                  <div className="legacy-mini-card-header">
+                    <strong className="legacy-mini-card-title">{item.nickName}</strong>
+                    <div className="legacy-mini-card-badges">
+                      <span className={`legacy-mini-card-badge ${item.isUpload ? 'is-published' : 'is-draft'}`}>{item.isUpload ? '已发布' : '未发布'}</span>
+                    </div>
+                  </div>
+                  <p className="legacy-mini-card-main" title={item.text}>{item.text.length > 84 ? `${item.text.slice(0, 84)}...` : item.text}</p>
+                  <div className="legacy-mini-card-meta">
+                    <span>点赞 {item.likesNum}</span>
+                    <span>评论 {item.commentsNum}</span>
+                    <span>{item.time}</span>
+                  </div>
+                  <div className="legacy-mini-card-footer">
+                    <Link className="legacy-action-button secondary small" to={`/questions/${item.qid}`}>
+                      查看这条
+                    </Link>
+                  </div>
                 </article>
               ))}
               {relatedQuestionsPage.total > relatedQuestionsPage.page_size ? (
