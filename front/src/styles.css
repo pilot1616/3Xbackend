@@ -367,6 +367,19 @@ video {
   margin: 0;
 }
 
+.legacy-home-filter-row.is-compact {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  gap: 10px;
+}
+
+.legacy-home-filter-label {
+  color: #8d8d8d;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
 .legacy-home-feedback {
   margin-bottom: 20px;
 }

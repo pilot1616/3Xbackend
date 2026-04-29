@@ -51,7 +51,6 @@ export function HomePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [message, setMessage] = useState('');
   const [filters, setFilters] = useState<HomeFilters>(defaultFilters);
-  const [keywordInput, setKeywordInput] = useState(defaultFilters.keyword);
   const [authorInput, setAuthorInput] = useState(defaultFilters.author);
   const [sortInput, setSortInput] = useState(defaultFilters.sort);
   const [submittingQid, setSubmittingQid] = useState<number | null>(null);
@@ -60,7 +59,6 @@ export function HomePage() {
 
   useEffect(() => {
     const nextFilters = readFiltersFromSearchParams(searchParams);
-    setKeywordInput(nextFilters.keyword);
     setAuthorInput(nextFilters.author);
     setSortInput(nextFilters.sort);
     setFilters((current) =>
@@ -216,15 +214,9 @@ export function HomePage() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const nextKeyword = keywordInput.trim();
     const nextAuthor = authorInput.trim();
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
-      if (nextKeyword) {
-        next.set('keyword', nextKeyword);
-      } else {
-        next.delete('keyword');
-      }
       if (nextAuthor) {
         next.set('author', nextAuthor);
       } else {
@@ -240,7 +232,6 @@ export function HomePage() {
   }
 
   function handleReset() {
-    setKeywordInput(defaultFilters.keyword);
     setAuthorInput(defaultFilters.author);
     setSortInput(defaultFilters.sort);
     setSearchParams({});
@@ -264,17 +255,13 @@ export function HomePage() {
     <>
       <section className="content whisper-content">
         <div className="cont">
-          <form className="legacy-home-filter-row" onSubmit={handleSubmit}>
-            <div className="legacy-home-filter-copy">
-              <strong>帖子筛选</strong>
-              <span>在这里统一按作者、正文关键字和排序方式筛选首页内容。</span>
-            </div>
+          <form className="legacy-home-filter-row is-compact" onSubmit={handleSubmit}>
+            <span className="legacy-home-filter-label">作者筛选</span>
             <input
               onChange={(event) => setAuthorInput(event.target.value)}
               placeholder="按作者昵称或手机号筛选"
               value={authorInput}
             />
-            <input onChange={(event) => setKeywordInput(event.target.value)} placeholder="按帖子内容关键字筛选" value={keywordInput} />
             <select onChange={(event) => setSortInput(event.target.value)} value={sortInput}>
               <option value="latest">最新发布</option>
               <option value="oldest">最早发布</option>
