@@ -218,11 +218,34 @@ export function HomePage() {
   }
 
   const hasActiveFilters = Boolean(filters.keyword || filters.author);
+  const activeSearchLabel = filters.author ? (filters.searchType === 'phone' ? '手机号检索' : '作者检索') : filters.keyword ? '内容检索' : '公开动态';
 
   return (
     <>
-      <section className="content whisper-content">
+      <section className="content whisper-content legacy-home-scene">
         <div className="cont">
+          <div className="legacy-home-stage">
+            <div className="legacy-home-stage-copy">
+              <span className="legacy-home-stage-kicker">3X Future Console</span>
+              <h2>在一块悬浮控制台里浏览社区动态</h2>
+              <p>首页现在作为整个论坛的主舞台：搜索、筛选和帖子流被组织成分层模块，重点内容会像实体装置一样浮在背景之上。</p>
+            </div>
+            <div className="legacy-home-stage-metrics">
+              <article className="legacy-home-stage-card">
+                <strong>{loading ? '--' : page.total}</strong>
+                <span>当前可浏览帖子</span>
+              </article>
+              <article className="legacy-home-stage-card">
+                <strong>{page.records.length}</strong>
+                <span>已装载到视野</span>
+              </article>
+              <article className="legacy-home-stage-card">
+                <strong>{activeSearchLabel}</strong>
+                <span>当前浏览模式</span>
+              </article>
+            </div>
+          </div>
+
           {hasActiveFilters ? (
             <div className="legacy-active-filters">
               {filters.keyword ? (
@@ -244,7 +267,7 @@ export function HomePage() {
           {message ? <div className="legacy-feedback legacy-home-feedback">{message}</div> : null}
           {loading ? <div className="legacy-feedback">正在加载帖子...</div> : null}
 
-          <div className="whisper-list">
+          <div className="whisper-list legacy-home-deck">
             {!loading && page.records.length === 0 ? <div className="legacy-feedback">当前没有匹配的帖子，换个筛选条件再试。</div> : null}
 
             {page.records.map((question) => (
