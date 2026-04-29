@@ -434,7 +434,7 @@ export function QuestionDetailPage() {
   const relatedTotalPages = Math.max(1, Math.ceil(relatedQuestionsPage.total / Math.max(1, relatedQuestionsPage.page_size)));
 
   return (
-    <section className="content whisper-content">
+    <section className="content whisper-content question-detail-scene">
       <div className="question-detail-shell">
       <div className="legacy-toolbar-card question-detail-toolbar-card">
         <div>
