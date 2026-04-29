@@ -205,20 +205,20 @@ export function QuestionCard({
         </div>
 
         <div className="op-list">
-          <p className={`like${question.likedByMe ? ' active' : ''}`} onClick={() => onLikeToggle?.(question)}>
+          <button className={`forum-op-button like${question.likedByMe ? ' active' : ''}`} disabled={submitting} onClick={() => onLikeToggle?.(question)} type="button">
             <LegacyIcon name="praise" size={16} />
             <span>{question.likesNum}</span>
-          </p>
+          </button>
           {detailPageOnly && detailHref ? (
             <Link className="edit forum-summary-link" to={detailHref}>
               <LegacyIcon name="reply-fill" size={16} />
               <span>{question.commentsNum}</span>
             </Link>
           ) : (
-            <p className="edit" onClick={() => setExpanded((current) => !current)}>
+            <button className="forum-op-button edit" disabled={submitting} onClick={() => setExpanded((current) => !current)} type="button">
               <LegacyIcon name="reply-fill" size={16} />
               <span>{question.commentsNum}</span>
-            </p>
+            </button>
           )}
           {detailPageOnly && detailHref ? (
             <Link className="off forum-summary-link" to={detailHref}>
@@ -226,10 +226,10 @@ export function QuestionCard({
               <LegacyIcon name="right" size={16} />
             </Link>
           ) : (
-            <p className="off" onClick={() => setExpanded((current) => !current)}>
+            <button className="forum-op-button off" disabled={submitting} onClick={() => setExpanded((current) => !current)} type="button">
               <span>{expanded ? '收起' : '展开'}</span>
               <LegacyIcon name={expanded ? 'up' : 'down'} size={16} />
-            </p>
+            </button>
           )}
         </div>
 

@@ -539,6 +539,22 @@ video {
   color: inherit;
 }
 
+.forum-op-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.forum-op-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .forum-like-panel {
   margin-top: 12px;
   padding: 14px 16px;
