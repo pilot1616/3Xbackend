@@ -40,8 +40,12 @@ export function AuthPage() {
     try {
       const remembered = JSON.parse(raw) as { username?: string; password?: string };
       setUsername(remembered.username ?? '');
-      setPassword(remembered.password ?? '');
       setRememberMe(Boolean(remembered.username));
+      if (remembered.username) {
+        localStorage.setItem('front-auth-remember', JSON.stringify({ username: remembered.username }));
+      } else {
+        localStorage.removeItem('front-auth-remember');
+      }
     } catch {
       localStorage.removeItem('front-auth-remember');
     }
@@ -105,7 +109,7 @@ export function AuthPage() {
         const result = await login({ username: username.trim(), password });
         saveSession(result);
         if (rememberMe) {
-          localStorage.setItem('front-auth-remember', JSON.stringify({ username: username.trim(), password }));
+          localStorage.setItem('front-auth-remember', JSON.stringify({ username: username.trim() }));
         } else {
           localStorage.removeItem('front-auth-remember');
         }
