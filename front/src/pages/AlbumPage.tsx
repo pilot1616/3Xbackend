@@ -309,8 +309,9 @@ export function AlbumPage() {
   return (
     <>
       {!session ? (
-        <div id="noLogined">
-          <div id="loginReminder" style={{ textAlign: 'center', padding: 50 }}>
+        <div className="legacy-gated-scene" id="noLogined">
+          <div className="legacy-gated-card" id="loginReminder">
+            <span className="legacy-home-stage-kicker">Access Required</span>
             <h2>请登录</h2>
             <p>当前页面需要登录才能访问，请先登录。</p>
             <Link className="legacy-action-button" to="/auth?redirect=/album">

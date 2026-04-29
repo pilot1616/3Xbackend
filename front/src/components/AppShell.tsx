@@ -136,38 +136,54 @@ export function AppShell() {
 
       <Outlet />
 
-      <footer>
-        <div className="footerCenter">
-          <div className="w1000">
-            <div className="footerCenterLeft">
-              <div className="fclWordBoxOne">
-                <div className="fclAbout">About Us</div>
-                <div className="fclLineOne"></div>
+      <footer className="legacy-site-footer">
+        <div className="legacy-site-footer-shell">
+          <div className="legacy-site-footer-top">
+            <section className="legacy-site-footer-brand">
+              <span className="legacy-site-footer-badge">3X Community Console</span>
+              <h2>把提问、相册和个人轨迹收纳进一块可持续浏览的数字工作台。</h2>
+              <p>现在的前端已经改写为 TypeScript 单页应用，页面通过空间层次、玻璃质感和冷色光影统一到同一套 3D Elements 视觉系统。</p>
+            </section>
+
+            <section className="legacy-site-footer-card">
+              <span className="legacy-site-footer-label">联系信息</span>
+              <div className="legacy-site-footer-list">
+                <div>
+                  <LegacyIcon name="home" size={14} />
+                  <span>15 Cliff St, New York NY 10038, USA</span>
+                </div>
+                <div>
+                  <LegacyIcon name="cellphone" size={14} />
+                  <span>+1 212-602-9641</span>
+                </div>
+                <div>
+                  <LegacyIcon name="email" size={14} />
+                  <span>info@example.com</span>
+                </div>
               </div>
-              <div className="fclWordBoxTwo">
-                <div className="fclwbtWordOne">
-                  Hidden Hills property with mountain and city view boast <br /> none bedrooms including a master suite with private <br /> terrace and an entertainment.wing which includes a 20- <br /> seat theater.
-                </div>
-                <div className="fclwbtWordTwo iconfont">
-                  <LegacyIcon name="home" size={12} /> 15 Cliff St,New York NY 10038,USA
-                </div>
-                <div className="fclwbtWordThree iconfont">
-                  <LegacyIcon name="cellphone" size={12} /> +1 212-602-9641
-                </div>
-                <div className="fclwbtWordFourth iconfont">
-                  <LegacyIcon name="email" size={12} /> info@example.com
-                </div>
+            </section>
+
+            <section className="legacy-site-footer-card">
+              <span className="legacy-site-footer-label">社区触点</span>
+              <div className="legacy-site-footer-social">
+                <span><LegacyIcon name="friends" size={18} /></span>
+                <span><LegacyIcon name="weibo" size={18} /></span>
+                <span><LegacyIcon name="survey" size={18} /></span>
+                <span><LegacyIcon name="wechat" size={18} /></span>
+                <span><LegacyIcon name="qq" size={18} /></span>
               </div>
-              <div className="fclWordBoxThree">
-                <LegacyIcon name="friends" size={20} />
-                <LegacyIcon name="weibo" size={20} />
-                <LegacyIcon name="survey" size={20} />
-                <LegacyIcon name="wechat" size={20} />
-                <LegacyIcon name="qq" size={20} />
-              </div>
-              <img alt="ad" src="/legacy/res/img/ad.jpg" style={{ float: 'right', width: 200 }} />
-              <div className="fbWord">@2019,Digiqole-News Magazine html Template.All rights reserved.</div>
-            </div>
+              <p className="legacy-site-footer-note">保留原示例站的社交触点信息，同时统一到新的深色控制台语义里。</p>
+            </section>
+
+            <section className="legacy-site-footer-card legacy-site-footer-ad-card">
+              <span className="legacy-site-footer-label">展示位</span>
+              <img alt="ad" className="legacy-site-footer-ad" src="/legacy/res/img/ad.jpg" />
+            </section>
+          </div>
+
+          <div className="legacy-site-footer-bottom">
+            <span>@2019 Digiqole-News Magazine html Template. All rights reserved.</span>
+            <span>Rebuilt for 3X with Go backend and TypeScript frontend.</span>
           </div>
         </div>
       </footer>
