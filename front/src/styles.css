@@ -34,8 +34,41 @@ video {
   align-items: center;
   gap: 24px;
   min-height: 120px;
-  padding: 20px 0 16px;
+  margin: 20px auto 26px;
+  padding: 22px 24px 18px;
   line-height: normal;
+  position: relative;
+  overflow: hidden;
+  border-radius: 30px;
+  background: linear-gradient(160deg, rgba(8, 18, 33, 0.96) 0%, rgba(12, 24, 42, 0.92) 54%, rgba(16, 31, 53, 0.95) 100%);
+  border: 1px solid rgba(123, 202, 255, 0.14);
+  box-shadow: 0 26px 60px rgba(1, 8, 20, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.07), inset 0 -18px 32px rgba(0, 0, 0, 0.16);
+}
+
+.legacy-app-shell > .header.w1000 {
+  max-width: 1120px !important;
+  width: min(1120px, calc(100vw - 32px));
+}
+
+.header::before,
+.header::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+.header::before {
+  inset: 12px;
+  border-radius: 24px;
+  border: 1px solid rgba(151, 223, 255, 0.08);
+}
+
+.header::after {
+  top: -90px;
+  right: -50px;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(87, 228, 255, 0.18) 0%, rgba(87, 228, 255, 0) 72%);
 }
 
 .legacy-header-with-search {
@@ -67,15 +100,19 @@ video {
   display: inline-flex;
   align-items: center;
   min-height: 60px;
-  padding-right: 4px;
-  color: #231538;
+  padding: 10px 14px;
+  border-radius: 20px;
+  color: #e8f5ff;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(129, 205, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .legacy-brand-mark {
   width: 58px;
   height: 58px;
   object-fit: contain;
-  filter: drop-shadow(0 8px 16px rgba(63, 40, 99, 0.12));
+  filter: drop-shadow(0 16px 24px rgba(36, 198, 255, 0.18));
 }
 
 .header .nav {
@@ -85,11 +122,11 @@ video {
   justify-content: center;
   min-width: 0;
   gap: 10px;
-  padding: 8px 14px;
+  padding: 10px 14px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #fffaf5 0%, #fff2e6 100%);
-  border: 1px solid #f4d8bf;
-  box-shadow: 0 12px 32px rgba(255, 127, 33, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(130, 205, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 36px rgba(1, 8, 20, 0.18);
 }
 
 .header .nav a {
@@ -100,15 +137,15 @@ video {
   padding: 0 18px;
   border-radius: 999px;
   white-space: nowrap;
-  color: #5c486f;
+  color: rgba(211, 233, 255, 0.78);
   font-weight: 700;
-  transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  transition: background-color 0.22s ease, color 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
 }
 
 .header .nav a:hover {
-  color: #2e1a48;
-  background: rgba(255, 255, 255, 0.75);
-  transform: translateY(-1px);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
 }
 
 .header .login-text {
@@ -134,11 +171,11 @@ video {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 6px 6px 10px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid #f0dbc7;
-  box-shadow: 0 14px 34px rgba(63, 40, 99, 0.08);
+  padding: 8px 8px 8px 12px;
+  border-radius: 20px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(65, 100, 190, 0.08));
+  border: 1px solid rgba(123, 206, 255, 0.16);
+  box-shadow: 0 20px 42px rgba(1, 8, 20, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .legacy-header-search input {
@@ -148,7 +185,7 @@ video {
   border: none;
   background: transparent;
   outline: none;
-  color: #2f1f45;
+  color: #eff8ff;
   font-size: 14px;
 }
 
@@ -158,21 +195,22 @@ video {
   padding: 0 14px;
   border: 0;
   border-radius: 12px;
-  background: linear-gradient(180deg, #f7f0ff 0%, #ede0fb 100%);
-  color: #4a2f6f;
+  background: linear-gradient(160deg, rgba(53, 238, 255, 0.16), rgba(112, 104, 255, 0.16));
+  color: #c9f6ff;
   outline: none;
   cursor: pointer;
   font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .legacy-header-search-divider {
   width: 1px;
   height: 22px;
-  background: #ead8c8;
+  background: rgba(140, 210, 255, 0.22);
 }
 
 .legacy-header-search input::placeholder {
-  color: #a38da8;
+  color: rgba(198, 221, 248, 0.52);
 }
 
 .legacy-header-search .legacy-search-button {
@@ -181,17 +219,17 @@ video {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  color: #fff;
-  background: linear-gradient(135deg, #ff8c32 0%, #ff6f1f 100%);
-  box-shadow: 0 10px 22px rgba(255, 127, 33, 0.24);
+  border-radius: 14px;
+  color: #03111f;
+  background: linear-gradient(135deg, #70efff 0%, #7fa2ff 100%);
+  box-shadow: 0 14px 28px rgba(111, 218, 255, 0.28);
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .legacy-header-search .legacy-search-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(255, 127, 33, 0.32);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 30px rgba(111, 218, 255, 0.34);
 }
 
 .header .login-text .layui-btn,
@@ -200,28 +238,32 @@ video {
 }
 
 .header .nav a.active {
-  color: #fff;
-  background: linear-gradient(135deg, #3f2863 0%, #5a3a86 100%);
-  box-shadow: 0 10px 24px rgba(63, 40, 99, 0.2);
+  color: #061320;
+  background: linear-gradient(135deg, #7af2ff 0%, #97a7ff 100%);
+  box-shadow: 0 14px 26px rgba(111, 218, 255, 0.26);
 }
 
 .header .login-text .layui-btn {
   height: 42px;
   padding: 0 18px;
   border: 0;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #3f2863 0%, #5b3d87 100%);
-  box-shadow: 0 10px 24px rgba(63, 40, 99, 0.18);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(31, 239, 255, 0.18) 0%, rgba(139, 122, 255, 0.3) 100%);
+  color: #e9f8ff;
+  border: 1px solid rgba(128, 207, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 14px 24px rgba(1, 8, 20, 0.16);
 }
 
 .header .login-text .layui-btn:hover {
-  opacity: 0.94;
+  opacity: 1;
+  transform: translateY(-1px);
 }
 
 .legacy-app-shell {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: linear-gradient(180deg, #08111c 0, #0b1727 220px, #fff7ed 220px, #ffffff 380px);
 }
 
 .legacy-session-bar {
@@ -239,8 +281,9 @@ video {
   color: inherit;
   padding: 6px 12px 6px 6px;
   border-radius: 16px;
-  background: #fff8f1;
-  border: 1px solid #f1decf;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(130, 204, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .legacy-session-avatar {
@@ -248,8 +291,8 @@ video {
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid #efe3d4;
-  background: #fff7ef;
+  border: 1px solid rgba(144, 222, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
   flex: 0 0 40px;
 }
 
@@ -259,7 +302,7 @@ video {
 }
 
 .legacy-session-user {
-  color: #2f1f45;
+  color: #f2f9ff;
   font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -267,7 +310,7 @@ video {
 
 .legacy-login-name {
   margin-top: 2px;
-  color: #8d8d8d;
+  color: rgba(194, 220, 248, 0.64);
   font-size: 12px;
   text-align: left;
   overflow: hidden;
