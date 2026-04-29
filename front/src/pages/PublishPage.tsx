@@ -44,6 +44,17 @@ function formatFileSize(size: number) {
   return `${Math.max(1, Math.round(size / 1024))} KB`;
 }
 
+function buildExcerpt(text: string, maxLength = 88) {
+  const content = text.trim();
+  if (!content) {
+    return '该帖子暂无正文内容。';
+  }
+  if (content.length <= maxLength) {
+    return content;
+  }
+  return `${content.slice(0, maxLength).trimEnd()}...`;
+}
+
 function SelectedFilePreviewGrid({ files }: { files: File[] }) {
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
@@ -392,6 +403,7 @@ export function PublishPage() {
               const previewFile = question.files[0];
               const previewName = question.imgName[0] || previewFile;
               const [datePart, timePart = ''] = question.time.split(' ');
+              const previewTypeLabel = previewFile ? (isImage(previewFile) ? '图片附件' : '视频附件') : '无附件';
 
               return (
                 <article className="item-box legacy-my-question-card" key={question.qid}>
@@ -400,6 +412,7 @@ export function PublishPage() {
                       <div className="legacy-my-question-title-main">
                         <LegacyIcon name="friends" size={16} style={{ color: 'gray' }} />
                         <span className="nickname">{question.nickName}</span>
+                        <span className="legacy-my-question-qid">QID {question.qid}</span>
                         <span className={`legacy-my-question-status${question.isUpload ? ' is-published' : ''}`}>
                           {question.isUpload ? '已发布' : '未发布'}
                         </span>
@@ -411,7 +424,14 @@ export function PublishPage() {
                       </div>
                     </div>
 
-                    <p className="text-cont legacy-my-question-text">{question.text.length > 88 ? `${question.text.slice(0, 88)}...` : question.text}</p>
+                    <div className="legacy-my-question-summary-row">
+                      <span className={`legacy-mini-card-badge ${previewFile ? (isImage(previewFile) ? 'is-published' : 'is-draft') : 'is-draft'}`}>{previewTypeLabel}</span>
+                      <span className="legacy-my-question-summary-meta">附件 {question.files.length}</span>
+                      <span className="legacy-my-question-summary-meta">点赞 {question.likesNum}</span>
+                      <span className="legacy-my-question-summary-meta">评论 {question.commentsNum}</span>
+                    </div>
+
+                    <p className="text-cont legacy-my-question-text" title={question.text}>{buildExcerpt(question.text)}</p>
 
                     {previewFile ? (
                       <div className="img-box legacy-my-question-media">

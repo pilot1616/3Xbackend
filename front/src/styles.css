@@ -1379,6 +1379,11 @@ video {
   flex-wrap: wrap;
 }
 
+.legacy-my-question-qid {
+  color: #8d8d8d;
+  font-size: 13px;
+}
+
 .legacy-my-question-title .legacy-my-question-status {
   padding: 6px 10px;
   border-radius: 999px;
@@ -1393,8 +1398,22 @@ video {
   color: #d77817;
 }
 
+.legacy-my-question-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.legacy-my-question-summary-meta {
+  color: #8d8d8d;
+  font-size: 13px;
+}
+
 .legacy-my-question-text {
   margin-bottom: 20px;
+  line-height: 1.7;
 }
 
 .legacy-my-question-op-list {
