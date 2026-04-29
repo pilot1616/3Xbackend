@@ -1,0 +1,198 @@
+version: 1
+name: forum-project-multi-agent
+description: >-
+  多 agent 协作配置，适用于当前论坛项目的功能开发、重构、排查与验收。
+
+global_rules:
+  language: zh-CN
+  branch_policy: "所有代码修改默认在当前工作分支完成"
+  api_doc_rule: "只要后端接口行为、字段、参数、状态码变化，就必须同步检查并更新 API.md"
+  commit_rule: "每完成一个明确功能点后单独提交"
+  test_rule: "代码编写完成后必须至少执行对应范围的构建、类型检查或测试"
+  review_rule: "代码审批角色优先关注回归、边界条件、接口契约和数据一致性"
+  conflict_rule: "多个代码编写角色并行时禁止修改同一文件，除非先完成责任切分"
+
+handoff_contract:
+  required_fields:
+    - goal
+    - inputs
+    - assumptions
+    - touched_files
+    - risks
+    - next_action
+  output_style: "短结论 + 清单，禁止空泛表述"
+
+roles:
+  - id: code_reading
+    name: 代码阅读
+    purpose: "快速建立代码上下文，定位实现入口、依赖关系、数据流和风险点"
+    responsibilities:
+      - "阅读相关页面、服务、路由、数据结构和样式文件"
+      - "识别已有能力、缺失能力和重复逻辑"
+      - "输出最小必要上下文，避免把全项目重新总结一遍"
+    inputs:
+      - "功能目标"
+      - "相关文件或模块范围"
+    outputs:
+      - "关键文件列表"
+      - "当前行为摘要"
+      - "改动切入点"
+      - "潜在风险"
+    done_when:
+      - "可以明确告诉后续角色该从哪些文件开始"
+
+  - id: plan_generation
+    name: 计划生成
+    purpose: "基于阅读结果生成可执行方案，而不是泛泛建议"
+    responsibilities:
+      - "拆分步骤"
+      - "区分前后端、样式、数据、验证工作"
+      - "标记哪些步骤可并行、哪些是阻塞项"
+    inputs:
+      - "代码阅读输出"
+    outputs:
+      - "候选实施方案"
+      - "步骤顺序"
+      - "验证方式"
+    done_when:
+      - "计划可以直接交给代码编写角色执行"
+
+  - id: plan_decision
+    name: 计划决策
+    purpose: "从多个候选方案里选一个最稳妥、成本最低的方案"
+    responsibilities:
+      - "比较复杂度、回归风险、改动范围和收益"
+      - "否决不必要的大改"
+      - "确认是否需要拆成多个提交"
+    inputs:
+      - "计划生成输出"
+    outputs:
+      - "最终实施方案"
+      - "不采用其他方案的原因"
+      - "提交切分建议"
+    done_when:
+      - "后续执行不再需要重新讨论方向"
+
+  - id: code_writing
+    name: 代码编写
+    purpose: "按已决策方案落地代码改动"
+    responsibilities:
+      - "只修改自己负责的文件集合"
+      - "保持现有代码风格和交互约定"
+      - "如果涉及后端接口变更，必须同步检查 API.md"
+      - "功能完成后执行最小必要验证"
+    inputs:
+      - "最终实施方案"
+      - "责任文件列表"
+    outputs:
+      - "代码改动"
+      - "验证结果"
+      - "剩余问题"
+    done_when:
+      - "代码可运行，且本角色负责范围内的验证通过"
+
+  - id: code_review
+    name: 代码审批
+    purpose: "站在 reviewer 视角识别风险，而不是重复实现"
+    responsibilities:
+      - "检查行为回归"
+      - "检查边界条件、空状态、错误处理、并发状态"
+      - "检查接口调用是否与 API 文档一致"
+      - "检查是否遗漏测试或构建验证"
+    inputs:
+      - "代码编写结果"
+      - "变更文件列表"
+    outputs:
+      - "findings 列表"
+      - "必须修复项"
+      - "可后续优化项"
+    done_when:
+      - "高优先级问题已清楚列出，或者明确无严重问题"
+
+  - id: feature_check
+    name: 功能检查
+    purpose: "从最终用户视角确认功能是否真的可用"
+    responsibilities:
+      - "执行构建、类型检查、必要测试"
+      - "验证主路径、空数据路径、错误路径"
+      - "确认文档是否需要更新"
+      - "确认是否满足最初需求"
+    inputs:
+      - "代码审批结论"
+      - "最终代码状态"
+    outputs:
+      - "检查结果"
+      - "未覆盖风险"
+      - "可提交/可推送结论"
+    done_when:
+      - "可以明确给出通过或不通过结论"
+
+workflows:
+  default_feature:
+    steps:
+      - code_reading
+      - plan_generation
+      - plan_decision
+      - code_writing
+      - code_review
+      - feature_check
+
+  quick_bugfix:
+    steps:
+      - code_reading
+      - plan_decision
+      - code_writing
+      - feature_check
+
+  backend_api_change:
+    extra_rules:
+      - "code_writing 完成后必须显式检查 API.md"
+      - "feature_check 必须确认文档与实现一致"
+    steps:
+      - code_reading
+      - plan_generation
+      - plan_decision
+      - code_writing
+      - code_review
+      - feature_check
+
+parallel_patterns:
+  - name: "阅读并行"
+    description: "代码阅读可按前端、后端、文档三路并行，然后汇总"
+  - name: "实现并行"
+    description: "代码编写只能在文件责任边界清晰时并行，例如前端页面与后端服务分开"
+  - name: "检查并行"
+    description: "代码审批与功能检查可在实现完成后并行启动，但审批结论优先级更高"
+
+role_mapping_example:
+  reader_frontend:
+    role: code_reading
+    scope:
+      - front/src/pages
+      - front/src/components
+      - front/src/styles.css
+  reader_backend:
+    role: code_reading
+    scope:
+      - internal/handler
+      - internal/service
+      - internal/server
+  writer_frontend:
+    role: code_writing
+    scope:
+      - front/src/**
+  writer_backend:
+    role: code_writing
+    scope:
+      - internal/**
+      - cmd/**
+  reviewer:
+    role: code_review
+    scope:
+      - changed_files_only
+  checker:
+    role: feature_check
+    scope:
+      - build
+      - typecheck
+      - manual_paths
