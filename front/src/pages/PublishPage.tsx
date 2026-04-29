@@ -41,6 +41,14 @@ const uploadFilterLabelMap: Record<string, string> = {
   false: '仅看未发布',
 };
 
+const publishDraftStorageKey = 'front-publish-draft';
+
+type PublishDraftPayload = {
+  text: string;
+  hadFiles: boolean;
+  updatedAt: string;
+};
+
 function readMyQuestionFiltersFromSearchParams(searchParams: URLSearchParams): MyQuestionFilters {
   const nextSort = searchParams.get('sort')?.trim() ?? defaultFilters.sort;
   const nextUploadFilter = searchParams.get('uploadFilter')?.trim() ?? defaultFilters.uploadFilter;
@@ -126,6 +134,7 @@ export function PublishPage() {
   const [composerUploadProgress, setComposerUploadProgress] = useState<number | null>(null);
   const [composerBusy, setComposerBusy] = useState(false);
   const [latestCreatedQid, setLatestCreatedQid] = useState<number | null>(null);
+  const [draftStatus, setDraftStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -146,6 +155,67 @@ export function PublishPage() {
       void loadMyQuestions(1, true);
     }
   }, [session, filters]);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+    const raw = localStorage.getItem(publishDraftStorageKey);
+    if (!raw) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw) as Partial<PublishDraftPayload>;
+      const nextText = typeof parsed.text === 'string' ? parsed.text : '';
+      if (!nextText.trim()) {
+        localStorage.removeItem(publishDraftStorageKey);
+        return;
+      }
+      setText(nextText);
+      setDraftStatus(parsed.hadFiles ? '已恢复本地草稿正文。之前选择过附件，但浏览器不会自动恢复文件，请重新选择。' : '已恢复本地草稿正文。');
+    } catch {
+      localStorage.removeItem(publishDraftStorageKey);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+
+    const hasDraft = text.trim().length > 0 || createFiles.length > 0;
+    if (!hasDraft) {
+      localStorage.removeItem(publishDraftStorageKey);
+      return;
+    }
+
+    const payload: PublishDraftPayload = {
+      text,
+      hadFiles: createFiles.length > 0,
+      updatedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(publishDraftStorageKey, JSON.stringify(payload));
+  }, [session, text, createFiles]);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      if (composerBusy) {
+        return;
+      }
+      if (!text.trim() && createFiles.length === 0) {
+        return;
+      }
+      event.preventDefault();
+      event.returnValue = '';
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [session, composerBusy, text, createFiles]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -257,10 +327,15 @@ export function PublishPage() {
     setText('');
     setCreateFiles([]);
     setComposerUploadProgress(null);
+    setDraftStatus('');
+    localStorage.removeItem(publishDraftStorageKey);
   }
 
   function handleTextChange(nextValue: string) {
     setText(nextValue);
+    if (draftStatus) {
+      setDraftStatus('');
+    }
     if (latestCreatedQid !== null) {
       setLatestCreatedQid(null);
     }
@@ -291,10 +366,19 @@ export function PublishPage() {
   }
 
   function handleCreateFilesChange(event: ChangeEvent<HTMLInputElement>) {
+    if (draftStatus) {
+      setDraftStatus('');
+    }
     if (latestCreatedQid !== null) {
       setLatestCreatedQid(null);
     }
     setCreateFiles(normalizeSelectedFiles(event.target.files));
+  }
+
+  function handleClearDraft() {
+    resetComposer();
+    setMessage('已清空本地草稿');
+    setLatestCreatedQid(null);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -431,7 +515,13 @@ export function PublishPage() {
                   <input accept=".png,.jpg,.jpeg,.gif,.mp4" multiple onChange={handleCreateFilesChange} type="file" />
                 </label>
                 <span className="legacy-upload-hint">仅支持 png/jpg/jpeg/gif/mp4，单文件最大 20MB</span>
+                {(text.trim() || createFiles.length > 0) && !composerBusy ? (
+                  <button className="legacy-action-button secondary small" onClick={handleClearDraft} type="button">
+                    清空草稿
+                  </button>
+                ) : null}
               </div>
+              {draftStatus ? <div className="legacy-feedback legacy-publish-feedback legacy-draft-feedback">{draftStatus}</div> : null}
               {createFiles.length > 0 ? (
                 <>
                   <div className="legacy-file-chip-list">

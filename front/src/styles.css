@@ -2999,6 +2999,12 @@ video {
   margin-top: 16px;
 }
 
+.legacy-draft-feedback {
+  margin-top: 14px;
+  background: rgba(17, 39, 68, 0.82);
+  border-color: rgba(129, 209, 255, 0.22);
+}
+
 .legacy-publish-status-link {
   margin-top: 12px;
   padding: 0;
