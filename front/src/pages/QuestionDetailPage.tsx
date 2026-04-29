@@ -18,10 +18,18 @@ import {
 } from '../api/forum';
 import { QuestionCard } from '../components/QuestionCard';
 import { useSession } from '../lib/session';
-import type { QuestionRecord } from '../types/api';
+import type { QuestionListPage, QuestionRecord } from '../types/api';
 
 const maxUploadSize = 20 * 1024 * 1024;
 const allowedVideoPattern = /\.mp4$/i;
+const authorMorePageSize = 6;
+
+const emptyAuthorPage: QuestionListPage = {
+  page: 1,
+  page_size: authorMorePageSize,
+  total: 0,
+  records: [],
+};
 
 function isImage(fileName: string) {
   return /\.(png|jpg|jpeg|gif)$/i.test(fileName);
@@ -77,8 +85,9 @@ export function QuestionDetailPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [relatedQuestions, setRelatedQuestions] = useState<QuestionRecord[]>([]);
+  const [relatedQuestionsPage, setRelatedQuestionsPage] = useState<QuestionListPage>(emptyAuthorPage);
   const [relatedLoading, setRelatedLoading] = useState(false);
+  const [relatedPage, setRelatedPage] = useState(1);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -90,11 +99,15 @@ export function QuestionDetailPage() {
 
   useEffect(() => {
     if (!question?.user) {
-      setRelatedQuestions([]);
+      setRelatedQuestionsPage(emptyAuthorPage);
       return;
     }
-    void loadRelatedQuestions(question.user, question.qid);
-  }, [question?.user, question?.qid, session?.token]);
+    void loadRelatedQuestions(question.user, question.qid, relatedPage);
+  }, [question?.user, question?.qid, relatedPage, session?.token]);
+
+  useEffect(() => {
+    setRelatedPage(1);
+  }, [question?.user, question?.qid]);
 
   async function loadQuestion() {
     if (!qid || Number.isNaN(Number(qid))) {
@@ -116,19 +129,25 @@ export function QuestionDetailPage() {
     }
   }
 
-  async function loadRelatedQuestions(author: string, currentQid: number) {
+  async function loadRelatedQuestions(author: string, currentQid: number, page: number) {
     setRelatedLoading(true);
     try {
       const result = await listQuestions({
         author,
         sort: 'latest',
         isUpload: 'true',
-        page: 1,
-        pageSize: 6,
+        page,
+        pageSize: authorMorePageSize,
       });
-      setRelatedQuestions(result.records.filter((item) => item.qid !== currentQid).slice(0, 5));
+      const filteredRecords = result.records.filter((item) => item.qid !== currentQid);
+      const adjustedTotal = Math.max(0, result.total - 1);
+      setRelatedQuestionsPage({
+        ...result,
+        total: adjustedTotal,
+        records: filteredRecords,
+      });
     } catch {
-      setRelatedQuestions([]);
+      setRelatedQuestionsPage(emptyAuthorPage);
     } finally {
       setRelatedLoading(false);
     }
@@ -355,6 +374,8 @@ export function QuestionDetailPage() {
     }
   }
 
+  const relatedTotalPages = Math.max(1, Math.ceil(relatedQuestionsPage.total / Math.max(1, relatedQuestionsPage.page_size)));
+
   return (
     <section className="content whisper-content">
       <div className="question-detail-shell">
@@ -471,8 +492,9 @@ export function QuestionDetailPage() {
             <section className="legacy-panel">
               <h2>作者更多帖子</h2>
               {relatedLoading ? <div className="legacy-empty-inline">正在加载更多内容...</div> : null}
-              {!relatedLoading && relatedQuestions.length === 0 ? <div className="legacy-empty-inline">当前没有更多可展示的帖子。</div> : null}
-              {relatedQuestions.map((item) => (
+              {!relatedLoading && relatedQuestionsPage.records.length === 0 ? <div className="legacy-empty-inline">当前没有更多可展示的帖子。</div> : null}
+              {!relatedLoading && relatedQuestionsPage.total > 0 ? <div className="legacy-empty-inline">共 {relatedQuestionsPage.total} 条，当前第 {relatedPage} / {relatedTotalPages} 页。</div> : null}
+              {relatedQuestionsPage.records.map((item) => (
                 <article className="legacy-mini-card" key={item.qid}>
                   <strong>{item.nickName}</strong>
                   <p>{item.text}</p>
@@ -482,6 +504,19 @@ export function QuestionDetailPage() {
                   </Link>
                 </article>
               ))}
+              {relatedQuestionsPage.total > relatedQuestionsPage.page_size ? (
+                <div className="legacy-list-pagination">
+                  <button className="legacy-action-button secondary small" disabled={relatedLoading || relatedPage <= 1} onClick={() => setRelatedPage((current) => current - 1)} type="button">
+                    上一页
+                  </button>
+                  <span>
+                    第 {relatedPage} / {relatedTotalPages} 页
+                  </span>
+                  <button className="legacy-action-button secondary small" disabled={relatedLoading || relatedPage >= relatedTotalPages} onClick={() => setRelatedPage((current) => current + 1)} type="button">
+                    下一页
+                  </button>
+                </div>
+              ) : null}
             </section>
           </aside>
         </div>
