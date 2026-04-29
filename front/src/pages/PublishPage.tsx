@@ -29,6 +29,10 @@ const defaultFilters: MyQuestionFilters = {
   sort: 'latest',
 };
 
+function isDefaultMyQuestionFilters(filters: MyQuestionFilters) {
+  return filters.keyword === defaultFilters.keyword && filters.uploadFilter === defaultFilters.uploadFilter && filters.sort === defaultFilters.sort;
+}
+
 function isImage(fileName: string) {
   return /\.(png|jpg|jpeg|gif)$/i.test(fileName);
 }
@@ -98,6 +102,7 @@ export function PublishPage() {
   const [createFiles, setCreateFiles] = useState<File[]>([]);
   const [composerUploadProgress, setComposerUploadProgress] = useState<number | null>(null);
   const [composerBusy, setComposerBusy] = useState(false);
+  const [latestCreatedQid, setLatestCreatedQid] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -265,9 +270,18 @@ export function PublishPage() {
         await uploadQuestionFiles(created.qid, createFiles, (percent) => setComposerUploadProgress(percent));
       }
       resetComposer();
+      setLatestCreatedQid(created.qid);
       setMessage('发帖成功');
-      await loadMyQuestions(1, true);
+      if (isDefaultMyQuestionFilters(filters)) {
+        await loadMyQuestions(1, true);
+      } else {
+        setKeywordInput(defaultFilters.keyword);
+        setUploadFilterInput(defaultFilters.uploadFilter);
+        setSortInput(defaultFilters.sort);
+        setFilters(defaultFilters);
+      }
     } catch (err) {
+      setLatestCreatedQid(null);
       setMessage(err instanceof Error ? err.message : '发帖失败');
     } finally {
       setComposerBusy(false);
@@ -358,6 +372,14 @@ export function PublishPage() {
               </div>
             </form>
             {message ? <div className="legacy-feedback" style={{ marginTop: 16 }}>{message}</div> : null}
+            {latestCreatedQid ? (
+              <div className="legacy-home-load-status" style={{ marginTop: 12, padding: 0 }}>
+                <span>已创建帖子 #{latestCreatedQid}，可以直接进入详情继续管理内容。</span>
+                <Link className="legacy-action-button secondary small" to={`/questions/${latestCreatedQid}`}>
+                  查看刚发布的帖子
+                </Link>
+              </div>
+            ) : null}
             </div>
           </div>
         </div>
