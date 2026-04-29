@@ -385,8 +385,30 @@ export function PublishPage() {
   }
 
   return (
-    <section className="content whisper-content leacots-content">
+    <section className="content whisper-content leacots-content publish-scene">
       <div className="cont w1000">
+        <div className="legacy-publish-stage">
+          <div className="legacy-publish-stage-copy">
+            <span className="legacy-home-stage-kicker">3X Creator Deck</span>
+            <h2>把新问题和附件投放到你的创作工作台</h2>
+            <p>这里用于发布、筛选和回看你自己的帖子。正文编辑、附件上传和状态管理被组织成一组连续的悬浮模块。</p>
+          </div>
+          <div className="legacy-publish-stage-metrics">
+            <article className="legacy-home-stage-card">
+              <strong>{page.total}</strong>
+              <span>我的帖子总数</span>
+            </article>
+            <article className="legacy-home-stage-card">
+              <strong>{createFiles.length}</strong>
+              <span>待上传附件</span>
+            </article>
+            <article className="legacy-home-stage-card">
+              <strong>{filters.uploadFilter ? uploadFilterLabelMap[filters.uploadFilter] : '全部状态'}</strong>
+              <span>当前查看范围</span>
+            </article>
+          </div>
+        </div>
+
         <div className="review-version">
           <div className="form-box legacy-publish-form-box">
             <div className="form legacy-panel legacy-publish-form-panel">

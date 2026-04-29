@@ -321,8 +321,30 @@ export function AlbumPage() {
       ) : null}
 
       {session ? (
-        <div className="album-content w1000 legacy-album-page">
+        <div className="album-content w1000 legacy-album-page album-scene">
           {message ? <div className="legacy-feedback legacy-home-feedback">{message}</div> : null}
+
+          <div className="legacy-album-stage">
+            <div className="legacy-album-stage-copy">
+              <span className="legacy-home-stage-kicker">3X Media Shelf</span>
+              <h2>把图片和视频整理成一面悬浮陈列架</h2>
+              <p>相册页专注展示已上传的媒体内容。你可以按帖子关键字或媒体类型筛选，并在同一块展示台上预览和回溯来源。</p>
+            </div>
+            <div className="legacy-album-stage-metrics">
+              <article className="legacy-home-stage-card">
+                <strong>{visibleItems.length}</strong>
+                <span>当前可见附件</span>
+              </article>
+              <article className="legacy-home-stage-card">
+                <strong>{imageCount} / {videoCount}</strong>
+                <span>图片 / 视频</span>
+              </article>
+              <article className="legacy-home-stage-card">
+                <strong>{pageInfo.loaded}</strong>
+                <span>已扫描帖子数</span>
+              </article>
+            </div>
+          </div>
 
           <div className="img-list">
             <form className="legacy-home-filter-row legacy-publish-filter-row" onSubmit={handleFilterSubmit}>
