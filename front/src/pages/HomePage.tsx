@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { likeQuestion, listQuestions, unlikeQuestion } from '../api/forum';
 import { QuestionCard } from '../components/QuestionCard';
@@ -8,6 +8,7 @@ import type { QuestionListPage, QuestionRecord } from '../types/api';
 type HomeFilters = {
   keyword: string;
   author: string;
+  searchType: 'content' | 'author' | 'phone';
   sort: string;
 };
 
@@ -22,6 +23,7 @@ const homePageSize = 30;
 const defaultFilters: HomeFilters = {
   keyword: '',
   author: '',
+  searchType: 'content',
   sort: 'latest',
 };
 
@@ -34,9 +36,13 @@ const sortLabelMap: Record<string, string> = {
 
 function readFiltersFromSearchParams(searchParams: URLSearchParams): HomeFilters {
   const nextSort = searchParams.get('sort')?.trim() ?? defaultFilters.sort;
+  const nextKeyword = searchParams.get('keyword')?.trim() ?? defaultFilters.keyword;
+  const nextAuthor = searchParams.get('author')?.trim() ?? defaultFilters.author;
+  const nextSearchType = nextAuthor ? (searchParams.get('searchType') === 'phone' ? 'phone' : 'author') : 'content';
   return {
-    keyword: searchParams.get('keyword')?.trim() ?? defaultFilters.keyword,
-    author: searchParams.get('author')?.trim() ?? defaultFilters.author,
+    keyword: nextKeyword,
+    author: nextAuthor,
+    searchType: nextSearchType,
     sort: sortLabelMap[nextSort] ? nextSort : defaultFilters.sort,
   };
 }
@@ -51,16 +57,16 @@ export function HomePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [message, setMessage] = useState('');
   const [filters, setFilters] = useState<HomeFilters>(defaultFilters);
-  const [sortInput, setSortInput] = useState(defaultFilters.sort);
   const [submittingQid, setSubmittingQid] = useState<number | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
     const nextFilters = readFiltersFromSearchParams(searchParams);
-    setSortInput(nextFilters.sort);
     setFilters((current) =>
-      current.keyword === nextFilters.keyword && current.author === nextFilters.author && current.sort === nextFilters.sort ? current : nextFilters,
+      current.keyword === nextFilters.keyword && current.author === nextFilters.author && current.searchType === nextFilters.searchType && current.sort === nextFilters.sort
+        ? current
+        : nextFilters,
     );
   }, [searchParams]);
 
@@ -210,61 +216,29 @@ export function HomePage() {
     }
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function handleReset() {
+    setSearchParams({});
+  }
+
+  function clearFilter(key: 'keyword' | 'author' | 'sort' | 'searchType') {
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
-      if (sortInput !== defaultFilters.sort) {
-        next.set('sort', sortInput);
-      } else {
-        next.delete('sort');
+      next.delete(key);
+      if (key === 'author' || key === 'searchType') {
+        next.delete('author');
+        next.delete('searchType');
       }
       return next;
     });
   }
 
-  function handleReset() {
-    setSortInput(defaultFilters.sort);
-    setSearchParams({});
-  }
-
-  function clearFilter(key: 'keyword' | 'author' | 'sort') {
-    setSearchParams((current) => {
-      const next = new URLSearchParams(current);
-      next.delete(key);
-      return next;
-    });
-  }
-
-  const activeFilterEntries = [
-    filters.keyword ? `关键字：${filters.keyword}` : '',
-    filters.author ? `作者：${filters.author}` : '',
-    filters.sort !== defaultFilters.sort ? `排序：${sortLabelMap[filters.sort]}` : '',
-  ].filter(Boolean);
+  const hasActiveFilters = Boolean(filters.keyword || filters.author || filters.sort !== defaultFilters.sort);
 
   return (
     <>
       <section className="content whisper-content">
         <div className="cont">
-          <form className="legacy-home-filter-row is-compact" onSubmit={handleSubmit}>
-            <span className="legacy-home-filter-label">排序方式</span>
-            <select onChange={(event) => setSortInput(event.target.value)} value={sortInput}>
-              <option value="latest">最新发布</option>
-              <option value="oldest">最早发布</option>
-              <option value="most_liked">点赞最多</option>
-              <option value="most_commented">评论最多</option>
-            </select>
-            <div className="legacy-home-filter-actions">
-              <button className="legacy-action-button small" type="submit">
-                应用筛选
-              </button>
-              <button className="legacy-action-button secondary small" onClick={handleReset} type="button">
-                重置
-              </button>
-            </div>
-          </form>
-
-          {activeFilterEntries.length > 0 ? (
+          {hasActiveFilters ? (
             <div className="legacy-active-filters">
               {filters.keyword ? (
                 <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearFilter('keyword')} type="button">
@@ -273,7 +247,7 @@ export function HomePage() {
               ) : null}
               {filters.author ? (
                 <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearFilter('author')} type="button">
-                  作者：{filters.author} ×
+                  {filters.searchType === 'phone' ? '手机号' : '作者'}：{filters.author} ×
                 </button>
               ) : null}
               {filters.sort !== defaultFilters.sort ? (

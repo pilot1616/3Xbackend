@@ -105,6 +105,14 @@ video {
   color: #3f2863;
 }
 
+.legacy-header-search select {
+  border: none;
+  background: transparent;
+  color: #7e6b91;
+  outline: none;
+  cursor: pointer;
+}
+
 .legacy-header-search input::placeholder {
   color: #a793b8;
 }

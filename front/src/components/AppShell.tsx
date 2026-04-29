@@ -5,6 +5,14 @@ import { buildAssetUrl } from '../api/client';
 import { LegacyIcon } from './LegacyIcon';
 import { clearSession, useSession } from '../lib/session';
 
+type GlobalSearchMode = 'content' | 'author' | 'phone';
+
+const searchPlaceholderMap: Record<GlobalSearchMode, string> = {
+  content: '搜索帖子内容',
+  author: '搜索作者昵称',
+  phone: '搜索手机号',
+};
+
 function navClassName({ isActive }: { isActive: boolean }) {
   return isActive ? 'active' : undefined;
 }
@@ -14,13 +22,31 @@ export function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchMode, setSearchMode] = useState<GlobalSearchMode>('content');
 
   useEffect(() => {
     if (location.pathname !== '/') {
       return;
     }
     const params = new URLSearchParams(location.search);
-    setSearchKeyword(params.get('keyword') ?? '');
+    const keyword = params.get('keyword') ?? '';
+    const author = params.get('author') ?? '';
+    const type = params.get('searchType');
+
+    if (keyword) {
+      setSearchMode('content');
+      setSearchKeyword(keyword);
+      return;
+    }
+
+    if (author) {
+      setSearchMode(type === 'phone' ? 'phone' : 'author');
+      setSearchKeyword(author);
+      return;
+    }
+
+    setSearchMode('content');
+    setSearchKeyword('');
   }, [location.pathname, location.search]);
 
   function handleHeaderSearchSubmit(event: FormEvent<HTMLFormElement>) {
@@ -28,10 +54,17 @@ export function AppShell() {
     const keyword = searchKeyword.trim();
     const params = location.pathname === '/' ? new URLSearchParams(location.search) : new URLSearchParams();
 
+    params.delete('keyword');
+    params.delete('author');
+    params.delete('searchType');
+
     if (keyword) {
-      params.set('keyword', keyword);
-    } else {
-      params.delete('keyword');
+      if (searchMode === 'content') {
+        params.set('keyword', keyword);
+      } else {
+        params.set('author', keyword);
+        params.set('searchType', searchMode);
+      }
     }
 
     navigate({
@@ -65,7 +98,12 @@ export function AppShell() {
         </div>
         <div className="legacy-header-tools">
           <form className="legacy-header-search" onSubmit={handleHeaderSearchSubmit}>
-            <input onChange={(event) => setSearchKeyword(event.target.value)} placeholder="全站搜帖子内容" type="search" value={searchKeyword} />
+            <select onChange={(event) => setSearchMode(event.target.value as GlobalSearchMode)} value={searchMode}>
+              <option value="content">按内容</option>
+              <option value="author">按作者</option>
+              <option value="phone">按手机号</option>
+            </select>
+            <input onChange={(event) => setSearchKeyword(event.target.value)} placeholder={searchPlaceholderMap[searchMode]} type="search" value={searchKeyword} />
             <button className="legacy-search-button" type="submit">
               <LegacyIcon name="search" size={18} />
             </button>
