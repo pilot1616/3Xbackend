@@ -259,6 +259,13 @@ export function PublishPage() {
     setComposerUploadProgress(null);
   }
 
+  function handleTextChange(nextValue: string) {
+    setText(nextValue);
+    if (latestCreatedQid !== null) {
+      setLatestCreatedQid(null);
+    }
+  }
+
   function normalizeSelectedFiles(fileList: FileList | null) {
     const allFiles = Array.from(fileList ?? []);
     const validFiles: File[] = [];
@@ -284,6 +291,9 @@ export function PublishPage() {
   }
 
   function handleCreateFilesChange(event: ChangeEvent<HTMLInputElement>) {
+    if (latestCreatedQid !== null) {
+      setLatestCreatedQid(null);
+    }
     setCreateFiles(normalizeSelectedFiles(event.target.files));
   }
 
@@ -385,7 +395,7 @@ export function PublishPage() {
                 <div className="layui-input-block">
                   <textarea
                     className="layui-textarea"
-                    onChange={(event) => setText(event.target.value)}
+                    onChange={(event) => handleTextChange(event.target.value)}
                     placeholder="既然来了，就说几句"
                     rows={6}
                     value={text}
