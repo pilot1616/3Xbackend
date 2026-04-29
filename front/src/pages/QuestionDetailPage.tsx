@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { buildUploadAssetUrl } from '../api/client';
 import {
@@ -89,6 +89,7 @@ function SelectedFilePreviewGrid({ files }: { files: File[] }) {
 
 export function QuestionDetailPage() {
   const { qid } = useParams<{ qid: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const session = useSession();
   const [question, setQuestion] = useState<QuestionRecord | null>(null);
@@ -211,7 +212,7 @@ export function QuestionDetailPage() {
 
   async function handleLikeToggle(currentQuestion: QuestionRecord) {
     if (!session) {
-      setMessage('请先登录后再点赞');
+      navigate(`/auth?redirect=${encodeURIComponent(`${location.pathname}${location.search}`)}`);
       return;
     }
 
@@ -233,7 +234,7 @@ export function QuestionDetailPage() {
 
   async function handleCommentSubmit(currentQuestion: QuestionRecord, text: string) {
     if (!session) {
-      setMessage('请先登录后再评论');
+      navigate(`/auth?redirect=${encodeURIComponent(`${location.pathname}${location.search}`)}`);
       return;
     }
 
@@ -251,7 +252,7 @@ export function QuestionDetailPage() {
 
   async function handleCommentUpdate(currentQuestion: QuestionRecord, commentID: number, text: string) {
     if (!session) {
-      setMessage('请先登录后再操作评论');
+      navigate(`/auth?redirect=${encodeURIComponent(`${location.pathname}${location.search}`)}`);
       return;
     }
 
@@ -269,7 +270,7 @@ export function QuestionDetailPage() {
 
   async function handleCommentDelete(currentQuestion: QuestionRecord, commentID: number) {
     if (!session) {
-      setMessage('请先登录后再操作评论');
+      navigate(`/auth?redirect=${encodeURIComponent(`${location.pathname}${location.search}`)}`);
       return;
     }
 

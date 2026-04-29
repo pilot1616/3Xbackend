@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { likeQuestion, listQuestions, unlikeQuestion } from '../api/forum';
 import { QuestionCard } from '../components/QuestionCard';
 import { useSession } from '../lib/session';
@@ -43,6 +43,8 @@ function readFiltersFromSearchParams(searchParams: URLSearchParams): HomeFilters
 
 export function HomePage() {
   const session = useSession();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(emptyPage);
   const [loading, setLoading] = useState(true);
@@ -181,7 +183,7 @@ export function HomePage() {
 
   async function handleLikeToggle(question: QuestionRecord) {
     if (!session) {
-      setMessage('请先登录后再点赞');
+      navigate(`/auth?redirect=${encodeURIComponent(`${location.pathname}${location.search}`)}`);
       return;
     }
 
