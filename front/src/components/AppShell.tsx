@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { buildAssetUrl } from '../api/client';
@@ -24,6 +24,7 @@ export function AppShell() {
   const showHeaderSearch = location.pathname === '/';
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchMode, setSearchMode] = useState<GlobalSearchMode>('content');
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (location.pathname !== '/') {
@@ -49,6 +50,34 @@ export function AppShell() {
     setSearchMode('content');
     setSearchKeyword('');
   }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!showHeaderSearch) {
+      return;
+    }
+
+    function handleShortcut(event: KeyboardEvent) {
+      if (event.key !== '/') {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      searchInputRef.current?.focus();
+    }
+
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, [showHeaderSearch]);
 
   function handleHeaderSearchSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -105,7 +134,8 @@ export function AppShell() {
                 <option value="phone">按手机号</option>
               </select>
               <span className="legacy-header-search-divider" aria-hidden="true"></span>
-              <input aria-label="搜索内容" onChange={(event) => setSearchKeyword(event.target.value)} placeholder={searchPlaceholderMap[searchMode]} type="search" value={searchKeyword} />
+              <input aria-label="搜索内容" onChange={(event) => setSearchKeyword(event.target.value)} placeholder={searchPlaceholderMap[searchMode]} ref={searchInputRef} type="search" value={searchKeyword} />
+              <span aria-hidden="true" className="legacy-header-search-hotkey">/</span>
               <button className="legacy-search-button" type="submit">
                 <LegacyIcon name="search" size={18} />
               </button>

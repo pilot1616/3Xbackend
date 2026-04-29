@@ -241,6 +241,21 @@ video {
   color: rgba(198, 221, 248, 0.52);
 }
 
+.legacy-header-search-hotkey {
+  min-width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(126, 201, 255, 0.12);
+  color: rgba(196, 222, 248, 0.7);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .legacy-header-search .legacy-search-button {
   width: 42px;
   height: 42px;
