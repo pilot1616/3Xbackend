@@ -24,6 +24,7 @@ interface QuestionCardProps {
   question: QuestionRecord;
   compact?: boolean;
   detailPageOnly?: boolean;
+  expandedByDefault?: boolean;
   canInteract?: boolean;
   submitting?: boolean;
   currentUsername?: string;
@@ -50,6 +51,7 @@ export function QuestionCard({
   question,
   compact = false,
   detailPageOnly = false,
+  expandedByDefault = false,
   canInteract = false,
   submitting = false,
   currentUsername,
@@ -60,7 +62,7 @@ export function QuestionCard({
   onCommentUpdate,
   onCommentDelete,
 }: QuestionCardProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(expandedByDefault);
   const [commentText, setCommentText] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingCommentText, setEditingCommentText] = useState('');
@@ -78,6 +80,10 @@ export function QuestionCard({
     }
     void loadComments(1);
   }, [expanded, question.qid]);
+
+  useEffect(() => {
+    setExpanded(expandedByDefault);
+  }, [expandedByDefault, question.qid]);
 
   useEffect(() => {
     if (!likesOpen) {
