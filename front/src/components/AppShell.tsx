@@ -122,12 +122,12 @@ export function AppShell() {
                   <span className="legacy-login-name">{session.user.username}</span>
                 </div>
               </Link>
-              <button className="layui-btn layui-btn-danger layui-btn-radius" onClick={() => clearSession()} type="button">
+              <button className="legacy-session-action legacy-session-action-danger" onClick={() => clearSession()} type="button">
                 退出登录
               </button>
             </div>
           ) : (
-            <Link className="layui-btn layui-btn-radius" to="/auth">
+            <Link className="legacy-session-action" to="/auth">
               登录/注册
             </Link>
           )}
