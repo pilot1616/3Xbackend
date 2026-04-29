@@ -78,7 +78,6 @@ export function AppShell() {
       <div className="header w1000">
         <h1 className="logo">
           <Link to="/">
-            <span>MYBLOG</span>
             <img alt="3X" className="legacy-brand-mark" src="/legacy/res/img/logo.png" />
           </Link>
         </h1>
