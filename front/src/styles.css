@@ -3132,6 +3132,8 @@ video {
   width: 320px;
   justify-self: end;
   align-self: start;
+  position: sticky;
+  top: 24px;
 }
 
 .question-detail-sidebar .legacy-panel {
@@ -3643,6 +3645,10 @@ video {
   .question-detail-sidebar,
   .question-detail-sidebar .legacy-panel {
     width: 100%;
+  }
+
+  .question-detail-sidebar {
+    position: static;
   }
 
 }
