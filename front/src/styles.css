@@ -1394,6 +1394,34 @@ video {
   justify-items: end;
 }
 
+.review-version {
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  perspective: 1400px;
+}
+
+.review-version::before,
+.review-version::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+.review-version::before {
+  inset: 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(151, 223, 255, 0.08);
+}
+
+.review-version::after {
+  top: -60px;
+  right: -40px;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(90, 225, 255, 0.18) 0%, rgba(90, 225, 255, 0) 72%);
+}
+
 .forum-comment-section-head {
   display: flex;
   align-items: flex-start;
@@ -1401,6 +1429,8 @@ video {
   gap: 18px;
   margin-bottom: 18px;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
 }
 
 .forum-comment-section-copy {
@@ -1417,7 +1447,9 @@ video {
 
 .forum-comment-section-copy strong {
   color: #f2f9ff;
-  font-size: 17px;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .forum-comment-section-copy span,
@@ -1434,6 +1466,8 @@ video {
   justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
 }
 
 .review-version .forum-comment-composer {
@@ -1442,6 +1476,14 @@ video {
   gap: 16px;
   align-items: start;
   margin-bottom: 18px;
+  position: relative;
+  z-index: 1;
+  padding: 20px 22px;
+  border-radius: 22px;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 52%, rgba(33, 54, 88, 0.2) 100%);
+  border: 1px solid rgba(142, 216, 255, 0.16);
+  box-shadow: 0 24px 48px rgba(2, 10, 24, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.09), inset 0 -18px 28px rgba(0, 0, 0, 0.12);
+  transform: translateZ(24px) rotateX(2.5deg);
 }
 
 .review-version .forum-comment-form {
@@ -1457,7 +1499,7 @@ video {
 
 .forum-comment-composer-head strong {
   color: #f2f9ff;
-  font-size: 16px;
+  font-size: 17px;
 }
 
 .forum-comment-composer-head span {
@@ -1468,6 +1510,8 @@ video {
 .review-version .list-cont {
   display: grid;
   gap: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .forum-comment-list-summary,
@@ -1485,10 +1529,11 @@ video {
   display: grid;
   gap: 12px;
   padding: 16px 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(148, 213, 255, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(16, 28, 49, 0.92) 0%, rgba(19, 35, 58, 0.86) 100%);
+  border: 1px solid rgba(148, 213, 255, 0.14);
+  box-shadow: 0 22px 42px rgba(1, 8, 20, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transform: translateZ(16px);
 }
 
 .forum-comment-filter-row {
@@ -1505,8 +1550,9 @@ video {
   padding: 0 14px;
   border: 1px solid rgba(128, 201, 255, 0.16);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
   color: #eff7ff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .forum-comment-filter-chip {
@@ -1517,9 +1563,9 @@ video {
   padding: 0 16px;
   border-radius: 14px;
   border: 1px solid rgba(128, 205, 255, 0.16);
-  background: rgba(255, 255, 255, 0.05);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
   color: rgba(214, 235, 255, 0.86);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 10px 24px rgba(1, 8, 20, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .forum-comment-filter-chip.is-active {
@@ -1530,6 +1576,10 @@ video {
 .forum-comment-filter-chip:disabled {
   opacity: 0.48;
   cursor: not-allowed;
+}
+
+.forum-comment-filter-chip:not(:disabled):hover {
+  transform: translateY(-1px) translateZ(8px);
 }
 
 .forum-comment-filter-actions,
@@ -1550,7 +1600,10 @@ video {
 
 .forum-empty-comments {
   color: rgba(194, 220, 248, 0.7);
-  padding: 12px 0;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(128, 201, 255, 0.1);
 }
 
 .forum-comment-editor {
@@ -1565,9 +1618,10 @@ video {
   padding: 10px 12px;
   border: 1px solid rgba(128, 201, 255, 0.16);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
   color: #eff7ff;
   resize: vertical;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .forum-comment-actions {
@@ -1580,12 +1634,15 @@ video {
 .forum-comment-timeline {
   display: grid;
   gap: 16px;
+  position: relative;
+  transform-style: preserve-3d;
 }
 
 .forum-comment-node {
   display: grid;
   grid-template-columns: 42px 1fr;
   gap: 14px;
+  align-items: start;
 }
 
 .forum-comment-rail {
@@ -1601,16 +1658,18 @@ video {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #ffeddc;
-  color: #8c5317;
+  background: linear-gradient(145deg, rgba(71, 231, 255, 0.28), rgba(130, 112, 255, 0.24));
+  color: #a2f7ff;
   font-weight: 700;
+  border: 1px solid rgba(151, 226, 255, 0.18);
+  box-shadow: 0 12px 26px rgba(7, 20, 39, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .forum-comment-line {
   width: 2px;
   height: 100%;
   margin-top: 8px;
-  background: linear-gradient(180deg, #ffd1aa 0%, rgba(255, 209, 170, 0) 100%);
+  background: linear-gradient(180deg, rgba(99, 224, 255, 0.7) 0%, rgba(99, 224, 255, 0.08) 100%);
 }
 
 .forum-comment-node:last-child .forum-comment-line {
@@ -1618,11 +1677,22 @@ video {
 }
 
 .forum-comment-card {
+  position: relative;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.05);
+  background: linear-gradient(155deg, rgba(17, 29, 50, 0.94) 0%, rgba(19, 35, 58, 0.88) 58%, rgba(24, 42, 68, 0.94) 100%);
   border: 1px solid rgba(148, 213, 255, 0.14);
-  border-radius: 18px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  box-shadow: 0 18px 40px rgba(2, 10, 24, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -14px 22px rgba(0, 0, 0, 0.12);
+  transform: translateZ(18px) rotateX(1.5deg);
+}
+
+.forum-comment-card::before {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(156, 225, 255, 0.06);
+  pointer-events: none;
 }
 
 .forum-comment-head {
@@ -2172,6 +2242,54 @@ video {
   border: 1px solid rgba(148, 213, 255, 0.14);
   border-radius: 20px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.question-detail-scene .review-version {
+  padding: 24px;
+  border-radius: 24px;
+  background: linear-gradient(155deg, rgba(12, 24, 42, 0.96) 0%, rgba(14, 29, 50, 0.92) 58%, rgba(21, 38, 62, 0.96) 100%);
+  border: 1px solid rgba(130, 208, 255, 0.16);
+  box-shadow: 0 30px 72px rgba(2, 8, 22, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -20px 28px rgba(0, 0, 0, 0.16);
+}
+
+.question-detail-scene .forum-comment-section-head {
+  margin-bottom: 22px;
+}
+
+.question-detail-scene .forum-comment-section-copy strong {
+  font-size: 19px;
+  letter-spacing: 0.08em;
+}
+
+.question-detail-scene .forum-comment-section-meta .legacy-summary-chip,
+.question-detail-scene .forum-comment-filter-summary .legacy-summary-chip {
+  background: linear-gradient(145deg, rgba(75, 229, 255, 0.16), rgba(123, 112, 255, 0.16));
+  border-color: rgba(132, 220, 255, 0.16);
+  color: #b8f7ff;
+}
+
+.question-detail-scene .forum-comment-composer,
+.question-detail-scene .forum-comment-filter-shell,
+.question-detail-scene .forum-comment-card {
+  backdrop-filter: blur(18px);
+}
+
+.question-detail-scene .forum-comment-composer {
+  margin-bottom: 20px;
+}
+
+.question-detail-scene .forum-comment-composer .layui-textarea,
+.question-detail-scene .forum-comment-filter-row input,
+.question-detail-scene .forum-comment-editor textarea {
+  min-height: 48px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04));
+  border-color: rgba(135, 211, 255, 0.18);
+}
+
+.question-detail-scene .forum-comment-card:hover,
+.question-detail-scene .forum-comment-filter-chip:not(:disabled):hover,
+.question-detail-scene .forum-comment-composer:hover {
+  transform: translateY(-2px) translateZ(24px);
 }
 
 .question-detail-scene .legacy-attachment-item img,
