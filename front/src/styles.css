@@ -63,14 +63,16 @@ video {
   gap: 24px;
   min-height: 120px;
   margin: 20px auto 26px;
-  padding: 22px 24px 18px;
+  padding: 24px 26px 20px;
   line-height: normal;
   position: relative;
   overflow: hidden;
   border-radius: 30px;
+  perspective: 1600px;
+  transform-style: preserve-3d;
   background: linear-gradient(160deg, rgba(8, 18, 33, 0.96) 0%, rgba(12, 24, 42, 0.92) 54%, rgba(16, 31, 53, 0.95) 100%);
   border: 1px solid rgba(123, 202, 255, 0.14);
-  box-shadow: 0 26px 60px rgba(1, 8, 20, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.07), inset 0 -18px 32px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 30px 72px rgba(1, 8, 20, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.07), inset 0 -18px 32px rgba(0, 0, 0, 0.16);
 }
 
 .legacy-app-shell > .header.w1000 {
@@ -92,11 +94,15 @@ video {
 }
 
 .header::after {
-  top: -90px;
-  right: -50px;
-  width: 260px;
-  height: 260px;
-  background: radial-gradient(circle, rgba(87, 228, 255, 0.18) 0%, rgba(87, 228, 255, 0) 72%);
+  inset: auto 26px 14px 26px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(87, 228, 255, 0), rgba(87, 228, 255, 0.4), rgba(140, 126, 255, 0.36), rgba(87, 228, 255, 0));
+  box-shadow: 0 0 24px rgba(89, 232, 255, 0.3);
+}
+
+.header > * {
+  position: relative;
+  z-index: 1;
 }
 
 .legacy-header-with-search {
@@ -122,58 +128,118 @@ video {
   align-items: center;
   margin: 0;
   flex: 0 0 auto;
+  transform: translateZ(28px);
 }
 
 .header .logo a {
+  position: relative;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
-  min-height: 60px;
-  padding: 10px 14px;
-  border-radius: 20px;
+  justify-content: center;
+  min-height: 68px;
+  min-width: 88px;
+  padding: 12px 18px;
+  border-radius: 22px;
   color: #e8f5ff;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(129, 205, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.08) 0%, rgba(67, 102, 188, 0.08) 48%, rgba(19, 34, 58, 0.38) 100%);
+  border: 1px solid rgba(129, 205, 255, 0.12);
+  box-shadow: 0 20px 40px rgba(1, 8, 20, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -14px 22px rgba(0, 0, 0, 0.16);
+  transform: rotateX(7deg) translateZ(8px);
+}
+
+.header .logo a::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+
+.header .logo a::after {
+  content: '';
+  position: absolute;
+  top: -38%;
+  left: -18%;
+  width: 72%;
+  height: 120%;
+  background: radial-gradient(circle, rgba(96, 236, 255, 0.24) 0%, rgba(96, 236, 255, 0) 72%);
+  pointer-events: none;
 }
 
 .legacy-brand-mark {
   width: 58px;
   height: 58px;
   object-fit: contain;
-  filter: drop-shadow(0 16px 24px rgba(36, 198, 255, 0.18));
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 16px 24px rgba(36, 198, 255, 0.22));
 }
 
 .header .nav {
   grid-area: nav;
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 0;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 12px;
+  padding: 12px 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(130, 205, 255, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 36px rgba(1, 8, 20, 0.18);
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.04) 48%, rgba(34, 56, 94, 0.22) 100%);
+  border: 1px solid rgba(130, 205, 255, 0.14);
+  box-shadow: 0 24px 52px rgba(1, 8, 20, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -14px 22px rgba(0, 0, 0, 0.12);
+  transform: translateZ(34px) rotateX(5deg);
+}
+
+.header .nav::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(156, 225, 255, 0.08);
+  pointer-events: none;
 }
 
 .header .nav a {
+  position: relative;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 44px;
-  padding: 0 18px;
+  height: 46px;
+  padding: 0 20px;
   border-radius: 999px;
   white-space: nowrap;
   color: rgba(211, 233, 255, 0.78);
   font-weight: 700;
-  transition: background-color 0.22s ease, color 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
+  letter-spacing: 0.01em;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01));
+  border: 1px solid rgba(126, 201, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 -10px 16px rgba(0, 0, 0, 0.08);
+  transition: background-color 0.22s ease, color 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.header .nav a::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 12px;
+  right: 12px;
+  height: 40%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0));
+  pointer-events: none;
 }
 
 .header .nav a:hover {
   color: #fff;
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateY(-2px);
+  background: linear-gradient(135deg, rgba(79, 236, 255, 0.18) 0%, rgba(110, 128, 255, 0.16) 100%);
+  border-color: rgba(145, 221, 255, 0.18);
+  transform: translateY(-4px) translateZ(12px);
+  box-shadow: 0 16px 28px rgba(4, 14, 28, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .header .login-text {
@@ -183,6 +249,7 @@ video {
   justify-content: flex-end;
   min-width: 150px;
   line-height: normal;
+  transform: translateZ(30px);
 }
 
 .legacy-header-tools {
@@ -192,49 +259,65 @@ video {
   justify-content: center;
   width: 100%;
   min-width: 0;
+  transform: translateZ(24px);
 }
 
 .legacy-header-search {
+  position: relative;
+  overflow: hidden;
   width: min(720px, 100%);
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 8px 8px 12px;
-  border-radius: 20px;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(65, 100, 190, 0.08));
+  padding: 10px 12px;
+  border-radius: 24px;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.04) 45%, rgba(37, 58, 97, 0.26) 100%);
   border: 1px solid rgba(123, 206, 255, 0.16);
-  box-shadow: 0 20px 42px rgba(1, 8, 20, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: 0 28px 56px rgba(1, 8, 20, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.07), inset 0 -18px 28px rgba(0, 0, 0, 0.14);
+  transform: rotateX(5deg) translateZ(10px);
+}
+
+.legacy-header-search::before {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border-radius: 18px;
+  border: 1px solid rgba(156, 225, 255, 0.08);
+  pointer-events: none;
 }
 
 .legacy-header-search input {
   width: 100%;
-  height: 42px;
+  height: 48px;
   min-width: 0;
+  padding: 0 10px;
   border: none;
-  background: transparent;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0));
   outline: none;
   color: #eff8ff;
   font-size: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .legacy-header-search-mode {
   flex: 0 0 auto;
-  height: 42px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 12px;
-  background: linear-gradient(160deg, rgba(53, 238, 255, 0.16), rgba(112, 104, 255, 0.16));
-  color: #c9f6ff;
+  height: 48px;
+  padding: 0 16px;
+  border: 1px solid rgba(133, 211, 255, 0.16);
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgba(53, 238, 255, 0.18), rgba(112, 104, 255, 0.16));
+  color: #d7f8ff;
   outline: none;
   cursor: pointer;
   font-weight: 700;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: 0 14px 26px rgba(3, 12, 24, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -12px 16px rgba(0, 0, 0, 0.12);
 }
 
 .legacy-header-search-divider {
   width: 1px;
-  height: 22px;
-  background: rgba(140, 210, 255, 0.22);
+  height: 28px;
+  background: linear-gradient(180deg, rgba(140, 210, 255, 0), rgba(140, 210, 255, 0.36), rgba(140, 210, 255, 0));
 }
 
 .legacy-header-search input::placeholder {
@@ -248,31 +331,33 @@ video {
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
   border: 1px solid rgba(126, 201, 255, 0.12);
   color: rgba(196, 222, 248, 0.7);
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .legacy-header-search .legacy-search-button {
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 14px;
+  border-radius: 16px;
   color: #03111f;
   background: linear-gradient(135deg, #70efff 0%, #7fa2ff 100%);
-  box-shadow: 0 14px 28px rgba(111, 218, 255, 0.28);
+  border: 1px solid rgba(198, 245, 255, 0.34);
+  box-shadow: 0 18px 32px rgba(111, 218, 255, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -10px 16px rgba(42, 88, 168, 0.18);
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .legacy-header-search .legacy-search-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 18px 30px rgba(111, 218, 255, 0.34);
+  transform: translateY(-3px) translateZ(12px);
+  box-shadow: 0 22px 36px rgba(111, 218, 255, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .header .login-text a,
@@ -283,7 +368,8 @@ video {
 .header .nav a.active {
   color: #061320;
   background: linear-gradient(135deg, #7af2ff 0%, #97a7ff 100%);
-  box-shadow: 0 14px 26px rgba(111, 218, 255, 0.26);
+  border-color: rgba(198, 245, 255, 0.32);
+  box-shadow: 0 18px 30px rgba(111, 218, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.26), inset 0 -10px 16px rgba(58, 109, 194, 0.16);
 }
 
 .legacy-app-shell {
@@ -545,19 +631,36 @@ video {
   gap: 10px;
   align-items: center;
   justify-content: flex-end;
+  padding: 6px;
+  border-radius: 22px;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.03) 44%, rgba(33, 55, 92, 0.24) 100%);
+  border: 1px solid rgba(130, 204, 255, 0.12);
+  box-shadow: 0 22px 42px rgba(1, 8, 20, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -14px 20px rgba(0, 0, 0, 0.12);
 }
 
 .legacy-session-link {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
   color: inherit;
-  padding: 6px 12px 6px 6px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.05);
+  padding: 8px 14px 8px 8px;
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
   border: 1px solid rgba(130, 204, 255, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 14px 28px rgba(2, 10, 24, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transform: translateZ(10px);
+}
+
+.legacy-session-link::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: 17px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+  pointer-events: none;
 }
 
 .legacy-session-avatar {
@@ -565,9 +668,10 @@ video {
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid rgba(144, 222, 255, 0.22);
+  border: 1px solid rgba(144, 222, 255, 0.26);
   background: rgba(255, 255, 255, 0.08);
   flex: 0 0 40px;
+  box-shadow: 0 10px 22px rgba(4, 14, 30, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 .legacy-session-copy {
@@ -581,17 +685,17 @@ video {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 14px;
+  border-radius: 16px;
   background: linear-gradient(135deg, rgba(31, 239, 255, 0.18) 0%, rgba(139, 122, 255, 0.3) 100%);
   color: #e9f8ff;
   border: 1px solid rgba(128, 207, 255, 0.16);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 14px 24px rgba(1, 8, 20, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -10px 16px rgba(0, 0, 0, 0.12), 0 16px 28px rgba(1, 8, 20, 0.18);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .legacy-session-action:hover {
-  transform: translateY(-2px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 28px rgba(1, 8, 20, 0.22);
+  transform: translateY(-3px) translateZ(8px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -10px 16px rgba(0, 0, 0, 0.12), 0 20px 32px rgba(1, 8, 20, 0.24);
 }
 
 .legacy-session-action-danger {
@@ -4437,7 +4541,7 @@ video {
       'search'
       'auth';
     gap: 16px;
-    padding: 18px 0 12px;
+    padding: 20px 18px 16px;
     justify-items: center;
   }
 
@@ -4447,14 +4551,20 @@ video {
   .header .nav {
     justify-content: center;
     width: 100%;
+    transform: none;
   }
 
   .header .nav {
     flex-wrap: wrap;
+    border-radius: 28px;
   }
 
   .header .login-text {
     min-width: 0;
+  }
+
+  .legacy-session-bar {
+    justify-content: center;
   }
 
   .legacy-toolbar-card,
@@ -4507,6 +4617,44 @@ video {
 }
 
 @media screen and (max-width: 768px) {
+  .header {
+    margin: 14px auto 22px;
+    padding: 18px 14px 14px;
+    border-radius: 24px;
+  }
+
+  .header::before {
+    inset: 10px;
+    border-radius: 18px;
+  }
+
+  .header::after {
+    left: 18px;
+    right: 18px;
+    bottom: 12px;
+  }
+
+  .header .logo a {
+    min-width: 76px;
+    min-height: 62px;
+    padding: 10px 14px;
+    border-radius: 18px;
+    transform: none;
+  }
+
+  .header .nav {
+    gap: 10px;
+    padding: 10px;
+    border-radius: 24px;
+    transform: none;
+  }
+
+  .header .nav a {
+    flex: 1 1 calc(50% - 10px);
+    min-width: 128px;
+    padding: 0 16px;
+  }
+
   .legacy-home-empty-state {
     padding: 24px 18px;
     border-radius: 22px;
@@ -4682,6 +4830,7 @@ video {
     padding: 8px;
     border-radius: 16px;
     flex-wrap: wrap;
+    transform: none;
   }
 
   .legacy-header-search-mode,
@@ -4704,14 +4853,21 @@ video {
     border-radius: 12px;
   }
 
+  .legacy-header-search-hotkey {
+    display: none;
+  }
+
   .legacy-session-bar {
     flex-direction: column;
     align-items: stretch;
     width: 100%;
+    padding: 8px;
+    border-radius: 18px;
   }
 
   .legacy-session-link {
     width: 100%;
+    transform: none;
   }
 
   .auth-card-glass,
