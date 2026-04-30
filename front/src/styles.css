@@ -5267,6 +5267,50 @@ video {
     padding: 20px 18px 18px;
   }
 
+  .legacy-my-question-media {
+    gap: 10px;
+  }
+
+  .legacy-my-question-media img,
+  .legacy-my-question-media video,
+  .legacy-album-item img,
+  .legacy-album-item video {
+    width: calc(50% - 5px);
+    height: 140px;
+    border-radius: 14px;
+  }
+
+  .legacy-my-question-media img:nth-child(odd),
+  .legacy-my-question-media video:nth-child(odd),
+  .legacy-my-question-media img:nth-child(even),
+  .legacy-my-question-media video:nth-child(even) {
+    transform: none;
+  }
+
+  .album-scene .legacy-album-item,
+  .album-scene .legacy-album-item:nth-child(odd),
+  .album-scene .legacy-album-item:nth-child(even),
+  .publish-scene .legacy-my-question-card,
+  .question-detail-scene .question-detail-related-panel,
+  .question-detail-scene .question-detail-related-card,
+  .question-detail-scene .question-detail-sidebar {
+    transform: none;
+  }
+
+  .album-scene .legacy-album-item:hover,
+  .publish-scene .legacy-my-question-card:hover,
+  .question-detail-scene .question-detail-related-card:hover,
+  .question-detail-scene .question-detail-sidebar .legacy-panel:hover {
+    transform: translateY(-2px);
+  }
+
+  .album-scene .legacy-inline-link,
+  .legacy-my-question-detail-link,
+  .question-detail-scene .question-detail-sidebar-head .legacy-summary-chip,
+  .question-detail-scene .question-detail-related-card .legacy-mini-card-footer {
+    transform: none;
+  }
+
   .question-detail-scene .question-detail-shell {
     width: min(100vw - 24px, 1120px);
   }
