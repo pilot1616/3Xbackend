@@ -563,7 +563,7 @@ export function QuestionDetailPage() {
           </div>
 
           <aside className="legacy-card-list question-detail-sidebar">
-            <section className="legacy-panel">
+            <section className="legacy-panel question-detail-related-panel">
               <div className="question-detail-sidebar-head">
                 <h2>作者更多帖子</h2>
                 {!relatedLoading && relatedQuestionsPage.total > 0 ? <span className="legacy-summary-chip">共 {relatedQuestionsPage.total} 条</span> : null}
@@ -591,7 +591,7 @@ export function QuestionDetailPage() {
               ) : null}
               {!relatedLoading && relatedQuestionsPage.total > 0 ? <div className="legacy-empty-inline">共 {relatedQuestionsPage.total} 条，当前第 {relatedPage} / {relatedTotalPages} 页。</div> : null}
               {relatedQuestionsPage.records.map((item) => (
-                <article className="legacy-mini-card" key={item.qid}>
+                <article className="legacy-mini-card question-detail-related-card" key={item.qid}>
                   <div className="legacy-mini-card-header">
                     <strong className="legacy-mini-card-title">{item.nickName}</strong>
                     <div className="legacy-mini-card-badges">
