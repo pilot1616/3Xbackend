@@ -588,9 +588,11 @@ video {
   padding: 34px 30px;
   text-align: center;
   border-radius: 28px;
+  transform-style: preserve-3d;
   background: linear-gradient(160deg, rgba(12, 22, 38, 0.95) 0%, rgba(13, 27, 47, 0.9) 58%, rgba(21, 35, 56, 0.94) 100%);
   border: 1px solid rgba(126, 201, 255, 0.14);
   box-shadow: 0 28px 70px rgba(1, 8, 20, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.07), inset 0 -18px 32px rgba(0, 0, 0, 0.16);
+  transform: translateZ(22px) rotateX(3deg);
 }
 
 .legacy-gated-card::before {
@@ -623,7 +625,7 @@ video {
   background: linear-gradient(135deg, rgba(54, 236, 255, 0.18) 0%, rgba(129, 116, 255, 0.22) 100%);
   color: #ecf9ff;
   border: 1px solid rgba(128, 205, 255, 0.16);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 16px 28px rgba(2, 8, 22, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -10px 16px rgba(0, 0, 0, 0.12);
 }
 
 .legacy-session-bar {
@@ -997,6 +999,8 @@ video {
 }
 
 .legacy-toolbar-card {
+  position: relative;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 20px;
@@ -1004,6 +1008,18 @@ video {
   background: linear-gradient(160deg, rgba(12, 22, 38, 0.94) 0%, rgba(13, 27, 47, 0.9) 58%, rgba(21, 35, 56, 0.94) 100%);
   border: 1px solid rgba(126, 201, 255, 0.14);
   box-shadow: 0 24px 58px rgba(1, 8, 20, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -18px 32px rgba(0, 0, 0, 0.14);
+  transform-style: preserve-3d;
+}
+
+.legacy-toolbar-card::before,
+.legacy-panel::before,
+.legacy-empty-card::before {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(156, 225, 255, 0.06);
+  pointer-events: none;
 }
 
 .legacy-toolbar-card h2,
@@ -1024,6 +1040,7 @@ video {
   display: grid;
   gap: 10px;
   align-content: start;
+  transform: translateZ(14px);
 }
 
 .legacy-toolbar-actions input,
@@ -4065,11 +4082,14 @@ video {
 
 .legacy-panel,
 .legacy-empty-card {
+  position: relative;
+  overflow: hidden;
   background: linear-gradient(160deg, rgba(12, 22, 38, 0.92) 0%, rgba(13, 27, 47, 0.88) 58%, rgba(21, 35, 56, 0.92) 100%);
   border: 1px solid rgba(126, 201, 255, 0.14);
   padding: 24px;
   border-radius: 24px;
   box-shadow: 0 24px 58px rgba(1, 8, 20, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -18px 32px rgba(0, 0, 0, 0.14);
+  transform-style: preserve-3d;
 }
 
 .legacy-page-header {
@@ -4082,6 +4102,7 @@ video {
 
 .legacy-empty-card {
   text-align: center;
+  justify-items: center;
 }
 
 .legacy-grid {
@@ -4320,8 +4341,12 @@ video {
 }
 
 .legacy-empty-inline {
-  padding: 14px 0 4px;
+  padding: 14px 16px;
   color: rgba(196, 222, 248, 0.74);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(126, 201, 255, 0.1);
+  box-shadow: 0 14px 24px rgba(2, 8, 22, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .legacy-card-list {
