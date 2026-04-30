@@ -49,6 +49,7 @@ export function HomePage() {
   const [submittingQid, setSubmittingQid] = useState<number | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [hasMore, setHasMore] = useState(true);
+  const listBusy = loading || loadingMore;
 
   useEffect(() => {
     const nextFilters = readFiltersFromSearchParams(searchParams);
@@ -258,7 +259,7 @@ export function HomePage() {
                   {filters.searchType === 'phone' ? '手机号' : '作者'}：{filters.author} ×
                 </button>
               ) : null}
-              <button className="legacy-action-button secondary small" onClick={handleReset} type="button">
+              <button className="legacy-action-button secondary small" disabled={listBusy} onClick={handleReset} type="button">
                 清除全部
               </button>
             </div>
@@ -274,7 +275,7 @@ export function HomePage() {
                 <h3>{hasActiveFilters ? '当前筛选条件下没有匹配帖子' : '广场里暂时还没有公开帖子'}</h3>
                 <p>{hasActiveFilters ? '可以清空搜索条件，或者切换作者 / 手机号 / 内容重新检索。' : '等第一批公开帖子进入广场后，这里会开始持续滚动加载。'}</p>
                 {hasActiveFilters ? (
-                  <button className="legacy-action-button secondary" onClick={handleReset} type="button">
+                  <button className="legacy-action-button secondary" disabled={listBusy} onClick={handleReset} type="button">
                     清空当前筛选
                   </button>
                 ) : null}
@@ -301,8 +302,8 @@ export function HomePage() {
                 <span>
                   已加载 {page.records.length} / {page.total} 条帖子
                 </span>
-                <button className="legacy-action-button secondary small" onClick={() => void reloadCurrentWindow()} type="button">
-                  刷新当前列表
+                <button className="legacy-action-button secondary small" disabled={listBusy} onClick={() => void reloadCurrentWindow()} type="button">
+                  {listBusy ? '刷新中...' : '刷新当前列表'}
                 </button>
               </div>
             ) : null}

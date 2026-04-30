@@ -139,6 +139,7 @@ export function PublishPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const listBusy = loading || loadingMore;
 
   useEffect(() => {
     const nextFilters = readMyQuestionFiltersFromSearchParams(searchParams);
@@ -582,10 +583,10 @@ export function PublishPage() {
             <option value="most_commented">评论最多</option>
           </select>
           <div className="legacy-home-filter-actions">
-            <button className="legacy-action-button small" type="submit">
-              应用筛选
+            <button className="legacy-action-button small" disabled={listBusy} type="submit">
+              {listBusy ? '处理中...' : '应用筛选'}
             </button>
-            <button className="legacy-action-button secondary small" onClick={handleFilterReset} type="button">
+            <button className="legacy-action-button secondary small" disabled={listBusy} onClick={handleFilterReset} type="button">
               重置
             </button>
           </div>
@@ -608,7 +609,7 @@ export function PublishPage() {
                 排序：{publishSortLabelMap[filters.sort]} ×
               </button>
             ) : null}
-            <button className="legacy-action-button secondary small" onClick={handleFilterReset} type="button">
+            <button className="legacy-action-button secondary small" disabled={listBusy} onClick={handleFilterReset} type="button">
               清除全部
             </button>
           </div>
@@ -695,8 +696,8 @@ export function PublishPage() {
               <span>
                 已加载 {page.records.length} / {page.total} 条帖子
               </span>
-              <button className="legacy-action-button secondary small" onClick={() => void reloadCurrentWindow()} type="button">
-                刷新当前列表
+              <button className="legacy-action-button secondary small" disabled={listBusy} onClick={() => void reloadCurrentWindow()} type="button">
+                {listBusy ? '刷新中...' : '刷新当前列表'}
               </button>
             </div>
           ) : null}

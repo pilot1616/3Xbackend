@@ -91,6 +91,7 @@ export function AlbumPage() {
 
   const imageCount = visibleItems.filter((item) => isImage(item.fileName)).length;
   const videoCount = visibleItems.length - imageCount;
+  const albumBusy = loading || loadingMore;
 
   useEffect(() => {
     const nextFilters = readAlbumFiltersFromSearchParams(searchParams);
@@ -360,10 +361,10 @@ export function AlbumPage() {
                 <option value="video">仅看视频</option>
               </select>
               <div className="legacy-home-filter-actions">
-                <button className="legacy-action-button small" type="submit">
-                  应用筛选
+                <button className="legacy-action-button small" disabled={albumBusy} type="submit">
+                  {albumBusy ? '处理中...' : '应用筛选'}
                 </button>
-                <button className="legacy-action-button secondary small" onClick={handleFilterReset} type="button">
+                <button className="legacy-action-button secondary small" disabled={albumBusy} onClick={handleFilterReset} type="button">
                   重置
                 </button>
               </div>
@@ -381,7 +382,7 @@ export function AlbumPage() {
                     类型：{albumMediaTypeLabelMap[filters.mediaType]} ×
                   </button>
                 ) : null}
-                <button className="legacy-action-button secondary small" onClick={handleFilterReset} type="button">
+                <button className="legacy-action-button secondary small" disabled={albumBusy} onClick={handleFilterReset} type="button">
                   清除全部
                 </button>
               </div>
@@ -394,8 +395,8 @@ export function AlbumPage() {
                 <span>
                   当前展示 {visibleItems.length} 个附件，图片 {imageCount} 个，视频 {videoCount} 个；已扫描 {pageInfo.loaded} / {pageInfo.total} 条帖子
                 </span>
-                <button className="legacy-action-button secondary small" onClick={() => void reloadCurrentWindow()} type="button">
-                  刷新当前相册
+                <button className="legacy-action-button secondary small" disabled={albumBusy} onClick={() => void reloadCurrentWindow()} type="button">
+                  {albumBusy ? '刷新中...' : '刷新当前相册'}
                 </button>
               </div>
             ) : null}
