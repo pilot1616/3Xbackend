@@ -1,3 +1,16 @@
 .vscode/
 .env
 front/.env
+.cache/
+node_modules/
+front/node_modules/
+front/dist/
+public/uploads/1777369913605_2026042800060_seed_sy_img5.jpg
+public/uploads/1777369913605_2026042800072_seed_xc_img1.jpg
+public/uploads/1777369913605_2026042800074_seed_sy_img2.jpg
+public/uploads/1777369913605_2026042800074_seed_xc_img3.jpg
+public/uploads/1777369913605_2026042800075_seed_xc_img4.jpg
+public/uploads/1777369913605_2026042800076_seed_xc_img5.jpg
+public/uploads/1777369913605_2026042800080_seed_wy_img4.jpg
+public/uploads/1777369913605_2026042800081_seed_bgimg2.jpg
+public/uploads/2026042801201_2026042800017_seed_wy_img2.jpg
