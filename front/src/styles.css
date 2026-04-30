@@ -441,7 +441,25 @@ video {
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(130, 205, 255, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 22px 42px rgba(2, 8, 22, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -14px 22px rgba(0, 0, 0, 0.12);
+  transform-style: preserve-3d;
+  transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
+}
+
+.legacy-site-footer-brand::before,
+.legacy-site-footer-card::before {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(156, 225, 255, 0.06);
+  pointer-events: none;
+}
+
+.legacy-site-footer-brand:hover,
+.legacy-site-footer-card:hover {
+  transform: translateY(-4px) translateZ(14px);
+  box-shadow: 0 28px 50px rgba(2, 8, 22, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .legacy-site-footer-brand {
@@ -514,6 +532,13 @@ video {
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(65, 100, 190, 0.08));
   border: 1px solid rgba(123, 206, 255, 0.14);
   box-shadow: 0 14px 28px rgba(1, 8, 20, 0.18);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.legacy-site-footer-social span:hover {
+  transform: translateY(-3px) translateZ(10px);
+  border-color: rgba(157, 230, 255, 0.2);
+  box-shadow: 0 20px 34px rgba(1, 8, 20, 0.24);
 }
 
 .legacy-site-footer-note {
@@ -531,6 +556,12 @@ video {
   border-radius: 18px;
   border: 1px solid rgba(153, 218, 255, 0.14);
   box-shadow: 0 20px 40px rgba(1, 8, 20, 0.26);
+  transition: transform 0.26s ease, box-shadow 0.26s ease;
+}
+
+.legacy-site-footer-ad:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 24px 46px rgba(1, 8, 20, 0.3);
 }
 
 .legacy-site-footer-bottom {
@@ -4397,13 +4428,31 @@ video {
 }
 
 .legacy-mini-card {
+  position: relative;
+  overflow: hidden;
   padding: 16px;
-  background: rgba(255, 255, 255, 0.05);
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03) 54%, rgba(28, 46, 78, 0.18) 100%);
   border: 1px solid rgba(148, 213, 255, 0.14);
   border-radius: 20px;
   display: grid;
   gap: 12px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 18px 32px rgba(2, 8, 22, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -12px 18px rgba(0, 0, 0, 0.1);
+  transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+}
+
+.legacy-mini-card::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(156, 225, 255, 0.06);
+  pointer-events: none;
+}
+
+.legacy-mini-card:hover {
+  transform: translateY(-3px) translateZ(16px);
+  border-color: rgba(156, 225, 255, 0.18);
+  box-shadow: 0 22px 38px rgba(2, 8, 22, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .legacy-mini-card p {
@@ -4458,11 +4507,12 @@ video {
 
 .legacy-mini-card-quote {
   padding: 12px 14px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
   border: 1px solid rgba(148, 213, 255, 0.14);
   color: rgba(196, 222, 248, 0.74);
   line-height: 1.6;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .legacy-mini-card-meta {
@@ -4692,15 +4742,24 @@ video {
 .legacy-summary-chip {
   padding: 8px 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
   color: #d7ecff;
   border: 1px solid rgba(123, 206, 255, 0.14);
   font-weight: 700;
+  box-shadow: 0 12px 22px rgba(2, 8, 22, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
 }
 
 .legacy-summary-chip-button {
-  border: none;
+  border: 1px solid rgba(123, 206, 255, 0.14);
   cursor: pointer;
+}
+
+.legacy-summary-chip:hover,
+.legacy-summary-chip-button:hover {
+  transform: translateY(-2px) translateZ(10px);
+  border-color: rgba(156, 225, 255, 0.18);
+  box-shadow: 0 16px 26px rgba(2, 8, 22, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .legacy-profile-page {
