@@ -453,21 +453,27 @@ export function QuestionCard({
                 <span>本页匹配 {filteredComments.length} / {commentsPage.records.length} 条评论</span>
               </div>
             ) : null}
-            <form className="forum-comment-filter-row" onSubmit={handleCommentFilterSubmit}>
-              <input onChange={(event) => setCommentFilterKeywordInput(event.target.value)} placeholder="按评论内容或昵称筛选当前页" value={commentFilterKeywordInput} />
-              <label className={`forum-comment-filter-toggle${commentFilterOnlyMine ? ' is-active' : ''}`}>
-                <input checked={commentFilterOnlyMine} disabled={!currentUsername} onChange={(event) => setCommentFilterOnlyMine(event.target.checked)} type="checkbox" />
-                <span>只看我的评论</span>
-              </label>
-              <div className="forum-comment-filter-actions">
-                <button className="legacy-action-button secondary small" type="submit">
-                  筛选
+            <div className="forum-comment-filter-shell">
+              <form className="forum-comment-filter-row" onSubmit={handleCommentFilterSubmit}>
+                <input onChange={(event) => setCommentFilterKeywordInput(event.target.value)} placeholder="按评论内容或昵称筛选当前页" value={commentFilterKeywordInput} />
+                <button
+                  className={`forum-comment-filter-chip${commentFilterOnlyMine ? ' is-active' : ''}`}
+                  disabled={!currentUsername}
+                  onClick={() => setCommentFilterOnlyMine((current) => !current)}
+                  type="button"
+                >
+                  只看我的评论
                 </button>
-                <button className="legacy-action-button secondary small" onClick={handleCommentFilterReset} type="button">
-                  重置
-                </button>
-              </div>
-            </form>
+                <div className="forum-comment-filter-actions">
+                  <button className="legacy-action-button secondary small" type="submit">
+                    应用筛选
+                  </button>
+                  <button className="legacy-action-button secondary small" onClick={handleCommentFilterReset} type="button">
+                    清空
+                  </button>
+                </div>
+              </form>
+            </div>
             {commentFilterKeyword || commentFilterOnlyMine ? (
               <div className="forum-comment-filter-summary">
                 {commentFilterKeyword ? <span className="legacy-summary-chip">关键字：{commentFilterKeyword}</span> : null}

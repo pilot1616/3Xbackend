@@ -1475,44 +1475,53 @@ video {
   width: 100%;
 }
 
+.forum-comment-filter-shell {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(148, 213, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
 .forum-comment-filter-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
 }
 
 .forum-comment-filter-row input {
+  flex: 1 1 260px;
   min-width: 0;
-  width: 100%;
-  padding: 12px 14px;
+  height: 44px;
+  padding: 0 14px;
   border: 1px solid rgba(128, 201, 255, 0.16);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.06);
   color: #eff7ff;
 }
 
-.forum-comment-filter-toggle {
+.forum-comment-filter-chip {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  min-height: 46px;
-  padding: 0 14px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
   border-radius: 14px;
-  border: 1px solid rgba(128, 201, 255, 0.16);
+  border: 1px solid rgba(128, 205, 255, 0.16);
   background: rgba(255, 255, 255, 0.05);
   color: rgba(214, 235, 255, 0.86);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-.forum-comment-filter-toggle.is-active {
+.forum-comment-filter-chip.is-active {
   background: linear-gradient(135deg, rgba(54, 236, 255, 0.16) 0%, rgba(129, 116, 255, 0.18) 100%);
   color: #f2fbff;
 }
 
-.forum-comment-filter-toggle input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
+.forum-comment-filter-chip:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
 }
 
 .forum-comment-filter-actions,
@@ -1521,6 +1530,10 @@ video {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.forum-comment-filter-actions {
+  margin-left: auto;
 }
 
 .forum-empty-comments {
