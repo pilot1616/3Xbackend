@@ -1408,13 +1408,19 @@ video {
   gap: 6px;
 }
 
+.forum-comment-section-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .forum-comment-section-copy strong {
   color: #f2f9ff;
   font-size: 17px;
 }
 
 .forum-comment-section-copy span,
-.forum-comment-section-note,
 .forum-comment-submit-meta,
 .forum-comment-list-summary,
 .forum-comment-edit-meta {
@@ -1476,6 +1482,8 @@ video {
 }
 
 .forum-comment-filter-shell {
+  display: grid;
+  gap: 12px;
   padding: 16px 18px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.04);
@@ -1534,6 +1542,10 @@ video {
 
 .forum-comment-filter-actions {
   margin-left: auto;
+}
+
+.forum-comment-filter-summary {
+  min-height: 24px;
 }
 
 .forum-empty-comments {

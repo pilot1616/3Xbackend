@@ -398,10 +398,12 @@ export function QuestionCard({
           <div className="forum-comment-section-head">
             <div className="forum-comment-section-copy">
               <strong>评论区</strong>
-              <span>{totalCommentCount > 0 ? `当前共 ${totalCommentCount} 条评论，所有互动都集中在这里。` : '现在还没有评论，你可以先留下第一条反馈。'}</span>
+              <div className="forum-comment-section-meta">
+                <span className="legacy-summary-chip">共 {totalCommentCount} 条评论</span>
+                {commentFilterOnlyMine ? <span className="legacy-summary-chip">仅看我的评论</span> : null}
+              </div>
             </div>
             <div className="forum-comment-section-actions">
-              <span className="forum-comment-section-note">支持 Ctrl / Cmd + Enter 快捷提交</span>
               {canInteract ? (
                 <button className="forum-inline-button" onClick={scrollToComposer} type="button">
                   去输入区
@@ -416,8 +418,8 @@ export function QuestionCard({
             <img alt="avatar" className="now-header forum-comment-avatar" src={avatarSrc(viewerAvatarPath)} />
             <form className="layui-form forum-comment-form" onSubmit={handleCommentSubmit}>
               <div className="forum-comment-composer-head">
-                <strong>{canInteract ? '写下你的评论' : '登录后参与评论'}</strong>
-                <span>{canInteract ? '评论会直接展示在帖子详情时间线上。' : '当前只能浏览评论，登录后即可参与互动。'}</span>
+                <strong>{canInteract ? '写评论' : '登录后参与评论'}</strong>
+                <span>{canInteract ? '支持 Ctrl / Cmd + Enter 快捷提交' : '当前只能浏览评论内容'}</span>
               </div>
               <div className="layui-form-item layui-form-text">
                 <div className="layui-input-block">
@@ -447,13 +449,13 @@ export function QuestionCard({
           </div>
 
           <div className="list-cont">
-            {!commentsLoading && commentsPage.records.length > 0 ? (
-              <div className="forum-comment-list-summary">
-                <span>第 {commentsPage.page} / {totalCommentPages} 页</span>
-                <span>本页匹配 {filteredComments.length} / {commentsPage.records.length} 条评论</span>
-              </div>
-            ) : null}
             <div className="forum-comment-filter-shell">
+              {!commentsLoading && commentsPage.records.length > 0 ? (
+                <div className="forum-comment-list-summary">
+                  <span>第 {commentsPage.page} / {totalCommentPages} 页</span>
+                  <span>当前页 {filteredComments.length} / {commentsPage.records.length}</span>
+                </div>
+              ) : null}
               <form className="forum-comment-filter-row" onSubmit={handleCommentFilterSubmit}>
                 <input onChange={(event) => setCommentFilterKeywordInput(event.target.value)} placeholder="按评论内容或昵称筛选当前页" value={commentFilterKeywordInput} />
                 <button
@@ -473,13 +475,12 @@ export function QuestionCard({
                   </button>
                 </div>
               </form>
+              {commentFilterKeyword || commentFilterOnlyMine ? (
+                <div className="forum-comment-filter-summary">
+                  {commentFilterKeyword ? <span className="legacy-summary-chip">关键字：{commentFilterKeyword}</span> : null}
+                </div>
+              ) : null}
             </div>
-            {commentFilterKeyword || commentFilterOnlyMine ? (
-              <div className="forum-comment-filter-summary">
-                {commentFilterKeyword ? <span className="legacy-summary-chip">关键字：{commentFilterKeyword}</span> : null}
-                {commentFilterOnlyMine ? <span className="legacy-summary-chip">仅看我的评论</span> : null}
-              </div>
-            ) : null}
             {commentsMessage ? <div className="forum-empty-comments">{commentsMessage}</div> : null}
             {commentsLoading ? <div className="forum-empty-comments">正在加载评论...</div> : null}
             {!commentsLoading && commentsPage.records.length === 0 && !commentsMessage ? <div className="forum-empty-comments">暂时还没有评论。</div> : null}
