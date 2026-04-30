@@ -69,6 +69,7 @@ export function ProfilePage() {
   const [commentPage, setCommentPage] = useState(1);
   const [likePage, setLikePage] = useState(1);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [likesLoading, setLikesLoading] = useState(false);
   const [commentKeyword, setCommentKeyword] = useState('');
   const [commentKeywordInput, setCommentKeywordInput] = useState('');
   const [likeKeyword, setLikeKeyword] = useState('');
@@ -141,11 +142,14 @@ export function ProfilePage() {
   }
 
   async function loadLikesPage(page: number, keyword: string) {
+    setLikesLoading(true);
     try {
       const nextLikes = await listMyLikes(page, 20, keyword);
       setLikes(nextLikes);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : '加载我的点赞失败');
+    } finally {
+      setLikesLoading(false);
     }
   }
 
@@ -564,7 +568,27 @@ export function ProfilePage() {
                     </div>
                   </form>
 
-                  {likes.records.length === 0 ? <div className="legacy-empty-inline">{likeKeyword ? '没有匹配的点赞记录。' : '你还没有点赞过任何帖子。'}</div> : null}
+                  {likes.total > 0 ? (
+                    <div className="legacy-home-load-status">
+                      <span>
+                        共 {likes.total} 条点赞，当前第 {likePage} / {totalLikePages} 页，本页 {likes.records.length} 条
+                      </span>
+                      <button className="legacy-action-button secondary small" disabled={likesLoading} onClick={() => void loadLikesPage(likePage, likeKeyword)} type="button">
+                        {likesLoading ? '刷新中...' : '刷新点赞记录'}
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {likeKeyword ? (
+                    <div className="legacy-active-filters">
+                      <button className="legacy-summary-chip legacy-summary-chip-button" onClick={handleLikeFilterReset} type="button">
+                        关键字：{likeKeyword} ×
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {likesLoading ? <div className="legacy-empty-inline">正在加载点赞记录...</div> : null}
+                  {!likesLoading && likes.records.length === 0 ? <div className="legacy-empty-inline">{likeKeyword ? '没有匹配的点赞记录。' : '你还没有点赞过任何帖子。'}</div> : null}
                   {likes.records.map((item) => (
                     <div className="legacy-mini-card" key={item.id}>
                       <div className="legacy-mini-card-header">
@@ -590,13 +614,13 @@ export function ProfilePage() {
                   ))}
                   {likes.total > likes.page_size ? (
                     <div className="legacy-list-pagination">
-                      <button className="legacy-action-button secondary small" disabled={likePage <= 1} onClick={() => setLikePage((current) => current - 1)} type="button">
+                      <button className="legacy-action-button secondary small" disabled={likesLoading || likePage <= 1} onClick={() => setLikePage((current) => current - 1)} type="button">
                         上一页
                       </button>
                       <span>
                         第 {likePage} / {totalLikePages} 页
                       </span>
-                      <button className="legacy-action-button secondary small" disabled={likePage >= totalLikePages} onClick={() => setLikePage((current) => current + 1)} type="button">
+                      <button className="legacy-action-button secondary small" disabled={likesLoading || likePage >= totalLikePages} onClick={() => setLikePage((current) => current + 1)} type="button">
                         下一页
                       </button>
                     </div>
