@@ -66,6 +66,9 @@ export function QuestionCard({
   const [commentText, setCommentText] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingCommentText, setEditingCommentText] = useState('');
+  const [commentFilterKeywordInput, setCommentFilterKeywordInput] = useState('');
+  const [commentFilterKeyword, setCommentFilterKeyword] = useState('');
+  const [commentFilterOnlyMine, setCommentFilterOnlyMine] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsMessage, setCommentsMessage] = useState('');
   const [commentsPage, setCommentsPage] = useState<CommentListPage>(emptyComments);
@@ -80,6 +83,11 @@ export function QuestionCard({
   const trimmedCommentText = commentText.trim();
   const commentDraftLength = trimmedCommentText.length;
   const totalCommentCount = commentsPage.total || question.commentsNum;
+  const filteredComments = commentsPage.records.filter((comment) => {
+    const matchesKeyword = !commentFilterKeyword || comment.text.toLowerCase().includes(commentFilterKeyword.toLowerCase()) || comment.nickName.toLowerCase().includes(commentFilterKeyword.toLowerCase());
+    const matchesMine = !commentFilterOnlyMine || (currentUsername ? comment.user === currentUsername : false);
+    return matchesKeyword && matchesMine;
+  });
 
   useEffect(() => {
     if (!expanded) {
@@ -101,6 +109,13 @@ export function QuestionCard({
 
   useEffect(() => {
     setPreviewIndex(null);
+  }, [question.qid]);
+
+  useEffect(() => {
+    setCommentFilterKeyword('');
+    setCommentFilterKeywordInput('');
+    setCommentFilterOnlyMine(false);
+    cancelEditingComment();
   }, [question.qid]);
 
   useEffect(() => {
@@ -221,6 +236,17 @@ export function QuestionCard({
   function scrollToComposer() {
     composerTextareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     composerTextareaRef.current?.focus();
+  }
+
+  function handleCommentFilterSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCommentFilterKeyword(commentFilterKeywordInput.trim());
+  }
+
+  function handleCommentFilterReset() {
+    setCommentFilterKeywordInput('');
+    setCommentFilterKeyword('');
+    setCommentFilterOnlyMine(false);
   }
 
   async function handleCommentUpdate(commentID: number) {
@@ -424,14 +450,36 @@ export function QuestionCard({
             {!commentsLoading && commentsPage.records.length > 0 ? (
               <div className="forum-comment-list-summary">
                 <span>第 {commentsPage.page} / {totalCommentPages} 页</span>
-                <span>本页展示 {commentsPage.records.length} 条评论</span>
+                <span>本页匹配 {filteredComments.length} / {commentsPage.records.length} 条评论</span>
+              </div>
+            ) : null}
+            <form className="forum-comment-filter-row" onSubmit={handleCommentFilterSubmit}>
+              <input onChange={(event) => setCommentFilterKeywordInput(event.target.value)} placeholder="按评论内容或昵称筛选当前页" value={commentFilterKeywordInput} />
+              <label className={`forum-comment-filter-toggle${commentFilterOnlyMine ? ' is-active' : ''}`}>
+                <input checked={commentFilterOnlyMine} disabled={!currentUsername} onChange={(event) => setCommentFilterOnlyMine(event.target.checked)} type="checkbox" />
+                <span>只看我的评论</span>
+              </label>
+              <div className="forum-comment-filter-actions">
+                <button className="legacy-action-button secondary small" type="submit">
+                  筛选
+                </button>
+                <button className="legacy-action-button secondary small" onClick={handleCommentFilterReset} type="button">
+                  重置
+                </button>
+              </div>
+            </form>
+            {commentFilterKeyword || commentFilterOnlyMine ? (
+              <div className="forum-comment-filter-summary">
+                {commentFilterKeyword ? <span className="legacy-summary-chip">关键字：{commentFilterKeyword}</span> : null}
+                {commentFilterOnlyMine ? <span className="legacy-summary-chip">仅看我的评论</span> : null}
               </div>
             ) : null}
             {commentsMessage ? <div className="forum-empty-comments">{commentsMessage}</div> : null}
             {commentsLoading ? <div className="forum-empty-comments">正在加载评论...</div> : null}
             {!commentsLoading && commentsPage.records.length === 0 && !commentsMessage ? <div className="forum-empty-comments">暂时还没有评论。</div> : null}
+            {!commentsLoading && commentsPage.records.length > 0 && filteredComments.length === 0 && !commentsMessage ? <div className="forum-empty-comments">当前页没有匹配的评论，试试清空筛选条件。</div> : null}
             <div className="forum-comment-timeline">
-              {commentsPage.records.map((comment, index) => (
+              {filteredComments.map((comment, index) => (
                 <div className="forum-comment-node" key={comment.id}>
                   <div className="forum-comment-rail">
                     <span className="forum-comment-dot">{index + 1}</span>
