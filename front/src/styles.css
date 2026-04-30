@@ -1416,7 +1416,8 @@ video {
 .forum-comment-section-copy span,
 .forum-comment-section-note,
 .forum-comment-submit-meta,
-.forum-comment-list-summary {
+.forum-comment-list-summary,
+.forum-comment-edit-meta {
   color: rgba(194, 220, 248, 0.72);
   font-size: 13px;
 }
@@ -1464,7 +1465,8 @@ video {
 }
 
 .forum-comment-list-summary,
-.forum-comment-submit-meta {
+.forum-comment-submit-meta,
+.forum-comment-edit-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;

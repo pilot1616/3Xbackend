@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, useEffect, useState } from 'react';
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { buildAssetUrl, buildUploadAssetUrl } from '../api/client';
@@ -74,6 +74,8 @@ export function QuestionCard({
   const [likesMessage, setLikesMessage] = useState('');
   const [likesPage, setLikesPage] = useState(emptyLikes);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editorTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const visibleFiles = question.files.slice(0, compact ? 4 : question.files.length);
   const trimmedCommentText = commentText.trim();
   const commentDraftLength = trimmedCommentText.length;
@@ -100,6 +102,24 @@ export function QuestionCard({
   useEffect(() => {
     setPreviewIndex(null);
   }, [question.qid]);
+
+  useEffect(() => {
+    if (!expanded || !canInteract) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => composerTextareaRef.current?.focus(), 160);
+    return () => window.clearTimeout(timer);
+  }, [expanded, canInteract, question.qid]);
+
+  useEffect(() => {
+    if (editingCommentId === null) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => editorTextareaRef.current?.focus(), 0);
+    return () => window.clearTimeout(timer);
+  }, [editingCommentId]);
 
   useEffect(() => {
     if (previewIndex === null) {
@@ -155,6 +175,13 @@ export function QuestionCard({
     }
   }
 
+  function handleEditKeyDown(event: KeyboardEvent<HTMLTextAreaElement>, commentID: number) {
+    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && !submitting && editingCommentText.trim()) {
+      event.preventDefault();
+      void handleCommentUpdate(commentID);
+    }
+  }
+
   async function loadComments(page = 1) {
     setCommentsLoading(true);
     setCommentsMessage('');
@@ -189,6 +216,11 @@ export function QuestionCard({
   function cancelEditingComment() {
     setEditingCommentId(null);
     setEditingCommentText('');
+  }
+
+  function scrollToComposer() {
+    composerTextareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    composerTextareaRef.current?.focus();
   }
 
   async function handleCommentUpdate(commentID: number) {
@@ -344,6 +376,11 @@ export function QuestionCard({
             </div>
             <div className="forum-comment-section-actions">
               <span className="forum-comment-section-note">支持 Ctrl / Cmd + Enter 快捷提交</span>
+              {canInteract ? (
+                <button className="forum-inline-button" onClick={scrollToComposer} type="button">
+                  去输入区
+                </button>
+              ) : null}
               <button className="forum-inline-button" disabled={commentsLoading} onClick={() => void loadComments(commentsPage.page || 1)} type="button">
                 {commentsLoading ? '刷新中...' : '刷新评论'}
               </button>
@@ -364,6 +401,7 @@ export function QuestionCard({
                     onChange={(event) => setCommentText(event.target.value)}
                     onKeyDown={handleComposerKeyDown}
                     placeholder={canInteract ? '在这里评论' : '登录后可评论'}
+                    ref={composerTextareaRef}
                     value={commentText}
                   ></textarea>
                 </div>
@@ -413,7 +451,17 @@ export function QuestionCard({
 
                     {editingCommentId === comment.id ? (
                       <div className="forum-comment-editor">
-                        <textarea onChange={(event) => setEditingCommentText(event.target.value)} rows={3} value={editingCommentText}></textarea>
+                        <textarea
+                          onChange={(event) => setEditingCommentText(event.target.value)}
+                          onKeyDown={(event) => handleEditKeyDown(event, comment.id)}
+                          ref={editorTextareaRef}
+                          rows={3}
+                          value={editingCommentText}
+                        ></textarea>
+                        <div className="forum-comment-edit-meta">
+                          <span>{editingCommentText.trim().length} 字</span>
+                          <span>支持 Ctrl / Cmd + Enter 快捷保存</span>
+                        </div>
                         <div className="forum-comment-actions">
                           <button className="legacy-action-button small" disabled={submitting} onClick={() => void handleCommentUpdate(comment.id)} type="button">
                             {submitting ? '保存中...' : '保存'}
