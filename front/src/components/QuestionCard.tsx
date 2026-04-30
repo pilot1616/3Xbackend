@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, KeyboardEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { buildAssetUrl, buildUploadAssetUrl } from '../api/client';
@@ -75,6 +75,9 @@ export function QuestionCard({
   const [likesPage, setLikesPage] = useState(emptyLikes);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const visibleFiles = question.files.slice(0, compact ? 4 : question.files.length);
+  const trimmedCommentText = commentText.trim();
+  const commentDraftLength = trimmedCommentText.length;
+  const totalCommentCount = commentsPage.total || question.commentsNum;
 
   useEffect(() => {
     if (!expanded) {
@@ -133,13 +136,23 @@ export function QuestionCard({
 
   async function handleCommentSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const text = commentText.trim();
-    if (!text || !onCommentSubmit) {
+    await submitCommentDraft();
+  }
+
+  async function submitCommentDraft() {
+    if (!trimmedCommentText || !onCommentSubmit) {
       return;
     }
-    await onCommentSubmit(question, text);
+    await onCommentSubmit(question, trimmedCommentText);
     setCommentText('');
     await loadComments(1);
+  }
+
+  function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && canInteract && !submitting && trimmedCommentText) {
+      event.preventDefault();
+      void submitCommentDraft();
+    }
   }
 
   async function loadComments(page = 1) {
@@ -324,15 +337,32 @@ export function QuestionCard({
 
       {expanded && !detailPageOnly ? (
           <div className="review-version">
+          <div className="forum-comment-section-head">
+            <div className="forum-comment-section-copy">
+              <strong>评论区</strong>
+              <span>{totalCommentCount > 0 ? `当前共 ${totalCommentCount} 条评论，所有互动都集中在这里。` : '现在还没有评论，你可以先留下第一条反馈。'}</span>
+            </div>
+            <div className="forum-comment-section-actions">
+              <span className="forum-comment-section-note">支持 Ctrl / Cmd + Enter 快捷提交</span>
+              <button className="forum-inline-button" disabled={commentsLoading} onClick={() => void loadComments(commentsPage.page || 1)} type="button">
+                {commentsLoading ? '刷新中...' : '刷新评论'}
+              </button>
+            </div>
+          </div>
           <div className="form forum-comment-composer">
             <img alt="avatar" className="now-header forum-comment-avatar" src={avatarSrc(viewerAvatarPath)} />
             <form className="layui-form forum-comment-form" onSubmit={handleCommentSubmit}>
+              <div className="forum-comment-composer-head">
+                <strong>{canInteract ? '写下你的评论' : '登录后参与评论'}</strong>
+                <span>{canInteract ? '评论会直接展示在帖子详情时间线上。' : '当前只能浏览评论，登录后即可参与互动。'}</span>
+              </div>
               <div className="layui-form-item layui-form-text">
                 <div className="layui-input-block">
                   <textarea
                     className="layui-textarea"
                     disabled={!canInteract || submitting}
                     onChange={(event) => setCommentText(event.target.value)}
+                    onKeyDown={handleComposerKeyDown}
                     placeholder={canInteract ? '在这里评论' : '登录后可评论'}
                     value={commentText}
                   ></textarea>
@@ -340,7 +370,11 @@ export function QuestionCard({
               </div>
               <div className="layui-form-item layui-form-item-btn">
                 <div className="layui-input-block forum-comment-submit-wrap">
-                  <button className="comment-upload-btn layui-btn" disabled={!canInteract || submitting} type="submit">
+                  <div className="forum-comment-submit-meta">
+                    <span>{commentDraftLength} 字</span>
+                    <span>{canInteract ? '发布后会自动刷新评论列表' : '登录后可发表评论'}</span>
+                  </div>
+                  <button className="comment-upload-btn layui-btn" disabled={!canInteract || submitting || !trimmedCommentText} type="submit">
                     {submitting ? '提交中' : '确定'}
                   </button>
                 </div>
@@ -349,6 +383,12 @@ export function QuestionCard({
           </div>
 
           <div className="list-cont">
+            {!commentsLoading && commentsPage.records.length > 0 ? (
+              <div className="forum-comment-list-summary">
+                <span>第 {commentsPage.page} / {totalCommentPages} 页</span>
+                <span>本页展示 {commentsPage.records.length} 条评论</span>
+              </div>
+            ) : null}
             {commentsMessage ? <div className="forum-empty-comments">{commentsMessage}</div> : null}
             {commentsLoading ? <div className="forum-empty-comments">正在加载评论...</div> : null}
             {!commentsLoading && commentsPage.records.length === 0 && !commentsMessage ? <div className="forum-empty-comments">暂时还没有评论。</div> : null}

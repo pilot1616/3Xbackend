@@ -1389,7 +1389,44 @@ video {
 }
 
 .forum-comment-submit-wrap {
-  text-align: right;
+  display: grid;
+  gap: 12px;
+  justify-items: end;
+}
+
+.forum-comment-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.forum-comment-section-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.forum-comment-section-copy strong {
+  color: #f2f9ff;
+  font-size: 17px;
+}
+
+.forum-comment-section-copy span,
+.forum-comment-section-note,
+.forum-comment-submit-meta,
+.forum-comment-list-summary {
+  color: rgba(194, 220, 248, 0.72);
+  font-size: 13px;
+}
+
+.forum-comment-section-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .review-version .forum-comment-composer {
@@ -1401,12 +1438,39 @@ video {
 }
 
 .review-version .forum-comment-form {
+  display: grid;
+  gap: 14px;
   min-width: 0;
+}
+
+.forum-comment-composer-head {
+  display: grid;
+  gap: 6px;
+}
+
+.forum-comment-composer-head strong {
+  color: #f2f9ff;
+  font-size: 16px;
+}
+
+.forum-comment-composer-head span {
+  color: rgba(194, 220, 248, 0.7);
+  font-size: 13px;
 }
 
 .review-version .list-cont {
   display: grid;
   gap: 12px;
+}
+
+.forum-comment-list-summary,
+.forum-comment-submit-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
 .forum-empty-comments {
