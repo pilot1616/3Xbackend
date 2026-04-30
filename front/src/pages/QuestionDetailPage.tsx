@@ -41,6 +41,13 @@ const defaultRelatedFilters: RelatedFilters = {
   sort: 'latest',
 };
 
+const relatedSortLabelMap: Record<string, string> = {
+  latest: '最新发布',
+  oldest: '最早发布',
+  most_liked: '点赞最多',
+  most_commented: '评论最多',
+};
+
 function isImage(fileName: string) {
   return /\.(png|jpg|jpeg|gif)$/i.test(fileName);
 }
@@ -98,6 +105,7 @@ export function QuestionDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [relatedQuestionsPage, setRelatedQuestionsPage] = useState<QuestionListPage>(emptyAuthorPage);
   const [relatedLoading, setRelatedLoading] = useState(false);
+  const [relatedMessage, setRelatedMessage] = useState('');
   const [relatedPage, setRelatedPage] = useState(1);
   const [relatedFilters, setRelatedFilters] = useState<RelatedFilters>(defaultRelatedFilters);
   const [relatedKeywordInput, setRelatedKeywordInput] = useState(defaultRelatedFilters.keyword);
@@ -148,6 +156,7 @@ export function QuestionDetailPage() {
 
   async function loadRelatedQuestions(author: string, currentQid: number, page: number, filters: RelatedFilters) {
     setRelatedLoading(true);
+    setRelatedMessage('');
     try {
       const result = await listQuestions({
         author,
@@ -164,10 +173,38 @@ export function QuestionDetailPage() {
         total: adjustedTotal,
         records: filteredRecords,
       });
-    } catch {
+    } catch (err) {
       setRelatedQuestionsPage(emptyAuthorPage);
+      setRelatedMessage(err instanceof Error ? err.message : '加载作者更多帖子失败');
     } finally {
       setRelatedLoading(false);
+    }
+  }
+
+  function clearRelatedFilter(key: 'keyword' | 'sort') {
+    const nextFilters = {
+      ...relatedFilters,
+      [key]: defaultRelatedFilters[key],
+    };
+
+    if (key === 'keyword') {
+      setRelatedKeywordInput(defaultRelatedFilters.keyword);
+    }
+    if (key === 'sort') {
+      setRelatedSortInput(defaultRelatedFilters.sort);
+    }
+
+    if (relatedPage !== 1) {
+      setRelatedPage(1);
+    }
+
+    if (nextFilters.keyword !== relatedFilters.keyword || nextFilters.sort !== relatedFilters.sort) {
+      setRelatedFilters(nextFilters);
+      return;
+    }
+
+    if (question?.user) {
+      void loadRelatedQuestions(question.user, question.qid, 1, nextFilters);
     }
   }
 
@@ -577,19 +614,43 @@ export function QuestionDetailPage() {
                   <option value="most_commented">评论最多</option>
                 </select>
                 <div className="legacy-home-filter-actions">
-                  <button className="legacy-action-button small" type="submit">
-                    筛选
+                  <button className="legacy-action-button small" disabled={relatedLoading} type="submit">
+                    {relatedLoading ? '筛选中...' : '筛选'}
                   </button>
-                  <button className="legacy-action-button secondary small" onClick={handleRelatedFilterReset} type="button">
+                  <button className="legacy-action-button secondary small" disabled={relatedLoading} onClick={handleRelatedFilterReset} type="button">
                     重置
                   </button>
                 </div>
               </form>
+              {relatedQuestionsPage.total > 0 ? (
+                <div className="legacy-home-load-status">
+                  <span>
+                    共 {relatedQuestionsPage.total} 条，当前第 {relatedPage} / {relatedTotalPages} 页，本页 {relatedQuestionsPage.records.length} 条
+                  </span>
+                  <button className="legacy-action-button secondary small" disabled={relatedLoading} onClick={() => question?.user && void loadRelatedQuestions(question.user, question.qid, relatedPage, relatedFilters)} type="button">
+                    {relatedLoading ? '刷新中...' : '刷新列表'}
+                  </button>
+                </div>
+              ) : null}
+              {relatedFilters.keyword || relatedFilters.sort !== defaultRelatedFilters.sort ? (
+                <div className="legacy-active-filters">
+                  {relatedFilters.keyword ? (
+                    <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearRelatedFilter('keyword')} type="button">
+                      关键字：{relatedFilters.keyword} ×
+                    </button>
+                  ) : null}
+                  {relatedFilters.sort !== defaultRelatedFilters.sort ? (
+                    <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearRelatedFilter('sort')} type="button">
+                      排序：{relatedSortLabelMap[relatedFilters.sort]} ×
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+              {relatedMessage ? <div className="legacy-empty-inline">{relatedMessage}</div> : null}
               {relatedLoading ? <div className="legacy-empty-inline">正在加载更多内容...</div> : null}
               {!relatedLoading && relatedQuestionsPage.records.length === 0 ? (
-                <div className="legacy-empty-inline">{relatedFilters.keyword ? '当前筛选条件下没有匹配帖子。' : '当前没有更多可展示的帖子。'}</div>
+                <div className="legacy-empty-inline">{relatedFilters.keyword || relatedFilters.sort !== defaultRelatedFilters.sort ? '当前筛选条件下没有匹配帖子。' : '当前没有更多可展示的帖子。'}</div>
               ) : null}
-              {!relatedLoading && relatedQuestionsPage.total > 0 ? <div className="legacy-empty-inline">共 {relatedQuestionsPage.total} 条，当前第 {relatedPage} / {relatedTotalPages} 页。</div> : null}
               {relatedQuestionsPage.records.map((item) => (
                 <article className="legacy-mini-card question-detail-related-card" key={item.qid}>
                   <div className="legacy-mini-card-header">
