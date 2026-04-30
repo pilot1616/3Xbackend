@@ -537,13 +537,13 @@ export function ProfilePage() {
                   ))}
                   {comments.total > comments.page_size ? (
                     <div className="legacy-list-pagination">
-                      <button className="legacy-action-button secondary small" disabled={commentPage <= 1} onClick={() => setCommentPage((current) => current - 1)} type="button">
+                      <button className="legacy-action-button secondary small" disabled={commentsLoading || commentPage <= 1} onClick={() => setCommentPage((current) => current - 1)} type="button">
                         上一页
                       </button>
                       <span>
                         第 {commentPage} / {totalCommentPages} 页
                       </span>
-                      <button className="legacy-action-button secondary small" disabled={commentPage >= totalCommentPages} onClick={() => setCommentPage((current) => current + 1)} type="button">
+                      <button className="legacy-action-button secondary small" disabled={commentsLoading || commentPage >= totalCommentPages} onClick={() => setCommentPage((current) => current + 1)} type="button">
                         下一页
                       </button>
                     </div>

@@ -175,6 +175,7 @@ export function PublishPage() {
       setDraftStatus(parsed.hadFiles ? '已恢复本地草稿正文。之前选择过附件，但浏览器不会自动恢复文件，请重新选择。' : '已恢复本地草稿正文。');
     } catch {
       localStorage.removeItem(publishDraftStorageKey);
+      setDraftStatus('检测到损坏的本地草稿，已自动清理。');
     }
   }, [session]);
 
