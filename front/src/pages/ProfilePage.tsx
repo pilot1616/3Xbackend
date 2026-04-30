@@ -68,6 +68,7 @@ export function ProfilePage() {
   const [savedProfile, setSavedProfile] = useState<EditableProfileSnapshot | null>(null);
   const [commentPage, setCommentPage] = useState(1);
   const [likePage, setLikePage] = useState(1);
+  const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentKeyword, setCommentKeyword] = useState('');
   const [commentKeywordInput, setCommentKeywordInput] = useState('');
   const [likeKeyword, setLikeKeyword] = useState('');
@@ -128,11 +129,14 @@ export function ProfilePage() {
   }
 
   async function loadCommentsPage(page: number, keyword: string) {
+    setCommentsLoading(true);
     try {
       const nextComments = await listMyComments(page, 20, keyword);
       setComments(nextComments);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : '加载我的评论失败');
+    } finally {
+      setCommentsLoading(false);
     }
   }
 
@@ -485,7 +489,27 @@ export function ProfilePage() {
                     </div>
                   </form>
 
-                  {comments.records.length === 0 ? <div className="legacy-empty-inline">{commentKeyword ? '没有匹配的评论。' : '你还没有发表过评论。'}</div> : null}
+                  {comments.total > 0 ? (
+                    <div className="legacy-home-load-status">
+                      <span>
+                        共 {comments.total} 条评论，当前第 {commentPage} / {totalCommentPages} 页，本页 {comments.records.length} 条
+                      </span>
+                      <button className="legacy-action-button secondary small" disabled={commentsLoading} onClick={() => void loadCommentsPage(commentPage, commentKeyword)} type="button">
+                        {commentsLoading ? '刷新中...' : '刷新评论记录'}
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {commentKeyword ? (
+                    <div className="legacy-active-filters">
+                      <button className="legacy-summary-chip legacy-summary-chip-button" onClick={handleCommentFilterReset} type="button">
+                        关键字：{commentKeyword} ×
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {commentsLoading ? <div className="legacy-empty-inline">正在加载评论记录...</div> : null}
+                  {!commentsLoading && comments.records.length === 0 ? <div className="legacy-empty-inline">{commentKeyword ? '没有匹配的评论。' : '你还没有发表过评论。'}</div> : null}
                   {comments.records.map((item) => (
                     <div className="legacy-mini-card" key={item.id}>
                       <div className="legacy-mini-card-header">
