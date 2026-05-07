@@ -92,6 +92,13 @@ export function AlbumPage() {
   const imageCount = visibleItems.filter((item) => isImage(item.fileName)).length;
   const videoCount = visibleItems.length - imageCount;
   const albumBusy = loading || loadingMore;
+  const hasActiveFilters = Boolean(filters.keyword || filters.mediaType !== defaultFilters.mediaType);
+  const albumScopeLabel = filters.mediaType === 'all' ? '全部附件' : albumMediaTypeLabelMap[filters.mediaType];
+  const albumScopeHint = loading
+    ? '正在同步你的媒体资产与帖子来源。'
+    : hasActiveFilters
+      ? `当前仅展示你本人帖子里的${albumScopeLabel}${filters.keyword ? `，并按“${filters.keyword}”匹配帖子正文` : ''}。`
+      : '当前展示你发布过的全部帖子附件，支持按帖子正文关键字与媒体类型快速收缩范围。';
 
   useEffect(() => {
     const nextFilters = readAlbumFiltersFromSearchParams(searchParams);
@@ -387,6 +394,21 @@ export function AlbumPage() {
                 </button>
               </div>
             ) : null}
+
+            <div className="legacy-home-result-summary legacy-home-status-card">
+              <div className="legacy-home-result-copy">
+                <span className="legacy-home-stage-kicker">Media Scope</span>
+                <strong>{albumScopeLabel} · {visibleItems.length} 个附件</strong>
+                <p>{albumScopeHint}</p>
+              </div>
+              <div className="legacy-summary-strip">
+                <span className="legacy-summary-chip">仅我的帖子</span>
+                <span className="legacy-summary-chip">已扫描 {pageInfo.loaded} / {pageInfo.total}</span>
+                <span className="legacy-summary-chip">图片 {imageCount}</span>
+                <span className="legacy-summary-chip">视频 {videoCount}</span>
+                {filters.keyword ? <span className="legacy-summary-chip">关键字：{filters.keyword}</span> : null}
+              </div>
+            </div>
 
             {loading ? <div className="legacy-feedback">正在加载相册...</div> : null}
 
