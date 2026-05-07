@@ -220,6 +220,12 @@ export function HomePage() {
 
   const hasActiveFilters = Boolean(filters.keyword || filters.author);
   const activeSearchLabel = filters.author ? (filters.searchType === 'phone' ? '手机号检索' : '作者检索') : filters.keyword ? '内容检索' : '公开动态';
+  const activeSearchValue = filters.author || filters.keyword;
+  const resultHint = hasActiveFilters
+    ? page.total > 0
+      ? `当前正在按${activeSearchLabel}查看“${activeSearchValue}”相关结果，仅展示已发布帖子。`
+      : `没有找到与“${activeSearchValue}”相关的公开帖子，可以清空条件后继续浏览广场。`
+    : '当前展示社区里所有已发布帖子，支持按内容、作者或手机号快速收缩结果范围。';
 
   return (
     <>
@@ -264,6 +270,19 @@ export function HomePage() {
               </button>
             </div>
           ) : null}
+
+          <div className="legacy-home-result-summary legacy-home-status-card">
+            <div className="legacy-home-result-copy">
+              <span className="legacy-home-stage-kicker">Result Scope</span>
+              <strong>{hasActiveFilters ? `${activeSearchLabel} · ${page.total} 条结果` : `公开动态 · ${page.total} 条结果`}</strong>
+              <p>{loading ? '正在同步最新帖子结果...' : resultHint}</p>
+            </div>
+            <div className="legacy-summary-strip">
+              <span className="legacy-summary-chip">仅公开帖</span>
+              <span className="legacy-summary-chip">已装载 {page.records.length}</span>
+              {hasActiveFilters ? <span className="legacy-summary-chip">检索值：{activeSearchValue}</span> : null}
+            </div>
+          </div>
 
           {message ? <div className="legacy-feedback legacy-home-feedback legacy-home-status-card">{message}</div> : null}
           {loading ? <div className="legacy-feedback legacy-home-status-card">正在加载帖子...</div> : null}
