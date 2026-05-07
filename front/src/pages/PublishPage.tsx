@@ -140,6 +140,13 @@ export function PublishPage() {
   const [hasMore, setHasMore] = useState(true);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const listBusy = loading || loadingMore;
+  const hasActiveFilters = Boolean(filters.keyword || filters.uploadFilter || filters.sort !== defaultFilters.sort);
+  const publishScopeLabel = filters.uploadFilter ? uploadFilterLabelMap[filters.uploadFilter] : '全部状态';
+  const publishScopeHint = loading
+    ? '正在同步你的帖子列表与筛选结果。'
+    : hasActiveFilters
+      ? `当前仅展示你自己的${publishScopeLabel}帖子，并按“${publishSortLabelMap[filters.sort]}”排序${filters.keyword ? `，关键字为“${filters.keyword}”` : ''}。`
+      : '当前展示你发布或暂存的全部帖子，支持按内容、发布状态和排序方式快速切换管理范围。';
 
   useEffect(() => {
     const nextFilters = readMyQuestionFiltersFromSearchParams(searchParams);
@@ -614,6 +621,20 @@ export function PublishPage() {
             </button>
           </div>
         ) : null}
+
+        <div className="legacy-home-result-summary legacy-home-status-card">
+          <div className="legacy-home-result-copy">
+            <span className="legacy-home-stage-kicker">Post Scope</span>
+            <strong>{publishScopeLabel} · {page.total} 条帖子</strong>
+            <p>{publishScopeHint}</p>
+          </div>
+          <div className="legacy-summary-strip">
+            <span className="legacy-summary-chip">仅我的帖子</span>
+            <span className="legacy-summary-chip">已装载 {page.records.length}</span>
+            <span className="legacy-summary-chip">排序：{publishSortLabelMap[filters.sort]}</span>
+            {filters.keyword ? <span className="legacy-summary-chip">关键字：{filters.keyword}</span> : null}
+          </div>
+        </div>
 
         <div className="whisper-list">
           {loading ? <div className="legacy-feedback">正在加载我的帖子...</div> : null}

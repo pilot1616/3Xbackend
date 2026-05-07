@@ -273,6 +273,16 @@ export function ProfilePage() {
   const totalCommentPages = Math.max(1, Math.ceil(comments.total / Math.max(1, comments.page_size)));
   const totalLikePages = Math.max(1, Math.ceil(likes.total / Math.max(1, likes.page_size)));
   const isProfileDirty = Boolean(user && savedProfile && JSON.stringify(toEditableProfileSnapshot(user)) !== JSON.stringify(savedProfile));
+  const commentScopeHint = commentsLoading
+    ? '正在同步你的评论记录。'
+    : commentKeyword
+      ? `当前仅展示评论内容匹配“${commentKeyword}”的记录。`
+      : '当前展示你发表过的全部评论记录，可按评论内容关键字筛选。';
+  const likeScopeHint = likesLoading
+    ? '正在同步你的点赞记录。'
+    : likeKeyword
+      ? `当前仅展示原帖内容匹配“${likeKeyword}”的点赞记录。`
+      : '当前展示你点赞过的全部帖子记录，可按原帖内容关键字筛选。';
 
   function handleReturnToShow() {
     if (isProfileDirty) {
@@ -501,6 +511,19 @@ export function ProfilePage() {
                   <h3>我的评论</h3>
                 </div>
                 <div className="legacy-card-list">
+                  <div className="legacy-home-result-summary legacy-home-status-card">
+                    <div className="legacy-home-result-copy">
+                      <span className="legacy-home-stage-kicker">Comment Scope</span>
+                      <strong>我的评论 · {comments.total} 条记录</strong>
+                      <p>{commentScopeHint}</p>
+                    </div>
+                    <div className="legacy-summary-strip">
+                      <span className="legacy-summary-chip">当前页 {comments.records.length}</span>
+                      <span className="legacy-summary-chip">第 {commentPage} / {totalCommentPages} 页</span>
+                      {commentKeyword ? <span className="legacy-summary-chip">关键字：{commentKeyword}</span> : null}
+                    </div>
+                  </div>
+
                   <form className="legacy-home-filter-row legacy-publish-filter-row" onSubmit={handleCommentFilterSubmit}>
                     <input onChange={(event) => setCommentKeywordInput(event.target.value)} placeholder="按评论内容关键字筛选" value={commentKeywordInput} />
                     <div className="legacy-home-filter-actions">
@@ -576,6 +599,19 @@ export function ProfilePage() {
                   <h3>我的点赞</h3>
                 </div>
                 <div className="legacy-card-list">
+                  <div className="legacy-home-result-summary legacy-home-status-card">
+                    <div className="legacy-home-result-copy">
+                      <span className="legacy-home-stage-kicker">Like Scope</span>
+                      <strong>我的点赞 · {likes.total} 条记录</strong>
+                      <p>{likeScopeHint}</p>
+                    </div>
+                    <div className="legacy-summary-strip">
+                      <span className="legacy-summary-chip">当前页 {likes.records.length}</span>
+                      <span className="legacy-summary-chip">第 {likePage} / {totalLikePages} 页</span>
+                      {likeKeyword ? <span className="legacy-summary-chip">关键字：{likeKeyword}</span> : null}
+                    </div>
+                  </div>
+
                   <form className="legacy-home-filter-row legacy-publish-filter-row" onSubmit={handleLikeFilterSubmit}>
                     <input onChange={(event) => setLikeKeywordInput(event.target.value)} placeholder="按帖子内容关键字筛选" value={likeKeywordInput} />
                     <div className="legacy-home-filter-actions">
