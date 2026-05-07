@@ -238,6 +238,11 @@ export function QuestionCard({
     composerTextareaRef.current?.focus();
   }
 
+  function scrollToQuestionTop() {
+    const cardRoot = composerTextareaRef.current?.closest('.forum-question-card');
+    cardRoot?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   function handleCommentFilterSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCommentFilterKeyword(commentFilterKeywordInput.trim());
@@ -274,6 +279,12 @@ export function QuestionCard({
 
   const totalCommentPages = Math.max(1, Math.ceil((commentsPage.total || 0) / Math.max(1, commentsPage.page_size || 10)));
   const totalLikePages = Math.max(1, Math.ceil((likesPage.total || 0) / Math.max(1, likesPage.page_size || 8)));
+  const commentScopeLabel = commentFilterKeyword || commentFilterOnlyMine ? '已应用当前页筛选' : '正在查看全部评论';
+  const commentScopeHint = commentsLoading
+    ? '正在同步最新评论与筛选结果。'
+    : commentFilterKeyword || commentFilterOnlyMine
+      ? `当前页保留 ${filteredComments.length} / ${commentsPage.records.length} 条评论，筛选不会跨页扩散。`
+      : `当前已装载第 ${commentsPage.page} / ${totalCommentPages} 页，本页展示 ${filteredComments.length} 条评论。`;
 
   return (
     <div className="item-box forum-question-card">
@@ -394,12 +405,25 @@ export function QuestionCard({
       </div>
 
       {expanded && !detailPageOnly ? (
-          <div className="review-version">
+        <div className="review-version">
+          <div className="forum-comment-stage-strip">
+            <div className="forum-comment-stage-copy">
+              <span className="legacy-home-stage-kicker">Comment Deck</span>
+              <strong>{commentScopeLabel}</strong>
+              <p>{commentScopeHint}</p>
+            </div>
+            <div className="legacy-summary-strip forum-comment-stage-metrics">
+              <span className="legacy-summary-chip">总评论 {totalCommentCount}</span>
+              <span className="legacy-summary-chip">当前页 {commentsPage.records.length}</span>
+              <span className="legacy-summary-chip">筛后 {filteredComments.length}</span>
+            </div>
+          </div>
           <div className="forum-comment-section-head">
             <div className="forum-comment-section-copy">
               <strong>评论区</strong>
               <div className="forum-comment-section-meta">
                 <span className="legacy-summary-chip">共 {totalCommentCount} 条评论</span>
+                <span className="legacy-summary-chip">第 {commentsPage.page} / {totalCommentPages} 页</span>
                 {commentFilterOnlyMine ? <span className="legacy-summary-chip">仅看我的评论</span> : null}
               </div>
             </div>
@@ -411,6 +435,9 @@ export function QuestionCard({
               ) : null}
               <button className="forum-inline-button" disabled={commentsLoading} onClick={() => void loadComments(commentsPage.page || 1)} type="button">
                 {commentsLoading ? '刷新中...' : '刷新评论'}
+              </button>
+              <button className="forum-inline-button" onClick={scrollToQuestionTop} type="button">
+                回到帖子顶部
               </button>
             </div>
           </div>
@@ -478,6 +505,7 @@ export function QuestionCard({
               {commentFilterKeyword || commentFilterOnlyMine ? (
                 <div className="forum-comment-filter-summary">
                   {commentFilterKeyword ? <span className="legacy-summary-chip">关键字：{commentFilterKeyword}</span> : null}
+                  {commentFilterOnlyMine ? <span className="legacy-summary-chip">范围：仅当前页 + 我的评论</span> : null}
                 </div>
               ) : null}
             </div>
