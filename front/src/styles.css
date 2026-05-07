@@ -2621,6 +2621,16 @@ video {
   line-height: 1.8;
 }
 
+.question-detail-stage-copy .legacy-summary-strip,
+.legacy-profile-stage-copy .legacy-summary-strip {
+  margin-top: 4px;
+}
+
+.question-detail-stage-copy .legacy-action-button,
+.legacy-profile-stage-copy .legacy-action-button {
+  margin: 0;
+}
+
 .question-detail-stage-metrics {
   display: grid;
   gap: 14px;
@@ -3745,6 +3755,10 @@ video {
   color: rgba(215, 231, 255, 0.78);
   font-size: 15px;
   line-height: 1.8;
+}
+
+.legacy-profile-stage-actions {
+  align-items: center;
 }
 
 .legacy-profile-stage-metrics {

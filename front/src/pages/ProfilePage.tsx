@@ -295,6 +295,12 @@ export function ProfilePage() {
     setMessage('已撤销未保存的资料修改');
   }
 
+  function scrollToSection(section: 'questions' | 'comments' | 'likes') {
+    const targetId = `profile-${section}`;
+    const target = document.getElementById(targetId);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   if (!session) {
     return (
       <div className="legacy-gated-scene" id="noLogined">
@@ -322,6 +328,20 @@ export function ProfilePage() {
                 <span className="legacy-home-stage-kicker">3X Personal Hub</span>
                 <h2>把你的资料、互动和历史内容集中到一块个人工作台</h2>
                 <p>这里承接头像、个人信息、最近帖子、评论和点赞记录，帮助你在同一块空间里回看自己的社区轨迹。</p>
+                <div className="legacy-summary-strip legacy-profile-stage-actions">
+                  <button className="legacy-action-button secondary small" onClick={() => setViewMode('edit')} type="button">
+                    编辑资料
+                  </button>
+                  <button className="legacy-action-button secondary small" onClick={() => scrollToSection('questions')} type="button">
+                    最近帖子
+                  </button>
+                  <button className="legacy-action-button secondary small" onClick={() => scrollToSection('comments')} type="button">
+                    我的评论
+                  </button>
+                  <button className="legacy-action-button secondary small" onClick={() => scrollToSection('likes')} type="button">
+                    我的点赞
+                  </button>
+                </div>
               </div>
               <div className="legacy-profile-stage-metrics">
                 <article className="legacy-home-stage-card">
@@ -436,7 +456,7 @@ export function ProfilePage() {
             </div>
 
             <div className="legacy-profile-records">
-              <section className="item info legacy-record-panel">
+              <section className="item info legacy-record-panel" id="profile-questions">
                 <div className="title">
                   <h3>最近帖子</h3>
                 </div>
@@ -476,7 +496,7 @@ export function ProfilePage() {
                 </div>
               </section>
 
-              <section className="item info legacy-record-panel">
+              <section className="item info legacy-record-panel" id="profile-comments">
                 <div className="title">
                   <h3>我的评论</h3>
                 </div>
@@ -551,7 +571,7 @@ export function ProfilePage() {
                 </div>
               </section>
 
-              <section className="item info legacy-record-panel">
+              <section className="item info legacy-record-panel" id="profile-likes">
                 <div className="title">
                   <h3>我的点赞</h3>
                 </div>

@@ -115,6 +115,8 @@ export function QuestionDetailPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
+  const detailPageUrl = `${window.location.origin}${location.pathname}${location.search}`;
+
   useEffect(() => {
     void loadQuestion();
   }, [qid, session?.token]);
@@ -468,6 +470,21 @@ export function QuestionDetailPage() {
     }
   }
 
+  function scrollToSection(section: 'comments' | 'related') {
+    const targetId = section === 'comments' ? 'question-detail-comments' : 'question-detail-related';
+    const target = document.getElementById(targetId);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function handleCopyLink() {
+    try {
+      await navigator.clipboard.writeText(detailPageUrl);
+      setMessage('帖子链接已复制');
+    } catch {
+      setMessage('复制链接失败，请手动复制地址栏');
+    }
+  }
+
   const relatedTotalPages = Math.max(1, Math.ceil(relatedQuestionsPage.total / Math.max(1, relatedQuestionsPage.page_size)));
 
   return (
@@ -497,6 +514,15 @@ export function QuestionDetailPage() {
           <Link className="legacy-action-button secondary" to="/">
             返回广场
           </Link>
+          <button className="legacy-action-button secondary" onClick={() => scrollToSection('comments')} type="button">
+            跳到评论区
+          </button>
+          <button className="legacy-action-button secondary" onClick={() => scrollToSection('related')} type="button">
+            作者更多帖子
+          </button>
+          <button className="legacy-action-button secondary" onClick={() => void handleCopyLink()} type="button">
+            复制链接
+          </button>
           {question ? <span className={`legacy-mini-card-badge ${question.isUpload ? 'is-published' : 'is-draft'}`}>{question.isUpload ? '已发布' : '未发布'}</span> : null}
         </div>
       </div>
@@ -584,23 +610,25 @@ export function QuestionDetailPage() {
               </div>
             ) : null}
 
-            <QuestionCard
-              canInteract={Boolean(session)}
-              currentUsername={session?.user.username}
-              expandedByDefault
-              viewerAvatarPath={session?.user.avatar_path}
-              onCommentDelete={handleCommentDelete}
-              onCommentSubmit={handleCommentSubmit}
-              onCommentUpdate={handleCommentUpdate}
-              onLikeToggle={handleLikeToggle}
-              question={question}
-              submitting={submitting}
-            />
+            <div id="question-detail-comments">
+              <QuestionCard
+                canInteract={Boolean(session)}
+                currentUsername={session?.user.username}
+                expandedByDefault
+                viewerAvatarPath={session?.user.avatar_path}
+                onCommentDelete={handleCommentDelete}
+                onCommentSubmit={handleCommentSubmit}
+                onCommentUpdate={handleCommentUpdate}
+                onLikeToggle={handleLikeToggle}
+                question={question}
+                submitting={submitting}
+              />
+            </div>
           </div>
           </div>
 
           <aside className="legacy-card-list question-detail-sidebar">
-            <section className="legacy-panel question-detail-related-panel">
+            <section className="legacy-panel question-detail-related-panel" id="question-detail-related">
               <div className="question-detail-sidebar-head">
                 <h2>作者更多帖子</h2>
                 {!relatedLoading && relatedQuestionsPage.total > 0 ? <span className="legacy-summary-chip">共 {relatedQuestionsPage.total} 条</span> : null}
