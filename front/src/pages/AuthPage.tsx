@@ -194,11 +194,11 @@ export function AuthPage() {
           </div>
 
           <form className="auth-form-legacy" onSubmit={handleSubmit}>
-            <input className="username" onChange={(event) => setUsername(event.target.value)} placeholder={mode === 'login' ? '请输入手机号' : '请输入注册手机号'} type="text" value={username} />
+            <input className="auth-text-input" onChange={(event) => setUsername(event.target.value)} placeholder={mode === 'login' ? '请输入手机号' : '请输入注册手机号'} type="text" value={username} />
 
             <div className="auth-input-row">
               <input
-                className="password"
+                className="auth-text-input"
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="请输入密码"
                 type={showPassword ? 'text' : 'password'}
@@ -246,7 +246,7 @@ export function AuthPage() {
 
             {mode === 'reset' && securityQuestionLabel ? <div className="auth-question-box">{securityQuestionLabel}</div> : null}
 
-            {mode !== 'login' ? <input className="security" onChange={(event) => setSecurityAnswer(event.target.value)} placeholder="请输入密保答案" type="text" value={securityAnswer} /> : null}
+            {mode !== 'login' ? <input className="auth-text-input" onChange={(event) => setSecurityAnswer(event.target.value)} placeholder="请输入密保答案" type="text" value={securityAnswer} /> : null}
 
             {message ? <div className="error-message auth-error-legacy">{message}</div> : null}
 
