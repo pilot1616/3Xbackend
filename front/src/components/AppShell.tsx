@@ -103,6 +103,15 @@ export function AppShell() {
     });
   }
 
+  function handleHeaderSearchReset() {
+    setSearchMode('content');
+    setSearchKeyword('');
+    navigate('/');
+  }
+
+  const searchModeLabel = searchMode === 'content' ? '内容检索' : searchMode === 'author' ? '作者检索' : '手机号检索';
+  const hasSearchValue = searchKeyword.trim().length > 0;
+
   return (
     <div className="legacy-app-shell">
       <div className={`header w1000${showHeaderSearch ? ' legacy-header-with-search' : ' legacy-header-compact'}`}>
@@ -136,10 +145,19 @@ export function AppShell() {
               <span className="legacy-header-search-divider" aria-hidden="true"></span>
               <input aria-label="搜索内容" onChange={(event) => setSearchKeyword(event.target.value)} placeholder={searchPlaceholderMap[searchMode]} ref={searchInputRef} type="search" value={searchKeyword} />
               <span aria-hidden="true" className="legacy-header-search-hotkey">/</span>
+              {hasSearchValue ? (
+                <button className="legacy-header-search-reset" onClick={handleHeaderSearchReset} type="button">
+                  清空
+                </button>
+              ) : null}
               <button className="legacy-search-button" type="submit">
                 <LegacyIcon name="search" size={18} />
               </button>
             </form>
+            <div className="legacy-header-search-status">
+              <span className="legacy-summary-chip">{searchModeLabel}</span>
+              <span className="legacy-summary-chip">{hasSearchValue ? `检索值：${searchKeyword.trim()}` : '未输入检索值'}</span>
+            </div>
           </div>
         ) : null}
         <div className="login-text">

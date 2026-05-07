@@ -168,6 +168,13 @@ export function AuthPage() {
 
   const title = mode === 'login' ? '登录' : mode === 'register' ? '注册' : '找回密码';
   const submitLabel = loading ? '处理中...' : mode === 'login' ? '登录' : mode === 'register' ? '注册' : '修改密码';
+  const authScopeHint =
+    mode === 'login'
+      ? '登录后会回到你刚才要访问的页面，适合继续浏览、点赞和评论。'
+      : mode === 'register'
+        ? '注册需要手机号、字母数字组合密码和密保答案，注册成功后会直接进入社区。'
+        : '先查询该手机号绑定的密保问题，再提交新密码完成重置。';
+  const authReturnLabel = redirectPath === '/' ? '登录后返回首页' : `登录后返回 ${redirectPath}`;
 
   return (
     <div className="auth-legacy-page">
@@ -175,6 +182,16 @@ export function AuthPage() {
       <div className="auth-page-center">
         <div className="auth-card-glass">
           <h2 className="auth-title-legacy">{title}</h2>
+          <div className="auth-stage-summary">
+            <span className="legacy-home-stage-kicker">Access Deck</span>
+            <strong>{authReturnLabel}</strong>
+            <p>{authScopeHint}</p>
+            <div className="legacy-summary-strip">
+              <span className="legacy-summary-chip">当前模式：{title}</span>
+              {mode === 'login' ? <span className="legacy-summary-chip">可记住账号</span> : null}
+              {mode === 'reset' ? <span className="legacy-summary-chip">需先查询密保</span> : null}
+            </div>
+          </div>
 
           <form className="auth-form-legacy" onSubmit={handleSubmit}>
             <input className="username" onChange={(event) => setUsername(event.target.value)} placeholder={mode === 'login' ? '请输入手机号' : '请输入注册手机号'} type="text" value={username} />
