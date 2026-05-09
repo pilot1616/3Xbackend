@@ -4,6 +4,8 @@ import (
 	"3Xbackend/internal/config"
 	"3Xbackend/internal/database"
 	"3Xbackend/internal/server"
+	"3Xbackend/internal/service"
+	"context"
 	"log"
 	"path/filepath"
 )
@@ -32,6 +34,12 @@ func main() {
 	if err := db.CreateTable(); err != nil {
 		log.Fatalf("create table failed: %v", err)
 	}
+
+	appCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	metalSyncService := service.NewPreciousMetalSyncService(db.Connect, cfg.Sync.PreciousMetals)
+	metalSyncService.Start(appCtx)
 
 	svr := server.Server{}
 	if err := svr.Init(db.Connect, cfg); err != nil {

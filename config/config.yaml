@@ -24,3 +24,12 @@ database:
     address: 10.2.98.225
     port: 3306
     schema: 3X
+
+sync:
+  precious_metals:
+    enabled: true
+    interval_minutes: 60
+    request_timeout_sec: 20
+    initial_run_on_startup: true
+    source_base_url: https://www.investing.com
+    user_agent: Mozilla/5.0 (compatible; 3Xbackend-metal-sync/1.0; +https://github.com/pilot1616/3Xbackend)

@@ -20,6 +20,7 @@
 - 评论发布、编辑、删除
 - 点赞与取消点赞
 - 我的帖子、我的评论、我的点赞、个人统计
+- 启动后定时抓取 Investing 贵金属行情并落库
 - 新前端 `front/` 已开始替换原来的 jQuery 示例页面
 
 详细接口说明见 [API.md](/Users/zhangxinghui/Desktop/web/3Xbackend/API.md)。
@@ -53,6 +54,64 @@
 - GORM
 - MySQL
 - Viper
+
+数据同步：
+
+- 后端启动时会注册贵金属定时同步任务
+- 数据来源为 `Investing.com` 贵金属页面
+- 当前默认同步 `黄金 / 白银 / 铂金 / 钯金`
+
+## 贵金属定时同步
+
+项目启动后，后端会按配置自动抓取 `Investing.com` 的贵金属行情页，并把快照写入数据库表 `precious_metal_snapshots`。
+
+当前同步品种：
+
+- Gold
+- Silver
+- Platinum
+- Palladium
+
+当前同步字段包含：
+
+- 价格
+- 涨跌额 / 涨跌幅
+- 开盘 / 前收 / 买价 / 卖价
+- 日内区间 / 52 周区间
+- 成交量 / 平均成交量
+- 合约月份 / 结算日 / 最小跳动 / 合约大小 / 跳动价值 / 基础单位
+- 原始概览字段 JSON
+- 抓取时间
+
+默认行为：
+
+- 服务启动后立即执行一次同步
+- 后续每 `60` 分钟执行一次
+
+手动执行一次同步：
+
+```bash
+task metal:sync
+```
+
+如果 MySQL 跑在 Docker：
+
+```bash
+task metal:sync:docker
+```
+
+相关配置在：
+
+- [config/config.yaml](/Users/zhangxinghui/Desktop/web/3Xbackend/config/config.yaml)
+
+配置项：
+
+- `sync.precious_metals.enabled`: 是否启用定时同步
+- `sync.precious_metals.interval_minutes`: 同步间隔分钟数
+- `sync.precious_metals.request_timeout_sec`: 单次请求超时秒数
+- `sync.precious_metals.initial_run_on_startup`: 启动时是否先跑一次
+- `sync.precious_metals.source_base_url`: 数据源根地址
+- `sync.precious_metals.user_agent`: 抓取请求使用的 UA
 
 前端：
 

@@ -15,6 +15,7 @@ type Config struct {
 	Auth     Auth     `mapstructure:"auth"`
 	Storage  Storage  `mapstructure:"storage"`
 	Database Database `mapstructure:"database"`
+	Sync     Sync     `mapstructure:"sync"`
 }
 
 type Server struct {
@@ -34,6 +35,19 @@ type Storage struct {
 
 type Database struct {
 	Mysql Mysql `mapstructure:"mysql"`
+}
+
+type Sync struct {
+	PreciousMetals PreciousMetalsSync `mapstructure:"precious_metals"`
+}
+
+type PreciousMetalsSync struct {
+	Enabled             bool   `mapstructure:"enabled"`
+	IntervalMinutes     int    `mapstructure:"interval_minutes"`
+	RequestTimeoutSec   int    `mapstructure:"request_timeout_sec"`
+	UserAgent           string `mapstructure:"user_agent"`
+	SourceBaseURL       string `mapstructure:"source_base_url"`
+	InitialRunOnStartup bool   `mapstructure:"initial_run_on_startup"`
 }
 
 type Mysql struct {
@@ -75,6 +89,12 @@ func bindEnv(v *viper.Viper) {
 		"database.mysql.address",
 		"database.mysql.port",
 		"database.mysql.schema",
+		"sync.precious_metals.enabled",
+		"sync.precious_metals.interval_minutes",
+		"sync.precious_metals.request_timeout_sec",
+		"sync.precious_metals.user_agent",
+		"sync.precious_metals.source_base_url",
+		"sync.precious_metals.initial_run_on_startup",
 	}
 
 	for _, key := range keys {
@@ -128,4 +148,40 @@ func (s Storage) UploadRoot() string {
 		return "public/uploads"
 	}
 	return strings.TrimSpace(s.UploadDir)
+}
+
+func (s PreciousMetalsSync) IsEnabled() bool {
+	return s.Enabled
+}
+
+func (s PreciousMetalsSync) Interval() time.Duration {
+	minutes := s.IntervalMinutes
+	if minutes <= 0 {
+		minutes = 60
+	}
+	return time.Duration(minutes) * time.Minute
+}
+
+func (s PreciousMetalsSync) RequestTimeout() time.Duration {
+	seconds := s.RequestTimeoutSec
+	if seconds <= 0 {
+		seconds = 20
+	}
+	return time.Duration(seconds) * time.Second
+}
+
+func (s PreciousMetalsSync) EffectiveUserAgent() string {
+	value := strings.TrimSpace(s.UserAgent)
+	if value == "" {
+		return "Mozilla/5.0 (compatible; 3Xbackend-metal-sync/1.0; +https://github.com/pilot1616/3Xbackend)"
+	}
+	return value
+}
+
+func (s PreciousMetalsSync) EffectiveSourceBaseURL() string {
+	value := strings.TrimSpace(s.SourceBaseURL)
+	if value == "" {
+		return "https://www.investing.com"
+	}
+	return strings.TrimRight(value, "/")
 }
