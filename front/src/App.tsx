@@ -4,6 +4,7 @@ import { AppShell } from './components/AppShell';
 import { AlbumPage } from './pages/AlbumPage';
 import { AuthPage } from './pages/AuthPage';
 import { HomePage } from './pages/HomePage';
+import { MarketPage } from './pages/MarketPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { PublishPage } from './pages/PublishPage';
 import { QuestionDetailPage } from './pages/QuestionDetailPage';
@@ -15,6 +16,7 @@ export default function App() {
         <Route element={<AuthPage />} path="/auth" />
         <Route element={<AppShell />} path="/">
           <Route element={<HomePage />} index />
+          <Route element={<MarketPage />} path="market" />
           <Route element={<PublishPage />} path="publish" />
           <Route element={<AlbumPage />} path="album" />
           <Route element={<ProfilePage />} path="profile" />

@@ -114,18 +114,44 @@ export function AppShell() {
 
   return (
     <div className="legacy-app-shell">
-      <div className={`header w1000${showHeaderSearch ? ' legacy-header-with-search' : ' legacy-header-compact'}`}>
-        <h1 className="logo">
-          <Link to="/">
-            <img alt="3X" className="legacy-brand-mark" src="/legacy/res/img/logo.png" />
-          </Link>
-        </h1>
-        <div className="nav">
+      <header className={`simple-page-header${showHeaderSearch ? ' has-search' : ' compact'}`}>
+        <div className="simple-header-top-row">
+          <h1 className="simple-header-brand">
+            <Link to="/">
+              <img alt="3X" className="legacy-brand-mark" src="/legacy/res/img/logo.png" />
+            </Link>
+          </h1>
+          <div className="simple-header-auth">
+            {session ? (
+              <div className="simple-session-bar">
+                <Link className="simple-session-link" to="/profile">
+                  <img alt={session.user.nickname || session.user.username} className="simple-session-avatar" src={buildAssetUrl(session.user.avatar_path)} />
+                  <div className="simple-session-copy">
+                    <span className="simple-session-user">{session.user.nickname || session.user.username}</span>
+                    <span className="simple-session-name">{session.user.username}</span>
+                  </div>
+                </Link>
+                <button className="simple-session-action simple-session-action-danger" onClick={() => clearSession()} type="button">
+                  退出登录
+                </button>
+              </div>
+            ) : (
+              <Link className="simple-session-action" to="/auth">
+                登录/注册
+              </Link>
+            )}
+          </div>
+        </div>
+
+        <nav className="simple-header-links" aria-label="主导航">
           <NavLink className={navClassName} to="/">
             首页
           </NavLink>
           <NavLink className={navClassName} to="/publish">
             发布问题
+          </NavLink>
+          <NavLink className={navClassName} to="/market">
+            市场动态
           </NavLink>
           <NavLink className={navClassName} to="/album">
             相册
@@ -133,54 +159,35 @@ export function AppShell() {
           <NavLink className={navClassName} to="/profile">
             我的资料
           </NavLink>
-        </div>
+        </nav>
+
         {showHeaderSearch ? (
-          <div className="legacy-header-tools">
-            <form className="legacy-header-search" onSubmit={handleHeaderSearchSubmit}>
-              <select aria-label="搜索类型" className="legacy-header-search-mode" onChange={(event) => setSearchMode(event.target.value as GlobalSearchMode)} value={searchMode}>
+          <div className="simple-header-search-wrap">
+            <form className="simple-header-search" onSubmit={handleHeaderSearchSubmit}>
+              <select aria-label="搜索类型" className="simple-header-search-mode" onChange={(event) => setSearchMode(event.target.value as GlobalSearchMode)} value={searchMode}>
                 <option value="content">按内容</option>
                 <option value="author">按作者</option>
                 <option value="phone">按手机号</option>
               </select>
-              <span className="legacy-header-search-divider" aria-hidden="true"></span>
+              <span className="simple-header-search-divider" aria-hidden="true"></span>
               <input aria-label="搜索内容" onChange={(event) => setSearchKeyword(event.target.value)} placeholder={searchPlaceholderMap[searchMode]} ref={searchInputRef} type="search" value={searchKeyword} />
-              <span aria-hidden="true" className="legacy-header-search-hotkey">/</span>
+              <span aria-hidden="true" className="simple-header-search-hotkey">/</span>
               {hasSearchValue ? (
-                <button className="legacy-header-search-reset" onClick={handleHeaderSearchReset} type="button">
+                <button className="simple-header-search-reset" onClick={handleHeaderSearchReset} type="button">
                   清空
                 </button>
               ) : null}
-              <button className="legacy-search-button" type="submit">
+              <button className="simple-header-search-button" type="submit">
                 <LegacyIcon name="search" size={18} />
               </button>
             </form>
-            <div className="legacy-header-search-status">
+            <div className="simple-header-search-status">
               <span className="legacy-summary-chip">{searchModeLabel}</span>
               <span className="legacy-summary-chip">{hasSearchValue ? `检索值：${searchKeyword.trim()}` : '未输入检索值'}</span>
             </div>
           </div>
         ) : null}
-        <div className="login-text">
-          {session ? (
-            <div className="legacy-session-bar">
-              <Link className="legacy-session-link" to="/profile">
-                <img alt={session.user.nickname || session.user.username} className="legacy-session-avatar" src={buildAssetUrl(session.user.avatar_path)} />
-                <div className="legacy-session-copy">
-                  <span className="legacy-session-user">{session.user.nickname || session.user.username}</span>
-                  <span className="legacy-login-name">{session.user.username}</span>
-                </div>
-              </Link>
-              <button className="legacy-session-action legacy-session-action-danger" onClick={() => clearSession()} type="button">
-                退出登录
-              </button>
-            </div>
-          ) : (
-            <Link className="legacy-session-action" to="/auth">
-              登录/注册
-            </Link>
-          )}
-        </div>
-      </div>
+      </header>
 
       <Outlet />
 

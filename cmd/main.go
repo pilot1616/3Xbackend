@@ -40,6 +40,8 @@ func main() {
 
 	metalSyncService := service.NewPreciousMetalSyncService(db.Connect, cfg.Sync.PreciousMetals)
 	metalSyncService.Start(appCtx)
+	techSyncService := service.NewTechMarketSyncService(db.Connect, cfg.Sync.AITech)
+	techSyncService.Start(appCtx)
 
 	svr := server.Server{}
 	if err := svr.Init(db.Connect, cfg); err != nil {

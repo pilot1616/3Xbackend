@@ -155,6 +155,79 @@ type MySummaryResult struct {
 	LikesCount     int64 `json:"likesCount"`
 }
 
+type PreciousMetalPoint struct {
+	Price     string    `json:"price"`
+	FetchedAt time.Time `json:"fetchedAt"`
+}
+
+type PreciousMetalMarketRecord struct {
+	Symbol         string               `json:"symbol"`
+	Name           string               `json:"name"`
+	SourceURL      string               `json:"sourceUrl"`
+	Price          string               `json:"price"`
+	Change         string               `json:"change"`
+	ChangePercent  string               `json:"changePercent"`
+	PrevClose      string               `json:"prevClose"`
+	Open           string               `json:"open"`
+	Bid            string               `json:"bid"`
+	Ask            string               `json:"ask"`
+	DayRange       string               `json:"dayRange"`
+	Week52Range    string               `json:"week52Range"`
+	Volume         string               `json:"volume"`
+	AvgVolume      string               `json:"avgVolume"`
+	LastUpdateText string               `json:"lastUpdateText"`
+	ContractMonth  string               `json:"contractMonth"`
+	SettlementDate string               `json:"settlementDate"`
+	TickSize       string               `json:"tickSize"`
+	ContractSize   string               `json:"contractSize"`
+	TickValue      string               `json:"tickValue"`
+	BaseUnit       string               `json:"baseUnit"`
+	FetchedAt      time.Time            `json:"fetchedAt"`
+	History        []PreciousMetalPoint `json:"history"`
+}
+
+type PreciousMetalMarketResponse struct {
+	UpdatedAt time.Time                   `json:"updatedAt"`
+	Records   []PreciousMetalMarketRecord `json:"records"`
+}
+
+type TechMarketPoint struct {
+	Price     string    `json:"price"`
+	FetchedAt time.Time `json:"fetchedAt"`
+}
+
+type TechMarketRecord struct {
+	Category       string            `json:"category"`
+	Symbol         string            `json:"symbol"`
+	Name           string            `json:"name"`
+	SourceURL      string            `json:"sourceUrl"`
+	Price          string            `json:"price"`
+	Change         string            `json:"change"`
+	ChangePercent  string            `json:"changePercent"`
+	PrevClose      string            `json:"prevClose"`
+	Open           string            `json:"open"`
+	Bid            string            `json:"bid"`
+	Ask            string            `json:"ask"`
+	DayRange       string            `json:"dayRange"`
+	Week52Range    string            `json:"week52Range"`
+	Volume         string            `json:"volume"`
+	AvgVolume      string            `json:"avgVolume"`
+	MarketCap      string            `json:"marketCap"`
+	PERatio        string            `json:"peRatio"`
+	Beta           string            `json:"beta"`
+	EPS            string            `json:"eps"`
+	Dividend       string            `json:"dividend"`
+	Yield          string            `json:"yield"`
+	LastUpdateText string            `json:"lastUpdateText"`
+	FetchedAt      time.Time         `json:"fetchedAt"`
+	History        []TechMarketPoint `json:"history"`
+}
+
+type TechMarketResponse struct {
+	UpdatedAt time.Time          `json:"updatedAt"`
+	Records   []TechMarketRecord `json:"records"`
+}
+
 type LegacyQuestionRecord struct {
 	QID         int64                 `json:"qid"`
 	IsUpload    bool                  `json:"isUpload"`
@@ -515,6 +588,187 @@ func (s *ForumService) GetMySummary(userID uint, username string) (*MySummaryRes
 	}
 
 	return result, nil
+}
+
+func (s *ForumService) ListPreciousMetalMarket(limit int) (*PreciousMetalMarketResponse, error) {
+	if limit <= 0 {
+		limit = 24
+	}
+	if limit > 240 {
+		limit = 240
+	}
+
+	var latestSnapshots []database.PreciousMetalSnapshot
+	latestQuery := `
+		SELECT p1.*
+		FROM precious_metal_snapshots p1
+		JOIN (
+			SELECT symbol, MAX(fetched_at) AS fetched_at
+			FROM precious_metal_snapshots
+			GROUP BY symbol
+		) latest
+		ON latest.symbol = p1.symbol AND latest.fetched_at = p1.fetched_at
+		ORDER BY FIELD(p1.symbol, 'XAU', 'XAG', 'XPT', 'XPD'), p1.id DESC
+	`
+	if err := s.db.Raw(latestQuery).Scan(&latestSnapshots).Error; err != nil {
+		return nil, fmt.Errorf("query latest precious metal snapshots failed: %w", err)
+	}
+
+	response := &PreciousMetalMarketResponse{Records: make([]PreciousMetalMarketRecord, 0, len(latestSnapshots))}
+	if len(latestSnapshots) == 0 {
+		return response, nil
+	}
+
+	latestBySymbol := make(map[string]database.PreciousMetalSnapshot, len(latestSnapshots))
+	symbols := make([]string, 0, len(latestSnapshots))
+	for _, snapshot := range latestSnapshots {
+		latestBySymbol[snapshot.Symbol] = snapshot
+		symbols = append(symbols, snapshot.Symbol)
+		if snapshot.FetchedAt.After(response.UpdatedAt) {
+			response.UpdatedAt = snapshot.FetchedAt
+		}
+	}
+
+	var historySnapshots []database.PreciousMetalSnapshot
+	if err := s.db.Where("symbol IN ?", symbols).Order("symbol asc, fetched_at desc, id desc").Find(&historySnapshots).Error; err != nil {
+		return nil, fmt.Errorf("query precious metal snapshot history failed: %w", err)
+	}
+
+	historyBySymbol := make(map[string][]PreciousMetalPoint, len(symbols))
+	for _, snapshot := range historySnapshots {
+		points := historyBySymbol[snapshot.Symbol]
+		if len(points) >= limit {
+			continue
+		}
+		historyBySymbol[snapshot.Symbol] = append(points, PreciousMetalPoint{
+			Price:     snapshot.Price,
+			FetchedAt: snapshot.FetchedAt,
+		})
+	}
+
+	for _, snapshot := range latestSnapshots {
+		history := historyBySymbol[snapshot.Symbol]
+		for i, j := 0, len(history)-1; i < j; i, j = i+1, j-1 {
+			history[i], history[j] = history[j], history[i]
+		}
+		response.Records = append(response.Records, PreciousMetalMarketRecord{
+			Symbol:         snapshot.Symbol,
+			Name:           snapshot.Name,
+			SourceURL:      snapshot.SourceURL,
+			Price:          snapshot.Price,
+			Change:         snapshot.Change,
+			ChangePercent:  snapshot.ChangePercent,
+			PrevClose:      snapshot.PrevClose,
+			Open:           snapshot.Open,
+			Bid:            snapshot.Bid,
+			Ask:            snapshot.Ask,
+			DayRange:       snapshot.DayRange,
+			Week52Range:    snapshot.Week52Range,
+			Volume:         snapshot.Volume,
+			AvgVolume:      snapshot.AvgVolume,
+			LastUpdateText: snapshot.LastUpdateText,
+			ContractMonth:  snapshot.ContractMonth,
+			SettlementDate: snapshot.SettlementDate,
+			TickSize:       snapshot.TickSize,
+			ContractSize:   snapshot.ContractSize,
+			TickValue:      snapshot.TickValue,
+			BaseUnit:       snapshot.BaseUnit,
+			FetchedAt:      snapshot.FetchedAt,
+			History:        history,
+		})
+	}
+
+	return response, nil
+}
+
+func (s *ForumService) ListTechMarket(limit int) (*TechMarketResponse, error) {
+	if limit <= 0 {
+		limit = 24
+	}
+	if limit > 240 {
+		limit = 240
+	}
+
+	var latestSnapshots []database.TechMarketSnapshot
+	latestQuery := `
+		SELECT t1.*
+		FROM tech_market_snapshots t1
+		JOIN (
+			SELECT symbol, MAX(fetched_at) AS fetched_at
+			FROM tech_market_snapshots
+			GROUP BY symbol
+		) latest
+		ON latest.symbol = t1.symbol AND latest.fetched_at = t1.fetched_at
+		ORDER BY FIELD(t1.symbol, 'NVDA', 'MSFT', 'GOOGL', 'META', 'AMD', 'AVGO', 'NDX', 'SMH'), t1.id DESC
+	`
+	if err := s.db.Raw(latestQuery).Scan(&latestSnapshots).Error; err != nil {
+		return nil, fmt.Errorf("query latest tech market snapshots failed: %w", err)
+	}
+
+	response := &TechMarketResponse{Records: make([]TechMarketRecord, 0, len(latestSnapshots))}
+	if len(latestSnapshots) == 0 {
+		return response, nil
+	}
+
+	symbols := make([]string, 0, len(latestSnapshots))
+	for _, snapshot := range latestSnapshots {
+		symbols = append(symbols, snapshot.Symbol)
+		if snapshot.FetchedAt.After(response.UpdatedAt) {
+			response.UpdatedAt = snapshot.FetchedAt
+		}
+	}
+
+	var historySnapshots []database.TechMarketSnapshot
+	if err := s.db.Where("symbol IN ?", symbols).Order("symbol asc, fetched_at desc, id desc").Find(&historySnapshots).Error; err != nil {
+		return nil, fmt.Errorf("query tech market snapshot history failed: %w", err)
+	}
+
+	historyBySymbol := make(map[string][]TechMarketPoint, len(symbols))
+	for _, snapshot := range historySnapshots {
+		points := historyBySymbol[snapshot.Symbol]
+		if len(points) >= limit {
+			continue
+		}
+		historyBySymbol[snapshot.Symbol] = append(points, TechMarketPoint{
+			Price:     snapshot.Price,
+			FetchedAt: snapshot.FetchedAt,
+		})
+	}
+
+	for _, snapshot := range latestSnapshots {
+		history := historyBySymbol[snapshot.Symbol]
+		for i, j := 0, len(history)-1; i < j; i, j = i+1, j-1 {
+			history[i], history[j] = history[j], history[i]
+		}
+		response.Records = append(response.Records, TechMarketRecord{
+			Category:       snapshot.Category,
+			Symbol:         snapshot.Symbol,
+			Name:           snapshot.Name,
+			SourceURL:      snapshot.SourceURL,
+			Price:          snapshot.Price,
+			Change:         snapshot.Change,
+			ChangePercent:  snapshot.ChangePercent,
+			PrevClose:      snapshot.PrevClose,
+			Open:           snapshot.Open,
+			Bid:            snapshot.Bid,
+			Ask:            snapshot.Ask,
+			DayRange:       snapshot.DayRange,
+			Week52Range:    snapshot.Week52Range,
+			Volume:         snapshot.Volume,
+			AvgVolume:      snapshot.AvgVolume,
+			MarketCap:      snapshot.MarketCap,
+			PERatio:        snapshot.PERatio,
+			Beta:           snapshot.Beta,
+			EPS:            snapshot.EPS,
+			Dividend:       snapshot.Dividend,
+			Yield:          snapshot.Yield,
+			LastUpdateText: snapshot.LastUpdateText,
+			FetchedAt:      snapshot.FetchedAt,
+			History:        history,
+		})
+	}
+
+	return response, nil
 }
 
 func (s *ForumService) DecorateQuestionRecordForUser(record *LegacyQuestionRecord, userID uint, username string) error {

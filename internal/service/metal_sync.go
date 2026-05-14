@@ -25,6 +25,15 @@ type PreciousMetalSyncService struct {
 	runMu sync.Mutex
 }
 
+type MarketSyncSummary struct {
+	TargetCount   int       `json:"targetCount"`
+	SuccessCount  int       `json:"successCount"`
+	FailedSymbols []string  `json:"failedSymbols"`
+	FailedDetails []string  `json:"failedDetails"`
+	FetchedAt     time.Time `json:"fetchedAt"`
+	Partial       bool      `json:"partial"`
+}
+
 type preciousMetalTarget struct {
 	Symbol string
 	Name   string
@@ -111,21 +120,46 @@ func (s *PreciousMetalSyncService) Start(ctx context.Context) {
 }
 
 func (s *PreciousMetalSyncService) SyncOnce(ctx context.Context) error {
+	_, err := s.SyncWithResult(ctx)
+	return err
+}
+
+func (s *PreciousMetalSyncService) SyncWithResult(ctx context.Context) (*MarketSyncSummary, error) {
 	s.runMu.Lock()
 	defer s.runMu.Unlock()
 
 	fetchedAt := time.Now()
+	summary := &MarketSyncSummary{
+		TargetCount:   len(preciousMetalTargets),
+		FailedSymbols: make([]string, 0),
+		FailedDetails: make([]string, 0),
+		FetchedAt:     fetchedAt,
+	}
 	for _, target := range preciousMetalTargets {
 		payload, err := s.fetchTarget(ctx, target, fetchedAt)
 		if err != nil {
-			return fmt.Errorf("sync %s failed: %w", target.Symbol, err)
+			summary.FailedSymbols = append(summary.FailedSymbols, target.Symbol)
+			summary.FailedDetails = append(summary.FailedDetails, fmt.Sprintf("%s: %v", target.Symbol, err))
+			continue
 		}
 		if err := s.storeSnapshot(payload); err != nil {
-			return fmt.Errorf("store %s failed: %w", target.Symbol, err)
+			summary.FailedSymbols = append(summary.FailedSymbols, target.Symbol)
+			summary.FailedDetails = append(summary.FailedDetails, fmt.Sprintf("%s: store failed: %v", target.Symbol, err))
+			continue
 		}
+		summary.SuccessCount++
+	}
+
+	if summary.SuccessCount == 0 {
+		return summary, fmt.Errorf("all precious metal targets failed: %s", strings.Join(summary.FailedDetails, "; "))
+	}
+
+	summary.Partial = len(summary.FailedSymbols) > 0
+	if summary.Partial {
+		log.Printf("precious metal sync completed with partial failures: %s", strings.Join(summary.FailedDetails, "; "))
 	}
 	log.Printf("precious metal sync completed at %s", fetchedAt.Format(time.RFC3339))
-	return nil
+	return summary, nil
 }
 
 func (s *PreciousMetalSyncService) fetchTarget(ctx context.Context, target preciousMetalTarget, fetchedAt time.Time) (*PreciousMetalSnapshotPayload, error) {
@@ -187,7 +221,7 @@ func (s *PreciousMetalSyncService) storeSnapshot(payload *PreciousMetalSnapshotP
 		Week52Range:    payload.Week52Range,
 		Volume:         payload.Volume,
 		AvgVolume:      payload.AvgVolume,
-		LastUpdateText: payload.LastUpdateText,
+		LastUpdateText: truncateString(payload.LastUpdateText, 255),
 		ContractMonth:  payload.ContractMonth,
 		SettlementDate: payload.SettlementDate,
 		TickSize:       payload.TickSize,
@@ -201,16 +235,16 @@ func (s *PreciousMetalSyncService) storeSnapshot(payload *PreciousMetalSnapshotP
 	return s.db.Create(record).Error
 }
 
-func (s *PreciousMetalSyncService) fetchPage(ctx context.Context, url string) (string, error) {
+func fetchInvestingPage(ctx context.Context, client *http.Client, userAgent, url string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return "", fmt.Errorf("create request failed: %w", err)
 	}
-	req.Header.Set("User-Agent", s.config.EffectiveUserAgent())
+	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 
-	resp, err := s.client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("request page failed: %w", err)
 	}
@@ -226,12 +260,33 @@ func (s *PreciousMetalSyncService) fetchPage(ctx context.Context, url string) (s
 	return string(body), nil
 }
 
+func (s *PreciousMetalSyncService) fetchPage(ctx context.Context, url string) (string, error) {
+	return fetchInvestingPage(ctx, s.client, s.config.EffectiveUserAgent(), url)
+}
+
 func extractByDataTest(body, dataTest string) string {
 	marker := fmt.Sprintf(`data-test="%s"`, dataTest)
 	idx := strings.Index(body, marker)
 	if idx < 0 {
 		return ""
 	}
+
+	tagEndOffset := strings.Index(body[idx:], ">")
+	if tagEndOffset < 0 {
+		return ""
+	}
+
+	contentStart := idx + tagEndOffset + 1
+	if contentStart < len(body) {
+		contentEndOffset := strings.Index(body[contentStart:], "<")
+		if contentEndOffset >= 0 {
+			value := cleanHTMLText(body[contentStart : contentStart+contentEndOffset])
+			if value != "" {
+				return value
+			}
+		}
+	}
+
 	segment := body[idx:]
 	match := textValuePattern.FindStringSubmatch(segment)
 	if len(match) < 2 {
@@ -302,4 +357,11 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func truncateString(value string, limit int) string {
+	if limit <= 0 || len(value) <= limit {
+		return value
+	}
+	return value[:limit]
 }

@@ -41,6 +41,190 @@ Authorization: Bearer <token>
 }
 ```
 
+## 市场数据接口
+
+### `GET /api/v1/market/precious-metals`
+
+公开接口，用于读取后端已同步入库的贵金属市场快照和最近一段价格历史。
+
+查询参数：
+
+- `history_limit`: 每个品种返回的历史点位数量，默认 `24`，最大 `240`
+
+成功响应 `200`:
+
+```json
+{
+  "updatedAt": "2026-05-11T10:30:00+08:00",
+  "records": [
+    {
+      "symbol": "XAU",
+      "name": "Gold",
+      "sourceUrl": "https://www.investing.com/commodities/gold",
+      "price": "3348.25",
+      "change": "+12.80",
+      "changePercent": "+0.38%",
+      "prevClose": "3335.45",
+      "open": "3338.10",
+      "bid": "3348.10",
+      "ask": "3348.40",
+      "dayRange": "3329.80 - 3354.20",
+      "week52Range": "2298.40 - 3509.90",
+      "volume": "128.62K",
+      "avgVolume": "189.31K",
+      "lastUpdateText": "Last Update: May 11, 2026 10:29AM ET",
+      "contractMonth": "Jun 26",
+      "settlementDate": "2026-06-26",
+      "tickSize": "0.1",
+      "contractSize": "100 Troy Ounces",
+      "tickValue": "10",
+      "baseUnit": "1 Troy Ounce",
+      "fetchedAt": "2026-05-11T10:30:00+08:00",
+      "history": [
+        {
+          "price": "3339.10",
+          "fetchedAt": "2026-05-11T09:30:00+08:00"
+        },
+        {
+          "price": "3348.25",
+          "fetchedAt": "2026-05-11T10:30:00+08:00"
+        }
+      ]
+    }
+  ]
+}
+```
+
+说明：
+
+- 当前默认同步 `Gold / Silver / Platinum / Palladium`
+- `history` 按时间升序返回，适合前端直接画价格走势图
+- 数据来源是后端定时抓取的 `Investing.com` 页面，不是实时直连第三方 API
+
+### `POST /api/v1/market/precious-metals/sync`
+
+受保护接口，需要 Bearer Token。用于手动触发一次贵金属行情抓取，适合首次初始化或前端手动更新。
+
+请求头:
+
+```http
+Authorization: Bearer <token>
+```
+
+成功响应 `200`:
+
+```json
+{
+  "message": "precious metal sync completed",
+  "targetCount": 4,
+  "successCount": 4,
+  "failedSymbols": [],
+  "failedDetails": [],
+  "fetchedAt": "2026-05-13T16:00:00+08:00",
+  "partial": false
+}
+```
+
+说明：
+
+- 该接口会立即抓取 `Investing.com` 的 `Gold / Silver / Platinum / Palladium` 页面
+- 抓取完成后会写入新快照，前端可随后重新请求 `GET /api/v1/market/precious-metals` 获取最新结果
+- 支持可选查询参数 `rounds` 和 `interval_ms`，用于连续执行多轮同步并补齐短历史点位
+- 如果部分品种抓取失败，接口仍会返回 `200`，并通过 `partial / failedSymbols / failedDetails` 告知失败明细
+- 未登录访问会返回 `401`
+
+### `GET /api/v1/market/ai-tech`
+
+公开接口，用于读取后端已同步入库的 AI / 科技相关市场快照和最近一段价格历史。
+
+查询参数：
+
+- `history_limit`: 每个标的返回的历史点位数量，默认 `24`，最大 `240`
+
+成功响应 `200`:
+
+```json
+{
+  "updatedAt": "2026-05-13T15:30:00+08:00",
+  "records": [
+    {
+      "category": "etf",
+      "symbol": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "sourceUrl": "https://www.investing.com/etfs/powershares-qqqq",
+      "price": "714.71",
+      "change": "+7.47",
+      "changePercent": "(+1.06%)",
+      "prevClose": "707.24",
+      "open": "709.35",
+      "bid": "",
+      "ask": "",
+      "dayRange": "709.25 - 715.11",
+      "week52Range": "402.39 - 715.11",
+      "volume": "34.12M",
+      "avgVolume": "46.81M",
+      "marketCap": "",
+      "peRatio": "",
+      "beta": "",
+      "eps": "",
+      "dividend": "",
+      "yield": "",
+      "lastUpdateText": "Last Update: May 13, 2026 03:29PM ET",
+      "fetchedAt": "2026-05-13T15:30:00+08:00",
+      "history": [
+        {
+          "price": "708.20",
+          "fetchedAt": "2026-05-13T13:30:00+08:00"
+        },
+        {
+          "price": "714.71",
+          "fetchedAt": "2026-05-13T15:30:00+08:00"
+        }
+      ]
+    }
+  ]
+}
+```
+
+说明：
+
+- 当前默认同步 `NDX / QQQ / XLK / SMH / IGV`
+- `category` 用于区分 `equity / index / etf`
+- `history` 按时间升序返回，适合前端直接画价格走势图
+- 数据来源同样是后端定时抓取的 `Investing.com` 页面
+
+### `POST /api/v1/market/ai-tech/sync`
+
+受保护接口，需要 Bearer Token。用于手动触发一次 AI / 科技市场抓取，适合首次初始化或手动更新。
+
+请求头:
+
+```http
+Authorization: Bearer <token>
+```
+
+成功响应 `200`:
+
+```json
+{
+  "message": "ai tech market sync completed",
+  "targetCount": 5,
+  "successCount": 5,
+  "failedSymbols": [],
+  "failedDetails": [],
+  "fetchedAt": "2026-05-13T16:00:00+08:00",
+  "partial": false
+}
+```
+
+说明：
+
+- 该接口会立即抓取当前默认配置的 AI / 科技相关高热度标的页面
+- 抓取完成后会写入新快照，前端可随后重新请求 `GET /api/v1/market/ai-tech` 获取最新结果
+- 支持可选查询参数 `rounds` 和 `interval_ms`，用于连续执行多轮同步并补齐短历史点位
+- 如果部分标的抓取失败，接口仍会返回 `200`，并通过 `partial / failedSymbols / failedDetails` 告知失败明细
+- 未登录访问会返回 `401`
+
 ## 认证接口
 
 ### `POST /api/v1/auth/register`

@@ -9,8 +9,12 @@ import type {
   MyCommentListPage,
   MyLikeListPage,
   MySummaryResult,
+  PreciousMetalMarketResponse,
+  PreciousMetalSyncResult,
   QuestionListPage,
   QuestionRecord,
+  TechMarketResponse,
+  TechMarketSyncResult,
   ToggleUploadResult,
 } from '../types/api';
 
@@ -142,6 +146,26 @@ export function listMyLikes(page = 1, pageSize = 20, keyword = '') {
 
 export function getMySummary() {
   return request<MySummaryResult>('/api/v1/users/me/summary');
+}
+
+export function getPreciousMetalMarket(historyLimit = 24) {
+  return request<PreciousMetalMarketResponse>(`/api/v1/market/precious-metals${toQueryString({ history_limit: historyLimit })}`);
+}
+
+export function syncPreciousMetalMarket(rounds = 1, intervalMs = 800) {
+  return request<PreciousMetalSyncResult>(`/api/v1/market/precious-metals/sync${toQueryString({ rounds, interval_ms: intervalMs })}`, {
+    method: 'POST',
+  });
+}
+
+export function getTechMarket(historyLimit = 24) {
+  return request<TechMarketResponse>(`/api/v1/market/ai-tech${toQueryString({ history_limit: historyLimit })}`);
+}
+
+export function syncTechMarket(rounds = 1, intervalMs = 800) {
+  return request<TechMarketSyncResult>(`/api/v1/market/ai-tech/sync${toQueryString({ rounds, interval_ms: intervalMs })}`, {
+    method: 'POST',
+  });
 }
 
 export function uploadQuestionFiles(qid: number, files: File[], onProgress?: (percent: number) => void) {

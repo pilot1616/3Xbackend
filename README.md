@@ -21,6 +21,7 @@
 - 点赞与取消点赞
 - 我的帖子、我的评论、我的点赞、个人统计
 - 启动后定时抓取 Investing 贵金属行情并落库
+- 启动后定时抓取 Investing AI / 科技相关热门标的并落库
 - 新前端 `front/` 已开始替换原来的 jQuery 示例页面
 
 详细接口说明见 [API.md](/Users/zhangxinghui/Desktop/web/3Xbackend/API.md)。
@@ -58,8 +59,61 @@
 数据同步：
 
 - 后端启动时会注册贵金属定时同步任务
+- 后端启动时会注册 AI / 科技市场定时同步任务
 - 数据来源为 `Investing.com` 贵金属页面
+- 数据来源为 `Investing.com` 个股 / 指数 / ETF 页面
 - 当前默认同步 `黄金 / 白银 / 铂金 / 钯金`
+
+## AI / 科技市场定时同步
+
+项目启动后，后端也会按配置自动抓取 `Investing.com` 上与 AI 热度高度相关的高市值科技标的、指数和 ETF，并把快照写入数据库表 `tech_market_snapshots`。
+
+当前默认同步标的：
+
+- Nasdaq 100 (`NDX`)
+- Invesco QQQ Trust (`QQQ`)
+- Technology Select Sector SPDR Fund (`XLK`)
+- VanEck Semiconductor ETF (`SMH`)
+- iShares Expanded Tech-Software Sector ETF (`IGV`)
+
+当前同步字段包含：
+
+- 价格
+- 涨跌额 / 涨跌幅
+- 开盘 / 前收 / 买价 / 卖价
+- 日内区间 / 52 周区间
+- 成交量 / 平均成交量
+- 市值 / 市盈率 / Beta / EPS / 股息 / 收益率
+- 原始概览字段 JSON
+- 抓取时间
+
+默认行为：
+
+- 服务启动后立即执行一次同步
+- 后续每 `120` 分钟执行一次
+
+手动执行一次同步：
+
+```bash
+task tech:sync
+```
+
+如果希望快速补出一小段历史点位，前端“市场动态”页登录后可以直接点击“快速补历史”；后端接口层也支持用多轮同步方式连续写入多条快照。
+
+如果 MySQL 跑在 Docker：
+
+```bash
+task tech:sync:docker
+```
+
+配置项：
+
+- `sync.ai_tech.enabled`: 是否启用定时同步
+- `sync.ai_tech.interval_minutes`: 同步间隔分钟数
+- `sync.ai_tech.request_timeout_sec`: 单次请求超时秒数
+- `sync.ai_tech.initial_run_on_startup`: 启动时是否先跑一次
+- `sync.ai_tech.source_base_url`: 数据源根地址
+- `sync.ai_tech.user_agent`: 抓取请求使用的 UA
 
 ## 贵金属定时同步
 
@@ -422,6 +476,18 @@ brew install go-task/tap/go-task
 
 - `task build`
   作用：检查 Go 构建和前端构建是否通过
+
+- `task metal:sync`
+  作用：手动执行一次贵金属市场同步
+
+- `task metal:sync:docker`
+  作用：先启动 Docker MySQL，再手动执行一次贵金属市场同步
+
+- `task tech:sync`
+  作用：手动执行一次 AI / 科技市场同步
+
+- `task tech:sync:docker`
+  作用：先启动 Docker MySQL，再手动执行一次 AI / 科技市场同步
 
 推荐本地开发顺序：
 

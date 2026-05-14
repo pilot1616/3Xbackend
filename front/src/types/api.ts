@@ -148,6 +148,99 @@ export interface MySummaryResult {
   likesCount: number;
 }
 
+export interface PreciousMetalPoint {
+  price: string;
+  fetchedAt: string;
+}
+
+export interface PreciousMetalMarketRecord {
+  symbol: string;
+  name: string;
+  sourceUrl: string;
+  price: string;
+  change: string;
+  changePercent: string;
+  prevClose: string;
+  open: string;
+  bid: string;
+  ask: string;
+  dayRange: string;
+  week52Range: string;
+  volume: string;
+  avgVolume: string;
+  lastUpdateText: string;
+  contractMonth: string;
+  settlementDate: string;
+  tickSize: string;
+  contractSize: string;
+  tickValue: string;
+  baseUnit: string;
+  fetchedAt: string;
+  history: PreciousMetalPoint[];
+}
+
+export interface PreciousMetalMarketResponse {
+  updatedAt: string;
+  records: PreciousMetalMarketRecord[];
+}
+
+export interface PreciousMetalSyncResult {
+  message: string;
+  targetCount: number;
+  successCount: number;
+  failedSymbols: string[];
+  failedDetails: string[];
+  fetchedAt: string;
+  partial: boolean;
+}
+
+export interface TechMarketPoint {
+  price: string;
+  fetchedAt: string;
+}
+
+export interface TechMarketRecord {
+  category: string;
+  symbol: string;
+  name: string;
+  sourceUrl: string;
+  price: string;
+  change: string;
+  changePercent: string;
+  prevClose: string;
+  open: string;
+  bid: string;
+  ask: string;
+  dayRange: string;
+  week52Range: string;
+  volume: string;
+  avgVolume: string;
+  marketCap: string;
+  peRatio: string;
+  beta: string;
+  eps: string;
+  dividend: string;
+  yield: string;
+  lastUpdateText: string;
+  fetchedAt: string;
+  history: TechMarketPoint[];
+}
+
+export interface TechMarketResponse {
+  updatedAt: string;
+  records: TechMarketRecord[];
+}
+
+export interface TechMarketSyncResult {
+  message: string;
+  targetCount: number;
+  successCount: number;
+  failedSymbols: string[];
+  failedDetails: string[];
+  fetchedAt: string;
+  partial: boolean;
+}
+
 export interface SessionData {
   token: string;
   user: User;
