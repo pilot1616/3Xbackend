@@ -1,49 +1,43 @@
 # 3Xbackend
 
-这是一个网络论坛项目，当前仓库同时包含：
+`3Xbackend` 是一个论坛 + 市场动态的全栈项目，当前仓库同时包含：
 
 - Go 后端服务
-- MySQL 数据存储
-- 基于 React + TypeScript 的新前端重写目录 `front/`
-- 旧示例前端目录 `example/`，仅作为结构和样式参考
-
-## 当前状态
-
-当前项目已经不是单纯的“后端骨架”，而是已经具备可联调的论坛基础能力：
-
-- 用户注册、登录、找回密码
-- Token 鉴权和当前用户资料维护
-- 头像上传
-- 帖子发布、编辑、删除、发布状态切换
-- 帖子附件上传与删除
-- 帖子列表、单帖详情
-- 评论发布、编辑、删除
-- 点赞与取消点赞
-- 我的帖子、我的评论、我的点赞、个人统计
-- 启动后定时抓取 Investing 贵金属行情并落库
-- 启动后定时抓取 Investing AI / 科技相关热门标的并落库
-- 新前端 `front/` 已开始替换原来的 jQuery 示例页面
+- MySQL 数据库
+- React + TypeScript 新前端：`front/`
+- 旧示例前端：`example/`，仅作为结构和样式参考
 
 详细接口说明见 [API.md](/Users/zhangxinghui/Desktop/web/3Xbackend/API.md)。
 
-## 项目结构
+## 项目能力
+
+当前项目已经具备完整的可运行链路，核心能力包括：
+
+- 用户注册、登录、找回密码、密保校验
+- 用户资料维护、头像上传
+- 帖子发布、编辑、删除、发布状态切换
+- 帖子图片 / 视频附件上传与删除
+- 帖子列表、详情页、点赞、评论
+- 我的帖子、我的评论、我的点赞、个人统计
+- 市场动态页：贵金属行情、AI / 科技市场行情、AI 日报
+- 启动后定时同步 `Investing.com` 贵金属数据
+- 启动后定时同步 `Investing.com` AI / 科技市场数据
+- 启动后定时同步 `hex2077.dev` AI 日报数据
+- 假数据脚本：可注入千级帖子、评论、点赞和演示图片
+
+## 目录结构
 
 ```text
 3Xbackend/
-├── cmd/                    # Go 程序入口
+├── cmd/                    # Go 程序入口（主服务、同步脚本、种子脚本）
 ├── config/                 # 后端配置文件
 ├── internal/               # 业务代码
-│   ├── config/             # 配置解析
-│   ├── database/           # 数据库初始化与模型
-│   ├── handler/            # HTTP Handler
-│   ├── middleware/         # 鉴权/CORS 等中间件
-│   ├── server/             # 路由注册与服务启动
-│   └── service/            # 业务服务层
 ├── public/                 # 运行时静态资源目录
 ├── front/                  # 新前端：Vite + React + TypeScript
 ├── example/                # 旧示例前端，仅供参考
 ├── API.md                  # 接口文档
-└── README.md               # 项目说明
+├── README.md               # 项目说明
+└── SEED.md                 # 假数据脚本说明
 ```
 
 ## 技术栈
@@ -56,163 +50,54 @@
 - MySQL
 - Viper
 
-数据同步：
-
-- 后端启动时会注册贵金属定时同步任务
-- 后端启动时会注册 AI / 科技市场定时同步任务
-- 数据来源为 `Investing.com` 贵金属页面
-- 数据来源为 `Investing.com` 个股 / 指数 / ETF 页面
-- 当前默认同步 `黄金 / 白银 / 铂金 / 钯金`
-
-## AI / 科技市场定时同步
-
-项目启动后，后端也会按配置自动抓取 `Investing.com` 上与 AI 热度高度相关的高市值科技标的、指数和 ETF，并把快照写入数据库表 `tech_market_snapshots`。
-
-当前默认同步标的：
-
-- Nasdaq 100 (`NDX`)
-- Invesco QQQ Trust (`QQQ`)
-- Technology Select Sector SPDR Fund (`XLK`)
-- VanEck Semiconductor ETF (`SMH`)
-- iShares Expanded Tech-Software Sector ETF (`IGV`)
-
-当前同步字段包含：
-
-- 价格
-- 涨跌额 / 涨跌幅
-- 开盘 / 前收 / 买价 / 卖价
-- 日内区间 / 52 周区间
-- 成交量 / 平均成交量
-- 市值 / 市盈率 / Beta / EPS / 股息 / 收益率
-- 原始概览字段 JSON
-- 抓取时间
-
-默认行为：
-
-- 服务启动后立即执行一次同步
-- 后续每 `120` 分钟执行一次
-
-手动执行一次同步：
-
-```bash
-task tech:sync
-```
-
-如果希望快速补出一小段历史点位，前端“市场动态”页登录后可以直接点击“快速补历史”；后端接口层也支持用多轮同步方式连续写入多条快照。
-
-如果 MySQL 跑在 Docker：
-
-```bash
-task tech:sync:docker
-```
-
-配置项：
-
-- `sync.ai_tech.enabled`: 是否启用定时同步
-- `sync.ai_tech.interval_minutes`: 同步间隔分钟数
-- `sync.ai_tech.request_timeout_sec`: 单次请求超时秒数
-- `sync.ai_tech.initial_run_on_startup`: 启动时是否先跑一次
-- `sync.ai_tech.source_base_url`: 数据源根地址
-- `sync.ai_tech.user_agent`: 抓取请求使用的 UA
-
-## 贵金属定时同步
-
-项目启动后，后端会按配置自动抓取 `Investing.com` 的贵金属行情页，并把快照写入数据库表 `precious_metal_snapshots`。
-
-当前同步品种：
-
-- Gold
-- Silver
-- Platinum
-- Palladium
-
-当前同步字段包含：
-
-- 价格
-- 涨跌额 / 涨跌幅
-- 开盘 / 前收 / 买价 / 卖价
-- 日内区间 / 52 周区间
-- 成交量 / 平均成交量
-- 合约月份 / 结算日 / 最小跳动 / 合约大小 / 跳动价值 / 基础单位
-- 原始概览字段 JSON
-- 抓取时间
-
-默认行为：
-
-- 服务启动后立即执行一次同步
-- 后续每 `60` 分钟执行一次
-
-手动执行一次同步：
-
-```bash
-task metal:sync
-```
-
-如果 MySQL 跑在 Docker：
-
-```bash
-task metal:sync:docker
-```
-
-相关配置在：
-
-- [config/config.yaml](/Users/zhangxinghui/Desktop/web/3Xbackend/config/config.yaml)
-
-配置项：
-
-- `sync.precious_metals.enabled`: 是否启用定时同步
-- `sync.precious_metals.interval_minutes`: 同步间隔分钟数
-- `sync.precious_metals.request_timeout_sec`: 单次请求超时秒数
-- `sync.precious_metals.initial_run_on_startup`: 启动时是否先跑一次
-- `sync.precious_metals.source_base_url`: 数据源根地址
-- `sync.precious_metals.user_agent`: 抓取请求使用的 UA
-
 前端：
 
-- Vite
 - React 18
 - TypeScript
+- Vite
 - React Router
 
-## 后端启动
+## 推荐本地启动方式
 
-如果你已经安装了 `go-task`，更推荐直接使用 [Taskfile.yml](/Users/zhangxinghui/Desktop/web/3Xbackend/Taskfile.yml)。
+推荐直接使用 [Taskfile.yml](/Users/zhangxinghui/Desktop/web/3Xbackend/Taskfile.yml)。
 
-可以直接本地运行，不需要先编译成二进制：
-
-```bash
-go run ./cmd
-```
-
-或者用任务命令：
+### 1. 初始化环境
 
 ```bash
-task backend
+task init
 ```
 
-如果你希望顺手把 Docker 里的 MySQL 也拉起来，再跑后端：
+这个命令会：
+
+- 创建 `public/images` 和 `public/uploads`
+- 补齐 `.env` 和 `front/.env`
+- 安装前端依赖
+
+### 2. 启动开发环境
+
+如果你本机已经有可用的 MySQL：
 
 ```bash
-task backend:docker
+task dev
 ```
 
-### 1. 准备 MySQL
+如果你希望使用 Docker 中的 MySQL：
 
-先准备一个可用的 MySQL 数据库，并确认 `config/config.yaml` 中的配置正确。
+```bash
+task dev:docker
+```
 
-当前默认配置文件位置：
+启动后默认访问地址：
 
-- [config/config.yaml](/Users/zhangxinghui/Desktop/web/3Xbackend/config/config.yaml)
+- 前端开发服务：`http://localhost:5173`
+- 后端 API：`http://localhost:3000`
+- 健康检查：`http://localhost:3000/health`
 
-需要重点确认：
+## 后端 / 前端单独运行
 
-- `database.mysql.user`
-- `database.mysql.password`
-- `database.mysql.address`
-- `database.mysql.port`
-- `database.mysql.schema`
+### 后端
 
-### 2. 启动后端
+不需要先编译，可以直接运行：
 
 ```bash
 go run ./cmd
@@ -224,32 +109,16 @@ go run ./cmd
 task backend
 ```
 
-默认监听：
-
-- `http://localhost:3000`
-
-健康检查：
+如果使用 Docker MySQL：
 
 ```bash
-curl http://localhost:3000/health
+task backend:docker
 ```
 
-## 前端启动
-
-新前端目录：
-
-- [front](/Users/zhangxinghui/Desktop/web/3Xbackend/front)
-
-### 1. 安装依赖
+### 前端
 
 ```bash
 cd front
-npm install
-```
-
-### 2. 启动开发服务
-
-```bash
 npm run dev
 ```
 
@@ -259,107 +128,207 @@ npm run dev
 task frontend
 ```
 
-### 3. 类型检查和构建
+前端类型检查和构建：
 
 ```bash
+cd front
 npm run typecheck
 npm run build
 ```
-
-### 4. 前端环境变量
-
-示例文件：
-
-- [front/.env.example](/Users/zhangxinghui/Desktop/web/3Xbackend/front/.env.example)
-
-支持的变量：
-
-- `VITE_API_BASE_URL`: 后端 API 根地址，默认 `http://localhost:3000`
-- `VITE_ASSET_BASE_URL`: 静态资源根地址，默认跟随 `VITE_API_BASE_URL`
 
 ## Docker 运行
 
 仓库根目录已经提供：
 
 - [Dockerfile](/Users/zhangxinghui/Desktop/web/3Xbackend/Dockerfile)
-- [.dockerignore](/Users/zhangxinghui/Desktop/web/3Xbackend/.dockerignore)
 - [docker-compose.yml](/Users/zhangxinghui/Desktop/web/3Xbackend/docker-compose.yml)
-- [Taskfile.yml](/Users/zhangxinghui/Desktop/web/3Xbackend/Taskfile.yml)
-- [.env.example](/Users/zhangxinghui/Desktop/web/3Xbackend/.env.example)
+- [.dockerignore](/Users/zhangxinghui/Desktop/web/3Xbackend/.dockerignore)
 
-这个镜像会同时：
-
-- 构建 `front/` 前端产物
-- 构建 Go 后端二进制
-- 在最终容器中由 Go 服务统一提供 API、前端页面和上传目录
-
-### 1. 构建镜像
-
-```bash
-docker build -t 3xbackend .
-```
-
-### 2. 运行容器
-
-```bash
-docker run --rm -p 3000:3000 \
-  -e SERVER_PORT=3000 \
-  -e DATABASE_MYSQL_USER=root \
-  -e DATABASE_MYSQL_PASSWORD=your-password \
-  -e DATABASE_MYSQL_ADDRESS=host.docker.internal \
-  -e DATABASE_MYSQL_PORT=3306 \
-  -e DATABASE_MYSQL_SCHEMA=3X \
-  -v $(pwd)/public:/app/public \
-  3xbackend
-```
-
-或者直接用 Compose：
+完整 Compose 启动：
 
 ```bash
 task compose:up
 ```
 
+关闭：
+
+```bash
+task compose:down
+```
+
 说明：
 
-- 推荐把 `public` 目录挂载出来，保留头像和帖子附件
-- 容器内默认工作目录是 `/app`
-- 前端页面会由后端直接托管，不需要再额外启动 Vite
-- 当前后端已支持通过环境变量覆盖 `config/config.yaml` 中的主要配置
+- Docker 镜像会同时构建 `front/` 前端产物和 Go 后端二进制
+- 运行容器后，前端静态文件由 Go 服务统一托管
+- 推荐挂载 `public/` 目录，保留头像和帖子附件
+
+## 市场动态与 AI 日报
+
+项目当前包含一个“市场动态”页面，数据来源分为三类：
+
+### 1. 贵金属
+
+数据来源：`Investing.com`
+
+当前默认同步：
+
+- Gold
+- Silver
+- Platinum
+- Palladium
+
+默认行为：
+
+- 服务启动后立即同步一次
+- 后续每 `60` 分钟自动同步一次
+
+手动同步：
+
+```bash
+task metal:sync
+```
+
+如果 MySQL 在 Docker：
+
+```bash
+task metal:sync:docker
+```
+
+### 2. AI / 科技市场
+
+数据来源：`Investing.com`
+
+当前默认同步：
+
+- Nasdaq 100 (`NDX`)
+- Invesco QQQ Trust (`QQQ`)
+- Technology Select Sector SPDR Fund (`XLK`)
+- VanEck Semiconductor ETF (`SMH`)
+- iShares Expanded Tech-Software Sector ETF (`IGV`)
+
+默认行为：
+
+- 服务启动后立即同步一次
+- 后续每 `120` 分钟自动同步一次
+
+手动同步：
+
+```bash
+task tech:sync
+```
+
+如果 MySQL 在 Docker：
+
+```bash
+task tech:sync:docker
+```
+
+### 3. AI 日报
+
+数据来源：`https://hex2077.dev/docs/`
+
+默认行为：
+
+- 服务启动后立即同步一次
+- 后续每 `30` 分钟自动同步一次
+- 默认抓取最近 `7` 篇日报
+
+手动同步：
+
+```bash
+task ai:daily:sync
+```
+
+如果 MySQL 在 Docker：
+
+```bash
+task ai:daily:sync:docker
+```
+
+### 前端能力
+
+市场动态页当前已支持：
+
+- 贵金属和 AI / 科技标的价格图展示
+- 已同步历史点位可视化
+- 登录后手动“立即同步”
+- 登录后使用多轮同步快速补短历史
+- AI 日报列表搜索
+- AI 日报分页加载更多
+- AI 日报上一篇 / 下一篇切换
+- AI 日报章节导航
 
 ## 假数据注入
 
-项目现在提供了独立的种子脚本入口：
+项目提供了独立的种子脚本入口：
 
 - [cmd/seed/main.go](/Users/zhangxinghui/Desktop/web/3Xbackend/cmd/seed/main.go)
 - [SEED.md](/Users/zhangxinghui/Desktop/web/3Xbackend/SEED.md)
 
-它会自动完成以下内容：
+默认可注入千级规模论坛数据，包括：
 
-- 创建一批演示账号
-- 注入大量帖子、评论、点赞数据
-- 把一批演示图片复制到 `public/images` 和 `public/uploads`
+- 演示账号
+- 帖子
+- 评论
+- 点赞
+- 演示图片和附件
 
-默认会注入千级规模数据。直接执行：
+执行方式：
 
 ```bash
 task seed
 ```
 
-如果你本地 MySQL 依赖 Docker：
+如果 MySQL 在 Docker：
 
 ```bash
 task seed:docker
 ```
 
-种子账号默认密码：
+默认种子账号密码：
 
 - `Forum123`
 
-种子账号默认密保答案：
+默认密保答案：
 
 - `1999`
 
-### 3. 可覆盖的常用环境变量
+## 常用 Task 命令
+
+如果本机还没有 `task`，可以先安装：
+
+```bash
+brew install go-task/tap/go-task
+```
+
+常用命令：
+
+- `task init`：初始化本地环境
+- `task db:up`：启动本地 MySQL 容器
+- `task db:wait`：等待 MySQL ready
+- `task db:down`：停止本地 MySQL 容器
+- `task backend`：本地直接 `go run ./cmd`
+- `task backend:docker`：拉起 Docker MySQL 后运行后端
+- `task frontend`：运行前端开发服务
+- `task dev`：本地同时跑前后端
+- `task dev:docker`：使用 Docker MySQL 同时跑前后端
+- `task build`：检查 Go 构建和前端构建
+- `task seed`：注入假数据
+- `task metal:sync`：手动执行贵金属同步
+- `task tech:sync`：手动执行 AI / 科技市场同步
+- `task ai:daily:sync`：手动执行 AI 日报同步
+- `task compose:up`：启动完整 Compose 环境
+- `task compose:down`：关闭完整 Compose 环境
+
+## 配置项
+
+主要配置文件：
+
+- [config/config.yaml](/Users/zhangxinghui/Desktop/web/3Xbackend/config/config.yaml)
+- [front/.env.example](/Users/zhangxinghui/Desktop/web/3Xbackend/front/.env.example)
+- [.env.example](/Users/zhangxinghui/Desktop/web/3Xbackend/.env.example)
+
+常用环境变量：
 
 - `SERVER_PORT`
 - `AUTH_SECRET`
@@ -372,8 +341,33 @@ task seed:docker
 - `DATABASE_MYSQL_ADDRESS`
 - `DATABASE_MYSQL_PORT`
 - `DATABASE_MYSQL_SCHEMA`
+- `VITE_API_BASE_URL`
+- `VITE_ASSET_BASE_URL`
 
-## 旧前端与新前端的关系
+同步相关配置项：
+
+- `sync.precious_metals.enabled`
+- `sync.precious_metals.interval_minutes`
+- `sync.precious_metals.request_timeout_sec`
+- `sync.precious_metals.initial_run_on_startup`
+- `sync.precious_metals.source_base_url`
+- `sync.precious_metals.user_agent`
+- `sync.ai_tech.enabled`
+- `sync.ai_tech.interval_minutes`
+- `sync.ai_tech.request_timeout_sec`
+- `sync.ai_tech.initial_run_on_startup`
+- `sync.ai_tech.source_base_url`
+- `sync.ai_tech.user_agent`
+- `sync.ai_daily.enabled`
+- `sync.ai_daily.interval_minutes`
+- `sync.ai_daily.request_timeout_sec`
+- `sync.ai_daily.initial_run_on_startup`
+- `sync.ai_daily.source_base_url`
+- `sync.ai_daily.index_path`
+- `sync.ai_daily.max_entries`
+- `sync.ai_daily.user_agent`
+
+## 新旧前端关系
 
 旧前端目录：
 
@@ -381,165 +375,21 @@ task seed:docker
 
 用途：
 
-- 用来参考页面结构和旧视觉资源
-- 不再作为最终交付前端继续扩展
+- 仅用于参考旧页面结构和静态资源
+- 不再作为新需求的主要开发目录
 
 新前端目录：
 
 - [front](/Users/zhangxinghui/Desktop/web/3Xbackend/front)
 
-当前策略：
+当前约定：
 
-- 先复用旧版 UI 资源
-- 再逐步把页面和数据流完全迁移到 TypeScript 前端
+- 新功能优先落在 `front/`
+- 与后端联调优先走 `/api/v1/*`
+- `example/` 只保留兼容参考价值
 
-## API 文档
+## 文档约定
 
-接口文档在：
-
-- [API.md](/Users/zhangxinghui/Desktop/web/3Xbackend/API.md)
-
-开发约定：
-
-- 只要后端接口发生变化，就必须同步更新 `API.md`
-- 前端开发时优先对齐 `/api/v1/*` 正式接口
-- 旧兼容接口只保留兼容用途，不再作为新功能扩展基础
-
-## 当前已完成的主要模块
-
-后端：
-
-- 认证模块
-- 用户资料模块
-- 论坛帖子模块
-- 评论模块
-- 点赞模块
-- 文件上传模块
-
-前端：
-
-- 登录/注册/重置密码页
-- 问题广场页
-- 发帖与帖子管理页
-- 相册页
-- 个人资料页
-- 单帖详情页
-
-## 开发约定
-
-- 后端代码变更后，要检查 [API.md](/Users/zhangxinghui/Desktop/web/3Xbackend/API.md) 是否需要同步更新
-- 每完成一个独立功能点，单独提交一次 Git commit
-- 新前端开发集中在 [front](/Users/zhangxinghui/Desktop/web/3Xbackend/front)
-- `example/` 只作为参考，不作为最终前端继续堆功能
-
-## Task 命令
-
-仓库根目录已经补了 [Taskfile.yml](/Users/zhangxinghui/Desktop/web/3Xbackend/Taskfile.yml)，常用命令如下：
-
-如果本机还没有 `task`，可以先安装：
-
-```bash
-brew install go-task/tap/go-task
-```
-
-或者参考官方仓库：`https://taskfile.dev/installation/`
-
-- `task init`
-  作用：初始化本地运行环境，创建 `public` 目录、补 `.env`/`front/.env`、安装前端依赖
-
-- `task db:up`
-  作用：只启动本地 MySQL 容器
-
-- `task db:wait`
-  作用：等待本地 MySQL 容器真正就绪，适合排查刚启动就连库失败的问题
-
-- `task backend`
-  作用：直接 `go run ./cmd` 跑后端，不预编译，不自动拉 Docker
-
-- `task backend:docker`
-  作用：先启动 Docker MySQL，并等待数据库 ready，再本地跑后端
-
-- `task frontend`
-  作用：直接运行前端 Vite 开发服务
-
-- `task dev`
-  作用：一条命令同时跑后端和前端，不预编译，不自动拉 Docker，适合已有本地 MySQL 或已手动启动数据库的场景
-
-- `task dev:docker`
-  作用：先启动 Docker MySQL，并等待数据库 ready，再跑本地前后端联调
-
-- `task compose:up`
-  作用：启动完整 Docker Compose 环境
-
-- `task compose:down`
-  作用：关闭完整 Docker Compose 环境
-
-- `task build`
-  作用：检查 Go 构建和前端构建是否通过
-
-- `task metal:sync`
-  作用：手动执行一次贵金属市场同步
-
-- `task metal:sync:docker`
-  作用：先启动 Docker MySQL，再手动执行一次贵金属市场同步
-
-- `task tech:sync`
-  作用：手动执行一次 AI / 科技市场同步
-
-- `task tech:sync:docker`
-  作用：先启动 Docker MySQL，再手动执行一次 AI / 科技市场同步
-
-推荐本地开发顺序：
-
-```bash
-task init
-task dev
-```
-
-如果你没有本地 MySQL，希望直接用容器数据库：
-
-```bash
-task init
-task dev:docker
-```
-
-## 下一步方向
-
-- 继续完善单帖详情交互
-- 完善发帖页上传体验和附件管理
-- 继续减少新前端对整份 legacy CSS 的直接依赖
-- 逐步把更多页面行为从“复用旧结构”过渡到“真正的新前端结构”
-
-
-## AI 日报定时同步
-
-项目启动后，后端会按配置自动抓取 `https://hex2077.dev/docs/` 上最近的 AI 日报，并把内容写入数据库表 `ai_daily_snapshots`。
-
-默认行为：
-
-- 服务启动后立即执行一次同步
-- 后续每 `30` 分钟执行一次
-- 默认拉取最近 `7` 篇日报
-
-手动执行一次同步：
-
-```bash
-task ai:daily:sync
-```
-
-如果 MySQL 跑在 Docker：
-
-```bash
-task ai:daily:sync:docker
-```
-
-配置项：
-
-- `sync.ai_daily.enabled`: 是否启用定时同步
-- `sync.ai_daily.interval_minutes`: 同步间隔分钟数
-- `sync.ai_daily.request_timeout_sec`: 单次请求超时秒数
-- `sync.ai_daily.initial_run_on_startup`: 启动时是否先跑一次
-- `sync.ai_daily.source_base_url`: 数据源根地址
-- `sync.ai_daily.index_path`: 日报索引页路径
-- `sync.ai_daily.max_entries`: 每轮最多拉取的日报篇数
-- `sync.ai_daily.user_agent`: 抓取请求使用的 UA
+- 后端 API、请求参数、返回字段、同步策略发生变化时，必须同步更新 [API.md](/Users/zhangxinghui/Desktop/web/3Xbackend/API.md)
+- 项目运行、初始化、同步、种子脚本发生变化时，应同步更新 `README.md`
+- 假数据策略或种子规模变化时，应同步更新 [SEED.md](/Users/zhangxinghui/Desktop/web/3Xbackend/SEED.md)
