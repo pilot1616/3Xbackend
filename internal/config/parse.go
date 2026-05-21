@@ -40,6 +40,7 @@ type Database struct {
 type Sync struct {
 	PreciousMetals PreciousMetalsSync `mapstructure:"precious_metals"`
 	AITech         AITechSync         `mapstructure:"ai_tech"`
+	AIDaily        AIDailySync        `mapstructure:"ai_daily"`
 }
 
 type PreciousMetalsSync struct {
@@ -58,6 +59,17 @@ type AITechSync struct {
 	UserAgent           string `mapstructure:"user_agent"`
 	SourceBaseURL       string `mapstructure:"source_base_url"`
 	InitialRunOnStartup bool   `mapstructure:"initial_run_on_startup"`
+}
+
+type AIDailySync struct {
+	Enabled             bool   `mapstructure:"enabled"`
+	IntervalMinutes     int    `mapstructure:"interval_minutes"`
+	RequestTimeoutSec   int    `mapstructure:"request_timeout_sec"`
+	UserAgent           string `mapstructure:"user_agent"`
+	SourceBaseURL       string `mapstructure:"source_base_url"`
+	IndexPath           string `mapstructure:"index_path"`
+	InitialRunOnStartup bool   `mapstructure:"initial_run_on_startup"`
+	MaxEntries          int    `mapstructure:"max_entries"`
 }
 
 type Mysql struct {
@@ -111,6 +123,14 @@ func bindEnv(v *viper.Viper) {
 		"sync.ai_tech.user_agent",
 		"sync.ai_tech.source_base_url",
 		"sync.ai_tech.initial_run_on_startup",
+		"sync.ai_daily.enabled",
+		"sync.ai_daily.interval_minutes",
+		"sync.ai_daily.request_timeout_sec",
+		"sync.ai_daily.user_agent",
+		"sync.ai_daily.source_base_url",
+		"sync.ai_daily.index_path",
+		"sync.ai_daily.initial_run_on_startup",
+		"sync.ai_daily.max_entries",
 	}
 
 	for _, key := range keys {
@@ -236,4 +256,51 @@ func (s AITechSync) EffectiveSourceBaseURL() string {
 		return "https://www.investing.com"
 	}
 	return strings.TrimRight(value, "/")
+}
+
+func (s AIDailySync) IsEnabled() bool {
+	return s.Enabled
+}
+
+func (s AIDailySync) Interval() time.Duration {
+	minutes := s.IntervalMinutes
+	if minutes <= 0 {
+		minutes = 30
+	}
+	return time.Duration(minutes) * time.Minute
+}
+
+func (s AIDailySync) RequestTimeout() time.Duration {
+	seconds := s.RequestTimeoutSec
+	if seconds <= 0 {
+		seconds = 20
+	}
+	return time.Duration(seconds) * time.Second
+}
+
+func (s AIDailySync) EffectiveUserAgent() string {
+	value := strings.TrimSpace(s.UserAgent)
+	if value == "" {
+		return "Mozilla/5.0 (compatible; 3Xbackend-ai-daily-sync/1.0; +https://github.com/pilot1616/3Xbackend)"
+	}
+	return value
+}
+
+func (s AIDailySync) EffectiveSourceBaseURL() string {
+	value := strings.TrimSpace(s.SourceBaseURL)
+	if value == "" {
+		return "https://hex2077.dev"
+	}
+	return strings.TrimRight(value, "/")
+}
+
+func (s AIDailySync) EffectiveIndexPath() string {
+	value := strings.TrimSpace(s.IndexPath)
+	if value == "" {
+		return "/docs/"
+	}
+	if !strings.HasPrefix(value, "/") {
+		value = "/" + value
+	}
+	return value
 }

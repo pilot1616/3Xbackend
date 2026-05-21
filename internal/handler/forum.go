@@ -14,9 +14,10 @@ import (
 )
 
 type ForumHandler struct {
-	forumService     *service.ForumService
-	metalSyncService *service.PreciousMetalSyncService
-	techSyncService  *service.TechMarketSyncService
+	forumService       *service.ForumService
+	metalSyncService   *service.PreciousMetalSyncService
+	techSyncService    *service.TechMarketSyncService
+	aiDailySyncService *service.AIDailySyncService
 }
 
 type QuestionUploadRequest struct {
@@ -63,8 +64,8 @@ type UpdateCommentRequest struct {
 	Text string `json:"text" binding:"required"`
 }
 
-func NewForumHandler(forumService *service.ForumService, metalSyncService *service.PreciousMetalSyncService, techSyncService *service.TechMarketSyncService) *ForumHandler {
-	return &ForumHandler{forumService: forumService, metalSyncService: metalSyncService, techSyncService: techSyncService}
+func NewForumHandler(forumService *service.ForumService, metalSyncService *service.PreciousMetalSyncService, techSyncService *service.TechMarketSyncService, aiDailySyncService *service.AIDailySyncService) *ForumHandler {
+	return &ForumHandler{forumService: forumService, metalSyncService: metalSyncService, techSyncService: techSyncService, aiDailySyncService: aiDailySyncService}
 }
 
 func (h *ForumHandler) QuestionRequest(c *gin.Context) {
@@ -263,6 +264,48 @@ func (h *ForumHandler) SyncTechMarket(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":       buildSyncMessage("ai tech market sync completed", rounds, interval),
+		"targetCount":   result.TargetCount,
+		"successCount":  result.SuccessCount,
+		"failedSymbols": result.FailedSymbols,
+		"failedDetails": result.FailedDetails,
+		"fetchedAt":     result.FetchedAt,
+		"partial":       result.Partial,
+	})
+}
+
+func (h *ForumHandler) ListAIDailies(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	keyword := c.Query("keyword")
+
+	result, err := h.forumService.ListAIDailies(limit, offset, keyword)
+	if err != nil {
+		h.handleForumError(c, err, "query ai daily failed")
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (h *ForumHandler) SyncAIDailies(c *gin.Context) {
+	if h.aiDailySyncService == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"message": "ai daily sync service unavailable"})
+		return
+	}
+
+	if _, _, ok := h.getCurrentUser(c); !ok {
+		return
+	}
+
+	rounds, interval := parseSyncBatchOptions(c)
+	result, err := runSyncRoundsWithResult(context.Background(), rounds, interval, h.aiDailySyncService.SyncWithResult)
+	if err != nil {
+		h.handleForumError(c, err, "sync ai daily failed")
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":       buildSyncMessage("ai daily sync completed", rounds, interval),
 		"targetCount":   result.TargetCount,
 		"successCount":  result.SuccessCount,
 		"failedSymbols": result.FailedSymbols,

@@ -109,7 +109,6 @@ export function AppShell() {
     navigate('/');
   }
 
-  const searchModeLabel = searchMode === 'content' ? '内容检索' : searchMode === 'author' ? '作者检索' : '手机号检索';
   const hasSearchValue = searchKeyword.trim().length > 0;
 
   return (
@@ -164,13 +163,16 @@ export function AppShell() {
         {showHeaderSearch ? (
           <div className="simple-header-search-wrap">
             <form className="simple-header-search" onSubmit={handleHeaderSearchSubmit}>
+              <label className="simple-header-search-label" htmlFor="global-home-search">
+                全站搜索
+              </label>
               <select aria-label="搜索类型" className="simple-header-search-mode" onChange={(event) => setSearchMode(event.target.value as GlobalSearchMode)} value={searchMode}>
                 <option value="content">按内容</option>
                 <option value="author">按作者</option>
                 <option value="phone">按手机号</option>
               </select>
               <span className="simple-header-search-divider" aria-hidden="true"></span>
-              <input aria-label="搜索内容" onChange={(event) => setSearchKeyword(event.target.value)} placeholder={searchPlaceholderMap[searchMode]} ref={searchInputRef} type="search" value={searchKeyword} />
+              <input aria-label="搜索内容" id="global-home-search" onChange={(event) => setSearchKeyword(event.target.value)} placeholder={searchPlaceholderMap[searchMode]} ref={searchInputRef} type="search" value={searchKeyword} />
               <span aria-hidden="true" className="simple-header-search-hotkey">/</span>
               {hasSearchValue ? (
                 <button className="simple-header-search-reset" onClick={handleHeaderSearchReset} type="button">
@@ -178,13 +180,9 @@ export function AppShell() {
                 </button>
               ) : null}
               <button className="simple-header-search-button" type="submit">
-                <LegacyIcon name="search" size={18} />
+                搜索
               </button>
             </form>
-            <div className="simple-header-search-status">
-              <span className="legacy-summary-chip">{searchModeLabel}</span>
-              <span className="legacy-summary-chip">{hasSearchValue ? `检索值：${searchKeyword.trim()}` : '未输入检索值'}</span>
-            </div>
           </div>
         ) : null}
       </header>

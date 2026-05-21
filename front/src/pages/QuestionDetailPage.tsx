@@ -493,14 +493,10 @@ export function QuestionDetailPage() {
       <div className="legacy-toolbar-card question-detail-toolbar-card question-detail-stage-banner">
         <div className="question-detail-stage-copy">
           <span className="legacy-home-stage-kicker">3X Detail Deck</span>
-          <h2>帖子详情控制台</h2>
-          <p>这里承接正文、附件、点赞、评论与作者更多帖子。所有深度操作都被集中到这块单帖工作台里。</p>
+          <h2>帖子详情</h2>
+          <p>正文、附件和评论都集中在这一页处理。</p>
         </div>
-        <div className="question-detail-stage-metrics">
-          <article className="legacy-home-stage-card">
-            <strong>{question ? `#${question.qid}` : '--'}</strong>
-            <span>当前帖子编号</span>
-          </article>
+        <div className="question-detail-stage-metrics question-detail-stage-metrics-compact">
           <article className="legacy-home-stage-card">
             <strong>{question ? question.likesNum : '--'}</strong>
             <span>累计点赞</span>
@@ -515,10 +511,7 @@ export function QuestionDetailPage() {
             返回广场
           </Link>
           <button className="legacy-action-button secondary" onClick={() => scrollToSection('comments')} type="button">
-            跳到评论区
-          </button>
-          <button className="legacy-action-button secondary" onClick={() => scrollToSection('related')} type="button">
-            作者更多帖子
+            评论区
           </button>
           <button className="legacy-action-button secondary" onClick={() => void handleCopyLink()} type="button">
             复制链接
@@ -631,7 +624,7 @@ export function QuestionDetailPage() {
             <section className="legacy-panel question-detail-related-panel" id="question-detail-related">
               <div className="question-detail-sidebar-head">
                 <h2>作者更多帖子</h2>
-                {!relatedLoading && relatedQuestionsPage.total > 0 ? <span className="legacy-summary-chip">共 {relatedQuestionsPage.total} 条</span> : null}
+                {!relatedLoading && relatedQuestionsPage.total > 0 ? <span className="legacy-summary-chip">{relatedQuestionsPage.total} 条</span> : null}
               </div>
               <form className="legacy-home-filter-row legacy-sidebar-filter-row" onSubmit={handleRelatedFilterSubmit}>
                 <input onChange={(event) => setRelatedKeywordInput(event.target.value)} placeholder="按正文关键字筛选" value={relatedKeywordInput} />
@@ -651,12 +644,12 @@ export function QuestionDetailPage() {
                 </div>
               </form>
               {relatedQuestionsPage.total > 0 ? (
-                <div className="legacy-home-load-status">
+                <div className="legacy-home-load-status question-detail-related-status">
                   <span>
-                    共 {relatedQuestionsPage.total} 条，当前第 {relatedPage} / {relatedTotalPages} 页，本页 {relatedQuestionsPage.records.length} 条
+                    第 {relatedPage} / {relatedTotalPages} 页
                   </span>
                   <button className="legacy-action-button secondary small" disabled={relatedLoading} onClick={() => question?.user && void loadRelatedQuestions(question.user, question.qid, relatedPage, relatedFilters)} type="button">
-                    {relatedLoading ? '刷新中...' : '刷新列表'}
+                    {relatedLoading ? '刷新中...' : '刷新'}
                   </button>
                 </div>
               ) : null}

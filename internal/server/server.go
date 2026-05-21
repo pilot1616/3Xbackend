@@ -36,7 +36,8 @@ func (s *Server) Init(db *gorm.DB, cfg *config.Config) error {
 	}
 	metalSyncService := service.NewPreciousMetalSyncService(db, cfg.Sync.PreciousMetals)
 	techSyncService := service.NewTechMarketSyncService(db, cfg.Sync.AITech)
-	s.forumHandler = handler.NewForumHandler(forumService, metalSyncService, techSyncService)
+	aiDailySyncService := service.NewAIDailySyncService(db, cfg.Sync.AIDaily)
+	s.forumHandler = handler.NewForumHandler(forumService, metalSyncService, techSyncService, aiDailySyncService)
 	s.router.Static("/public", cfg.Storage.PublicRoot())
 
 	s.registerRoutes()
@@ -74,6 +75,8 @@ func (s *Server) registerRoutes() {
 	api.POST("/market/precious-metals/sync", s.authGuard, s.forumHandler.SyncPreciousMetalMarket)
 	api.GET("/market/ai-tech", s.forumHandler.ListTechMarket)
 	api.POST("/market/ai-tech/sync", s.authGuard, s.forumHandler.SyncTechMarket)
+	api.GET("/ai-dailies", s.forumHandler.ListAIDailies)
+	api.POST("/ai-dailies/sync", s.authGuard, s.forumHandler.SyncAIDailies)
 
 	userGroup := api.Group("/users")
 	userGroup.Use(s.authGuard)

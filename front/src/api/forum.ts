@@ -1,5 +1,7 @@
 import { request, uploadRequest } from './client';
 import type {
+  AIDailyResponse,
+  AIDailySyncResult,
   CommentListPage,
   DeleteQuestionResult,
   FileDeleteResult,
@@ -164,6 +166,16 @@ export function getTechMarket(historyLimit = 24) {
 
 export function syncTechMarket(rounds = 1, intervalMs = 800) {
   return request<TechMarketSyncResult>(`/api/v1/market/ai-tech/sync${toQueryString({ rounds, interval_ms: intervalMs })}`, {
+    method: 'POST',
+  });
+}
+
+export function getAIDailies(limit = 20, keyword = '', offset = 0) {
+  return request<AIDailyResponse>(`/api/v1/ai-dailies${toQueryString({ limit, keyword, offset })}`);
+}
+
+export function syncAIDailies(rounds = 1, intervalMs = 800) {
+  return request<AIDailySyncResult>(`/api/v1/ai-dailies/sync${toQueryString({ rounds, interval_ms: intervalMs })}`, {
     method: 'POST',
   });
 }

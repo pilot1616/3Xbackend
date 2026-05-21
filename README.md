@@ -509,3 +509,37 @@ task dev:docker
 - 完善发帖页上传体验和附件管理
 - 继续减少新前端对整份 legacy CSS 的直接依赖
 - 逐步把更多页面行为从“复用旧结构”过渡到“真正的新前端结构”
+
+
+## AI 日报定时同步
+
+项目启动后，后端会按配置自动抓取 `https://hex2077.dev/docs/` 上最近的 AI 日报，并把内容写入数据库表 `ai_daily_snapshots`。
+
+默认行为：
+
+- 服务启动后立即执行一次同步
+- 后续每 `30` 分钟执行一次
+- 默认拉取最近 `7` 篇日报
+
+手动执行一次同步：
+
+```bash
+task ai:daily:sync
+```
+
+如果 MySQL 跑在 Docker：
+
+```bash
+task ai:daily:sync:docker
+```
+
+配置项：
+
+- `sync.ai_daily.enabled`: 是否启用定时同步
+- `sync.ai_daily.interval_minutes`: 同步间隔分钟数
+- `sync.ai_daily.request_timeout_sec`: 单次请求超时秒数
+- `sync.ai_daily.initial_run_on_startup`: 启动时是否先跑一次
+- `sync.ai_daily.source_base_url`: 数据源根地址
+- `sync.ai_daily.index_path`: 日报索引页路径
+- `sync.ai_daily.max_entries`: 每轮最多拉取的日报篇数
+- `sync.ai_daily.user_agent`: 抓取请求使用的 UA

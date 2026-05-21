@@ -38,14 +38,14 @@ func (db *MysqlDb) GetConnect() error {
 }
 
 func (db *MysqlDb) GetConnectString() string {
-	return fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?charset=utf8mb4&parseTime=True&loc=Local", db.User, db.Password, db.Address, db.Port, db.Schema)
+	return fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?charset=utf8mb4,utf8&parseTime=True&loc=Local", db.User, db.Password, db.Address, db.Port, db.Schema)
 }
 
 func (db *MysqlDb) CreateTable() error {
 	if db.Connect == nil {
 		return fmt.Errorf("db connection is nil")
 	}
-	if err := db.Connect.AutoMigrate(&User{}, &Question{}, &QuestionFile{}, &Comment{}, &QuestionLike{}, &PreciousMetalSnapshot{}, &TechMarketSnapshot{}); err != nil {
+	if err := db.Connect.AutoMigrate(&User{}, &Question{}, &QuestionFile{}, &Comment{}, &QuestionLike{}, &PreciousMetalSnapshot{}, &TechMarketSnapshot{}, &AIDailySnapshot{}); err != nil {
 		return fmt.Errorf("auto migrate failed: %v", err)
 	}
 	return nil

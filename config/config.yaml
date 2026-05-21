@@ -41,3 +41,13 @@ sync:
     initial_run_on_startup: true
     source_base_url: https://www.investing.com
     user_agent: Mozilla/5.0 (compatible; 3Xbackend-ai-tech-sync/1.0; +https://github.com/pilot1616/3Xbackend)
+
+  ai_daily:
+    enabled: true
+    interval_minutes: 30
+    request_timeout_sec: 20
+    initial_run_on_startup: true
+    source_base_url: https://hex2077.dev
+    index_path: /docs/
+    max_entries: 7
+    user_agent: Mozilla/5.0 (compatible; 3Xbackend-ai-daily-sync/1.0; +https://github.com/pilot1616/3Xbackend)

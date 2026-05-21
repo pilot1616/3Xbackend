@@ -241,6 +241,48 @@ export interface TechMarketSyncResult {
   partial: boolean;
 }
 
+export interface AIDailySection {
+  heading: string;
+  items: string[];
+}
+
+export interface AIDailyLink {
+  title: string;
+  url: string;
+}
+
+export interface AIDailyRecord {
+  title: string;
+  slug: string;
+  sourceUrl: string;
+  publishedDate: string;
+  summary: string;
+  readTime: string;
+  content: string;
+  sections: AIDailySection[];
+  links: AIDailyLink[];
+  fetchedAt: string;
+}
+
+export interface AIDailyResponse {
+  updatedAt: string;
+  offset: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+  records: AIDailyRecord[];
+}
+
+export interface AIDailySyncResult {
+  message: string;
+  targetCount: number;
+  successCount: number;
+  failedSymbols: string[];
+  failedDetails: string[];
+  fetchedAt: string;
+  partial: boolean;
+}
+
 export interface SessionData {
   token: string;
   user: User;

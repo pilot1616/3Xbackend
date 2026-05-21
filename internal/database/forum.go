@@ -110,3 +110,24 @@ type TechMarketSnapshot struct {
 	FetchedAt      time.Time `gorm:"index;not null"`
 	CreatedAt      time.Time `gorm:"autoCreateTime"`
 }
+
+type AIDailySnapshot struct {
+	ID            uint      `gorm:"primaryKey"`
+	Source        string    `gorm:"size:64;uniqueIndex:idx_ai_daily_source_slug,priority:1;not null"`
+	Title         string    `gorm:"size:255;not null"`
+	Slug          string    `gorm:"size:255;uniqueIndex:idx_ai_daily_source_slug,priority:2;index;not null"`
+	SourceURL     string    `gorm:"size:255;not null"`
+	PublishedDate string    `gorm:"size:32;index"`
+	Summary       string    `gorm:"type:text"`
+	ReadTime      string    `gorm:"size:64"`
+	Content       string    `gorm:"type:longtext"`
+	SectionsJSON  string    `gorm:"type:longtext"`
+	LinksJSON     string    `gorm:"type:longtext"`
+	MetaJSON      string    `gorm:"type:longtext"`
+	FetchedAt     time.Time `gorm:"index;not null"`
+	CreatedAt     time.Time `gorm:"autoCreateTime"`
+}
+
+func (AIDailySnapshot) TableName() string {
+	return "ai_daily_snapshots"
+}

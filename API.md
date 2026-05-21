@@ -225,6 +225,83 @@ Authorization: Bearer <token>
 - 如果部分标的抓取失败，接口仍会返回 `200`，并通过 `partial / failedSymbols / failedDetails` 告知失败明细
 - 未登录访问会返回 `401`
 
+### `GET /api/v1/ai-dailies`
+
+公开接口，用于读取后端已同步入库的 `hex2077.dev` AI 日报内容。
+
+查询参数：
+
+- `limit`: 返回条数，默认 `20`，最大建议 `200`
+- `offset`: 偏移量，默认 `0`，用于分页加载更多历史日报
+- `keyword`: 可选关键词，按标题、摘要、正文、发布日期、`slug` 做模糊匹配
+- 返回结果会按 `slug` 去重，仅保留每篇日报最新一次同步结果
+
+成功响应 `200`:
+
+```json
+{
+  "updatedAt": "2026-05-20T10:30:00+08:00",
+  "offset": 0,
+  "limit": 20,
+  "total": 87,
+  "hasMore": true,
+  "records": [
+    {
+      "title": "AI日报 2026/05/20",
+      "slug": "docs/2026-05/2026-05-20/",
+      "sourceUrl": "https://hex2077.dev/docs/2026-05/2026-05-20/",
+      "publishedDate": "2026-05-20",
+      "summary": "今日 AI 资讯摘要...",
+      "readTime": "6 min read",
+      "content": "全文抓取后的正文摘要...",
+      "sections": [
+        {
+          "heading": "今日看点",
+          "items": ["条目 1", "条目 2"]
+        }
+      ],
+      "links": [
+        {
+          "title": "原文链接",
+          "url": "https://..."
+        }
+      ],
+      "fetchedAt": "2026-05-20T10:30:00+08:00"
+    }
+  ]
+}
+```
+
+### `POST /api/v1/ai-dailies/sync`
+
+受保护接口，需要 Bearer Token。用于手动触发一次 AI 日报同步。
+
+请求头:
+
+```http
+Authorization: Bearer <token>
+```
+
+成功响应 `200`:
+
+```json
+{
+  "message": "ai daily sync completed",
+  "targetCount": 7,
+  "successCount": 7,
+  "failedSymbols": [],
+  "failedDetails": [],
+  "fetchedAt": "2026-05-20T10:30:00+08:00",
+  "partial": false
+}
+```
+
+说明：
+
+- 该接口会从 `https://hex2077.dev/docs/` 拉取最近一批 AI 日报页面并写入数据库
+- 支持可选查询参数 `rounds` 和 `interval_ms`
+- 未登录访问会返回 `401`
+
 ## 认证接口
 
 ### `POST /api/v1/auth/register`

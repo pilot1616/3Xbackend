@@ -3,6 +3,7 @@ package service
 import (
 	"3Xbackend/internal/config"
 	"3Xbackend/internal/database"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -226,6 +227,38 @@ type TechMarketRecord struct {
 type TechMarketResponse struct {
 	UpdatedAt time.Time          `json:"updatedAt"`
 	Records   []TechMarketRecord `json:"records"`
+}
+
+type AIDailySectionPayload struct {
+	Heading string   `json:"heading"`
+	Items   []string `json:"items"`
+}
+
+type AIDailyLinkPayload struct {
+	Title string `json:"title"`
+	URL   string `json:"url"`
+}
+
+type AIDailyRecord struct {
+	Title         string                  `json:"title"`
+	Slug          string                  `json:"slug"`
+	SourceURL     string                  `json:"sourceUrl"`
+	PublishedDate string                  `json:"publishedDate"`
+	Summary       string                  `json:"summary"`
+	ReadTime      string                  `json:"readTime"`
+	Content       string                  `json:"content"`
+	Sections      []AIDailySectionPayload `json:"sections"`
+	Links         []AIDailyLinkPayload    `json:"links"`
+	FetchedAt     time.Time               `json:"fetchedAt"`
+}
+
+type AIDailyResponse struct {
+	UpdatedAt time.Time       `json:"updatedAt"`
+	Offset    int             `json:"offset"`
+	Limit     int             `json:"limit"`
+	Total     int             `json:"total"`
+	HasMore   bool            `json:"hasMore"`
+	Records   []AIDailyRecord `json:"records"`
 }
 
 type LegacyQuestionRecord struct {
@@ -769,6 +802,105 @@ func (s *ForumService) ListTechMarket(limit int) (*TechMarketResponse, error) {
 	}
 
 	return response, nil
+}
+
+func (s *ForumService) ListAIDailies(limit, offset int, keyword string) (*AIDailyResponse, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	keyword = strings.TrimSpace(keyword)
+
+	var snapshots []database.AIDailySnapshot
+	queryLimit := maxInt(60, (offset+limit)*6)
+	if keyword != "" {
+		queryLimit = maxInt(queryLimit, (offset+limit)*12)
+	}
+
+	query := s.db.Order("published_date desc, fetched_at desc, id desc")
+	if keyword != "" {
+		like := "%" + keyword + "%"
+		query = query.Where(
+			"title LIKE ? OR summary LIKE ? OR content LIKE ? OR published_date LIKE ? OR slug LIKE ?",
+			like,
+			like,
+			like,
+			like,
+			like,
+		)
+	}
+	if err := query.Limit(queryLimit).Find(&snapshots).Error; err != nil {
+		return nil, fmt.Errorf("query ai daily snapshots failed: %w", err)
+	}
+
+	allRecords := make([]AIDailyRecord, 0, len(snapshots))
+	seen := make(map[string]struct{}, len(snapshots))
+	updatedAt := time.Time{}
+	for _, snapshot := range snapshots {
+		if _, exists := seen[snapshot.Slug]; exists {
+			continue
+		}
+		seen[snapshot.Slug] = struct{}{}
+		if snapshot.FetchedAt.After(updatedAt) {
+			updatedAt = snapshot.FetchedAt
+		}
+		sections := make([]AIDailySectionPayload, 0)
+		if strings.TrimSpace(snapshot.SectionsJSON) != "" {
+			_ = json.Unmarshal([]byte(snapshot.SectionsJSON), &sections)
+		}
+		links := make([]AIDailyLinkPayload, 0)
+		if strings.TrimSpace(snapshot.LinksJSON) != "" {
+			_ = json.Unmarshal([]byte(snapshot.LinksJSON), &links)
+		}
+		allRecords = append(allRecords, AIDailyRecord{
+			Title:         snapshot.Title,
+			Slug:          snapshot.Slug,
+			SourceURL:     snapshot.SourceURL,
+			PublishedDate: snapshot.PublishedDate,
+			Summary:       snapshot.Summary,
+			ReadTime:      snapshot.ReadTime,
+			Content:       snapshot.Content,
+			Sections:      sections,
+			Links:         links,
+			FetchedAt:     snapshot.FetchedAt,
+		})
+	}
+
+	total := len(allRecords)
+	if offset > total {
+		offset = total
+	}
+	end := minInt(total, offset+limit)
+	pageRecords := allRecords[offset:end]
+
+	return &AIDailyResponse{
+		UpdatedAt: updatedAt,
+		Offset:    offset,
+		Limit:     limit,
+		Total:     total,
+		HasMore:   end < total,
+		Records:   pageRecords,
+	}, nil
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func (s *ForumService) DecorateQuestionRecordForUser(record *LegacyQuestionRecord, userID uint, username string) error {
