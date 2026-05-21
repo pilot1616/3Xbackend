@@ -152,6 +152,9 @@ export function AppShell() {
           <NavLink className={navClassName} to="/market">
             市场动态
           </NavLink>
+          <NavLink className={navClassName} to="/ai-daily">
+            AI 日报
+          </NavLink>
           <NavLink className={navClassName} to="/album">
             相册
           </NavLink>

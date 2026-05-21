@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
 import { AppShell } from './components/AppShell';
+import { AIDailyPage } from './pages/AIDailyPage';
 import { AlbumPage } from './pages/AlbumPage';
 import { AuthPage } from './pages/AuthPage';
 import { HomePage } from './pages/HomePage';
@@ -17,6 +18,7 @@ export default function App() {
         <Route element={<AppShell />} path="/">
           <Route element={<HomePage />} index />
           <Route element={<MarketPage />} path="market" />
+          <Route element={<AIDailyPage />} path="ai-daily" />
           <Route element={<PublishPage />} path="publish" />
           <Route element={<AlbumPage />} path="album" />
           <Route element={<ProfilePage />} path="profile" />
