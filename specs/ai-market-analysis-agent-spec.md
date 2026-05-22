@@ -112,6 +112,13 @@
 - 不做预计算表
 - 可在代码结构上预留轻缓存位置，但首版不强制实现
 
+首期时间与窗口口径补充约定：
+
+- `AI 日报` 分析窗口优先按 `PublishedDate` 计算
+- 当 `PublishedDate` 缺失或不可解析时，才回退使用 `FetchedAt`
+- `AI / 科技市场` 与 `贵金属市场` 继续按 `FetchedAt` 计算窗口
+- `1d / 7d / 30d` 统一按服务端本地时区自然时间向前回溯，不使用 UTC 自然日切分
+
 ## 6. 非首期范围
 
 以下内容明确放到后续阶段，不在本次 spec 落地范围：
@@ -156,6 +163,12 @@
 - `PreciousMetalSnapshot`
 
 这意味着首期分析可以直接查询现有表，不需要改 schema，不需要 `AutoMigrate` 新表。
+
+额外约束：
+
+- `ai_daily_snapshots` 当前按 `source + slug` 唯一保存，重复抓取会覆盖更新，不会保留同一篇日报的多版历史快照
+- 因此 AI 日报分析应按“文章唯一记录”建模，而不是按“同文多次快照序列”建模
+- `tech_market_snapshots` 与 `precious_metal_snapshots` 会持续追加，适合做窗口内价格序列分析
 
 ### 7.3 同步服务层
 
@@ -335,6 +348,24 @@
 - 数据是否部分缺失
 - 是否存在历史不足
 
+首期建议统一 `dataStatus` 基础字段，避免三个接口各自发明结构：
+
+- `sufficient`: `boolean`
+- `partial`: `boolean`
+- `windowStart`: `string`，RFC3339 或日期字符串
+- `windowEnd`: `string`，RFC3339 或日期字符串
+- `sampleCount`: `number`，适用于单源统计
+- `coveredSymbols`: `string[]`，适用于市场类统计
+- `expectedSymbols`: `string[]`，适用于市场类统计
+- `coveredSymbolCount`: `number`，适用于市场类统计，表示窗口内成功形成有效变化率计算的 symbol 数
+- `note`: `string`
+
+在此基础上：
+
+- AI 趋势接口可增加 `sampleCount`
+- 市场趋势接口可增加 `techCoveredSymbolCount`、`metalCoveredSymbolCount`
+- 综合接口可增加 `aiSampleCount`、`techCoveredSymbolCount`、`metalCoveredSymbolCount`
+
 验收标准：
 
 - 三个接口输出结构层级清晰
@@ -350,11 +381,14 @@
 需要做的事：
 
 1. 查询 `AIDailySnapshot`
-2. 按窗口过滤 `FetchedAt`
-3. 结果按时间倒序或正序统一
+2. 按窗口过滤时间
+   - 优先使用 `PublishedDate`
+   - `PublishedDate` 缺失或不可解析时回退到 `FetchedAt`
+3. 结果按统一时间字段排序
 4. 只取窗口内数据，不混入窗口外数据
-5. 对同源同 slug 的重复记录做最小处理
-   - 如果窗口内存在重复快照，优先保留最新记录
+5. 不需要实现“同一篇日报多次快照去重”
+   - 当前表结构对 `source + slug` 做唯一约束，重复抓取会覆盖更新
+   - 分析输入应视为“每篇日报一条当前有效记录”
 6. 读取字段至少包括：
    - `Title`
    - `Summary`
@@ -370,6 +404,7 @@
 - 首期不需要复杂 repository 层
 - 直接在 `AnalysisService` 内部查询即可
 - 读取后尽量转换为内部分析输入结构，避免后续逻辑直接依赖 GORM model
+- 需要明确日期解析失败时的行为：解析失败的 `PublishedDate` 不应导致整批失败，应回退使用 `FetchedAt` 并在 `dataStatus.note` 中记录存在回退样本
 
 错误处理：
 
@@ -540,6 +575,14 @@
    - 最新价格
    - 最近更新时间
 6. 允许某些标的样本点较少，但必须有最小历史长度
+7. 需要把字符串价格解析为数值后再做计算
+
+价格解析规则必须固定：
+
+- 去掉千分位分隔符，如 `,`
+- 去掉百分号 `%` 后再解析百分比字段
+- 空字符串、`-`、`--`、`N/A` 视为无效值
+- 无法解析的标的不参与涨跌幅计算，并在 `dataStatus.note` 中体现
 
 重点：
 
@@ -554,6 +597,11 @@
   - `XAG`
   - `XPT`
   - `XPD`
+
+补充约束：
+
+- 首期分析标的白名单以现有同步服务中已经稳定抓取的 symbol 为准
+- 如果后续同步服务扩充 symbol，分析模块可在后续版本扩展，不要求首期自动全量接入
 
 错误处理：
 
@@ -624,7 +672,10 @@
    - `AnalyzeAITrend`
    - `AnalyzeMarketTrend`
 2. 不要重新查询和重复计算同一批规则
-3. 根据两边结果做联动判断：
+3. 首期 `overview` 采用严格成功策略：
+   - 任一子分析返回数据不足时，`overview` 直接返回 `422`
+   - 首期不做部分成功的 overview 响应
+4. 根据两边结果做联动判断：
    - AI 热点是否与科技风险偏好一致
    - AI 热点是否偏基础设施而市场偏弱
    - 是否存在题材热但价格未跟进
@@ -699,6 +750,22 @@
 - `insufficient ai daily data for analysis`
 - `insufficient market history for analysis`
 - `analysis computation failed`
+
+错误响应体建议统一为：
+
+```json
+{
+  "message": "invalid analysis window",
+  "code": "INVALID_ANALYSIS_WINDOW"
+}
+```
+
+其中 `code` 首期建议固定枚举：
+
+- `INVALID_ANALYSIS_WINDOW`
+- `INSUFFICIENT_AI_DAILY_DATA`
+- `INSUFFICIENT_MARKET_HISTORY`
+- `ANALYSIS_COMPUTATION_FAILED`
 
 验收标准：
 
@@ -819,6 +886,9 @@ AI 分析：
   "dataStatus": {
     "sampleCount": 7,
     "sufficient": true,
+    "partial": false,
+    "windowStart": "2026-05-15",
+    "windowEnd": "2026-05-21",
     "note": ""
   },
   "summary": "最近 7 天 AI 主题主要集中在基础设施与模型能力，基础设施相关信息出现频率更高，显示市场关注点仍偏底层算力与推理能力建设。",
@@ -886,9 +956,14 @@ AI 分析：
   "window": "7d",
   "generatedAt": "2026-05-21T10:30:00+08:00",
   "dataStatus": {
-    "techSamples": 5,
-    "metalSamples": 4,
+    "techCoveredSymbolCount": 5,
+    "metalCoveredSymbolCount": 4,
     "sufficient": true,
+    "partial": false,
+    "windowStart": "2026-05-15T10:30:00+08:00",
+    "windowEnd": "2026-05-21T10:30:00+08:00",
+    "coveredSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
+    "expectedSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
     "note": ""
   },
   "summary": "科技风险资产整体偏强，贵金属分化偏弱，市场处于 risk-on 状态。",
@@ -959,9 +1034,14 @@ AI 分析：
   "generatedAt": "2026-05-21T10:30:00+08:00",
   "dataStatus": {
     "aiSampleCount": 7,
-    "techSamples": 5,
-    "metalSamples": 4,
+    "techCoveredSymbolCount": 5,
+    "metalCoveredSymbolCount": 4,
     "sufficient": true,
+    "partial": false,
+    "windowStart": "2026-05-15T10:30:00+08:00",
+    "windowEnd": "2026-05-21T10:30:00+08:00",
+    "coveredSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
+    "expectedSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
     "note": ""
   },
   "summary": "AI 信息面偏向基础设施与模型能力，科技市场同步偏强，说明当前叙事与风险偏好存在一致性。",
@@ -986,6 +1066,14 @@ AI 分析：
     "marketRegime": "risk-on",
     "confidence": "medium"
   },
+  "evidence": [
+    {
+      "type": "theme-market-alignment",
+      "theme": "infra",
+      "symbols": ["SMH", "QQQ", "NDX"],
+      "note": "基础设施主题升温，且半导体与科技风险资产同步走强"
+    }
+  ],
   "risks": [
     "综合判断依赖规则联动，不代表长期因果关系",
     "短窗口下市场反馈可能滞后于信息面变化"
@@ -1008,7 +1096,11 @@ AI 分析：
 - `summary`
 - `risks`
 - `confidence`
-- `evidence`
+
+补充说明：
+
+- `evidence` 对 `ai-trend` 与 `market-trend` 为必备字段
+- `overview` 建议提供 `evidence`，用于表达联动判断证据；若首期实现成本过高，也可以在 `overview` 中降级为可选字段，但示例与文档需保持一致
 
 #### `window`
 
@@ -1058,22 +1150,32 @@ AI 分析：
 
 - 告知调用方本次分析的数据充分性和可靠性基础
 
-建议字段：
+建议基础字段：
 
 - `sufficient`
-- `sampleCount`
+- `partial`
+- `windowStart`
+- `windowEnd`
 - `note`
 
-对于市场接口，可扩展为：
+AI 接口扩展字段：
 
-- `techSamples`
-- `metalSamples`
+- `sampleCount`
 
-对于综合接口，可扩展为：
+市场接口扩展字段：
+
+- `techCoveredSymbolCount`
+- `metalCoveredSymbolCount`
+- `expectedSymbols`
+- `coveredSymbols`
+
+综合接口扩展字段：
 
 - `aiSampleCount`
-- `techSamples`
-- `metalSamples`
+- `techCoveredSymbolCount`
+- `metalCoveredSymbolCount`
+- `expectedSymbols`
+- `coveredSymbols`
 
 字段说明：
 
@@ -1083,9 +1185,28 @@ AI 分析：
 - `sampleCount`：
   - `number`
   - AI 日报类接口用于表示窗口内日报数
+- `techCoveredSymbolCount`：
+  - `number`
+  - 市场接口或综合接口中，科技组成功参与计算的 symbol 数
+- `metalCoveredSymbolCount`：
+  - `number`
+  - 市场接口或综合接口中，贵金属组成功参与计算的 symbol 数
+- `coveredSymbols`：
+  - `array[string]`
+  - 实际覆盖到并参与判断的 symbol 列表
+- `expectedSymbols`：
+  - `array[string]`
+  - 首期规则预期关注的 symbol 白名单
 - `note`：
   - `string`
   - 用于表达“样本偏少”“市场数据存在部分缺口”等说明
+
+补充约束：
+
+- `sampleCount` 仅用于 AI 日报篇数，不用于市场接口
+- 市场接口不要再使用语义模糊的 `techSamples` / `metalSamples`
+- 市场侧如果要表达覆盖程度，统一使用 `techCoveredSymbolCount` / `metalCoveredSymbolCount`
+- 如果将来需要表达窗口内原始快照总数，应另行使用 `techSnapshotCount` / `metalSnapshotCount`，不要复用 `sampleCount`
 
 要求：
 
@@ -1318,9 +1439,11 @@ AI 分析：
   "window": "7d",
   "generatedAt": "2026-05-21T10:30:00+08:00",
   "dataStatus": {
-    "techSamples": 5,
-    "metalSamples": 4,
+    "techCoveredSymbolCount": 5,
+    "metalCoveredSymbolCount": 4,
     "sufficient": true,
+    "coveredSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
+    "expectedSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
     "note": ""
   },
   "summary": "科技风险资产整体偏强，贵金属分化偏弱，市场处于 risk-on 状态。",
@@ -1459,9 +1582,11 @@ AI 分析：
   "generatedAt": "2026-05-21T10:30:00+08:00",
   "dataStatus": {
     "aiSampleCount": 7,
-    "techSamples": 5,
-    "metalSamples": 4,
+    "techCoveredSymbolCount": 5,
+    "metalCoveredSymbolCount": 4,
     "sufficient": true,
+    "coveredSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
+    "expectedSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
     "note": ""
   },
   "summary": "AI 信息面偏向基础设施与模型能力，科技市场同步偏强，说明当前叙事与风险偏好存在一致性。",
@@ -2413,9 +2538,11 @@ changePercent = ((endPrice - startPrice) / startPrice) * 100
   "window": "7d",
   "generatedAt": "2026-05-21T10:30:00+08:00",
   "dataStatus": {
-    "techSamples": 5,
-    "metalSamples": 4,
+    "techCoveredSymbolCount": 5,
+    "metalCoveredSymbolCount": 4,
     "sufficient": true,
+    "coveredSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
+    "expectedSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
     "note": ""
   },
   "summary": "科技风险资产整体偏强，贵金属分化偏弱，市场处于 risk-on 状态。",
@@ -2492,9 +2619,11 @@ changePercent = ((endPrice - startPrice) / startPrice) * 100
   "generatedAt": "2026-05-21T10:30:00+08:00",
   "dataStatus": {
     "aiSampleCount": 7,
-    "techSamples": 5,
-    "metalSamples": 4,
+    "techCoveredSymbolCount": 5,
+    "metalCoveredSymbolCount": 4,
     "sufficient": true,
+    "coveredSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
+    "expectedSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
     "note": ""
   },
   "summary": "AI 信息面偏向基础设施与模型能力，科技市场同步偏强，说明当前叙事与风险偏好存在较强一致性。",
@@ -2630,6 +2759,12 @@ changePercent = ((endPrice - startPrice) / startPrice) * 100
 - 使用 `api.GET(...)`
 - 继续走 `optionalAuth`
 - 不加 `authGuard`
+
+补充说明：
+
+- `optionalAuth` 的语义必须是不拦截匿名访问，只在存在登录态时注入可选用户上下文
+- 如果现有项目中的 `optionalAuth` 会影响匿名访问，analysis 路由就不应挂它
+- 这三个接口本身不依赖用户身份，不得因为未登录而返回鉴权失败
 
 原因：
 
