@@ -15,11 +15,12 @@ import (
 )
 
 type Server struct {
-	router       *gin.Engine
-	authHandler  *handler.AuthHandler
-	forumHandler *handler.ForumHandler
-	authGuard    gin.HandlerFunc
-	optionalAuth gin.HandlerFunc
+	router          *gin.Engine
+	authHandler     *handler.AuthHandler
+	forumHandler    *handler.ForumHandler
+	analysisHandler *handler.AnalysisHandler
+	authGuard       gin.HandlerFunc
+	optionalAuth    gin.HandlerFunc
 }
 
 func (s *Server) Init(db *gorm.DB, cfg *config.Config) error {
@@ -38,6 +39,7 @@ func (s *Server) Init(db *gorm.DB, cfg *config.Config) error {
 	techSyncService := service.NewTechMarketSyncService(db, cfg.Sync.AITech)
 	aiDailySyncService := service.NewAIDailySyncService(db, cfg.Sync.AIDaily)
 	s.forumHandler = handler.NewForumHandler(forumService, metalSyncService, techSyncService, aiDailySyncService)
+	s.analysisHandler = handler.NewAnalysisHandler(service.NewAnalysisService(db))
 	s.router.Static("/public", cfg.Storage.PublicRoot())
 
 	s.registerRoutes()
@@ -77,6 +79,9 @@ func (s *Server) registerRoutes() {
 	api.POST("/market/ai-tech/sync", s.authGuard, s.forumHandler.SyncTechMarket)
 	api.GET("/ai-dailies", s.forumHandler.ListAIDailies)
 	api.POST("/ai-dailies/sync", s.authGuard, s.forumHandler.SyncAIDailies)
+	api.GET("/analysis/ai-trend", s.analysisHandler.GetAITrend)
+	api.GET("/analysis/market-trend", s.analysisHandler.GetMarketTrend)
+	api.GET("/analysis/overview", s.analysisHandler.GetOverview)
 
 	userGroup := api.Group("/users")
 	userGroup.Use(s.authGuard)

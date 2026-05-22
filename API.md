@@ -325,6 +325,334 @@ Authorization: Bearer <token>
 - 主要用于抓取最近一批日报索引并落库
 - 支持多轮同步，用于短时间内补齐新增内容或验证抓取链路
 
+## 分析接口
+
+### `GET /api/v1/analysis/ai-trend`
+
+公开接口，返回指定窗口内 AI 日报的结构化趋势分析。
+
+查询参数：
+
+- `window`：可选，支持 `1d` / `7d` / `30d`，默认 `7d`
+
+成功响应 `200`：
+
+```json
+{
+  "window": "7d",
+  "generatedAt": "2026-05-21T10:30:00+08:00",
+  "dataStatus": {
+    "sampleCount": 7,
+    "sufficient": true,
+    "partial": false,
+    "windowStart": "2026-05-15",
+    "windowEnd": "2026-05-21",
+    "note": ""
+  },
+  "summary": "最近 7d 的 AI 日报主要围绕 infra 和 model-capability 展开，信息重心仍然集中在这两个主题。",
+  "dominantThemes": [
+    {
+      "theme": "infra",
+      "count": 5,
+      "share": 0.71
+    },
+    {
+      "theme": "model-capability",
+      "count": 4,
+      "share": 0.57
+    }
+  ],
+  "emergingThemes": [
+    {
+      "theme": "enterprise-app",
+      "count": 2,
+      "reason": "clustered-in-recent-days"
+    }
+  ],
+  "headlineSignals": [
+    "infra appears most often across the windowed AI dailies.",
+    "model-capability remains a secondary but persistent theme.",
+    "enterprise-app is clustering in the later part of the window."
+  ],
+  "risks": [
+    "主题识别基于规则关键词，可能遗漏隐含主题或语义相近表达。",
+    "主题分布较分散，因此总结结论的集中度会低于表面描述。"
+  ],
+  "confidence": "medium",
+  "evidence": [
+    {
+      "title": "AI Daily A",
+      "publishedDate": "2026-05-20",
+      "themes": ["infra", "model-capability"]
+    }
+  ]
+}
+```
+
+错误响应：
+
+`400 Bad Request`
+
+```json
+{
+  "message": "invalid analysis window",
+  "code": "INVALID_ANALYSIS_WINDOW"
+}
+```
+
+`422 Unprocessable Entity`
+
+```json
+{
+  "message": "insufficient ai daily data for analysis",
+  "code": "INSUFFICIENT_AI_DAILY_DATA"
+}
+```
+
+`500 Internal Server Error`
+
+```json
+{
+  "message": "analysis computation failed",
+  "code": "ANALYSIS_COMPUTATION_FAILED"
+}
+```
+
+字段说明：
+
+- `window`：分析窗口，固定为 `1d` / `7d` / `30d`
+- `generatedAt`：服务端生成分析结果的时间
+- `dataStatus.sampleCount`：窗口内纳入分析的 AI 日报篇数
+- `dataStatus.partial`：是否存在降级或回退情况
+- `dataStatus.note`：数据口径补充说明；若 `PublishedDate` 不可用会说明回退到 `FetchedAt`
+- `dominantThemes`：主导主题列表，按命中篇数降序
+- `emergingThemes`：后半窗口明显升温的主题
+- `headlineSignals`：基于统计结果生成的可读信号
+- `evidence`：支撑结论的代表性日报证据
+
+### `GET /api/v1/analysis/market-trend`
+
+公开接口，返回指定窗口内 AI / 科技市场和贵金属市场的结构化趋势分析。
+
+查询参数：
+
+- `window`：可选，支持 `1d` / `7d` / `30d`，默认 `7d`
+
+成功响应 `200`：
+
+```json
+{
+  "window": "7d",
+  "generatedAt": "2026-05-21T10:30:00+08:00",
+  "dataStatus": {
+    "techCoveredSymbolCount": 5,
+    "metalCoveredSymbolCount": 4,
+    "sufficient": true,
+    "partial": false,
+    "windowStart": "2026-05-15T10:30:00+08:00",
+    "windowEnd": "2026-05-21T10:30:00+08:00",
+    "coveredSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
+    "expectedSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
+    "note": ""
+  },
+  "summary": "科技风险资产整体偏强，而贵金属并未形成领涨，当前市场更接近 risk-on。",
+  "marketRegime": "risk-on",
+  "techMomentum": {
+    "averageChangePercent": 2.6,
+    "advancers": 4,
+    "decliners": 1
+  },
+  "safeHavenMomentum": {
+    "averageChangePercent": -0.3,
+    "advancers": 1,
+    "decliners": 3
+  },
+  "leaders": [
+    {
+      "symbol": "SMH",
+      "changePercent": 4.1
+    },
+    {
+      "symbol": "QQQ",
+      "changePercent": 2.8
+    }
+  ],
+  "laggards": [
+    {
+      "symbol": "XAU",
+      "changePercent": -0.7
+    }
+  ],
+  "risks": [
+    "Market analysis is based on fetched snapshots rather than exchange-grade high-frequency data.",
+    "Different symbols may have uneven snapshot density inside the same window."
+  ],
+  "confidence": "medium",
+  "evidence": [
+    {
+      "symbol": "QQQ",
+      "startPrice": "700.10",
+      "endPrice": "719.70",
+      "changePercent": 2.8
+    }
+  ]
+}
+```
+
+错误响应：
+
+`400 Bad Request`
+
+```json
+{
+  "message": "invalid analysis window",
+  "code": "INVALID_ANALYSIS_WINDOW"
+}
+```
+
+`422 Unprocessable Entity`
+
+```json
+{
+  "message": "insufficient market history for analysis",
+  "code": "INSUFFICIENT_MARKET_HISTORY"
+}
+```
+
+`500 Internal Server Error`
+
+```json
+{
+  "message": "analysis computation failed",
+  "code": "ANALYSIS_COMPUTATION_FAILED"
+}
+```
+
+字段说明：
+
+- `dataStatus.techCoveredSymbolCount`：窗口内成功形成起止价格的科技组 symbol 数量
+- `dataStatus.metalCoveredSymbolCount`：窗口内成功形成起止价格的贵金属组 symbol 数量
+- `dataStatus.coveredSymbols`：本次实际参与分析的 symbol 列表
+- `dataStatus.expectedSymbols`：首期预期观测的固定 symbol 白名单
+- `dataStatus.partial`：是否触发了宽松降级或存在部分数据跳过
+- `dataStatus.note`：当贵金属组样本不足但科技组可分析时，这里会说明结论偏向科技组视角
+- `marketRegime`：市场状态，固定为 `risk-on` / `risk-off` / `mixed`
+- `techMomentum`：科技组平均变化率和涨跌分布
+- `safeHavenMomentum`：贵金属组平均变化率和涨跌分布
+- `leaders` / `laggards`：窗口内表现最好和最弱的代表性标的
+
+### `GET /api/v1/analysis/overview`
+
+公开接口，返回 AI 信息面与市场面的联动分析结果。
+
+查询参数：
+
+- `window`：可选，支持 `1d` / `7d` / `30d`，默认 `7d`
+
+成功响应 `200`：
+
+```json
+{
+  "window": "7d",
+  "generatedAt": "2026-05-21T10:30:00+08:00",
+  "dataStatus": {
+    "aiSampleCount": 7,
+    "techCoveredSymbolCount": 5,
+    "metalCoveredSymbolCount": 4,
+    "sufficient": true,
+    "partial": false,
+    "windowStart": "2026-05-15T10:30:00+08:00",
+    "windowEnd": "2026-05-21T10:30:00+08:00",
+    "coveredSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
+    "expectedSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
+    "note": ""
+  },
+  "summary": "AI 信息面目前由 infra 主导，而市场也通过 risk-on 状态对这一叙事做出了确认。",
+  "alignment": "aligned",
+  "linkageTags": ["infra-chip-alignment"],
+  "keyAgreements": [
+    "基础设施主题升温，同时半导体与科技基准也处于领涨位置。"
+  ],
+  "keyTensions": [],
+  "aiTrend": {
+    "summary": "最近 7d 的 AI 日报主要围绕 infra 和 model-capability 展开，信息重心仍然集中在这两个主题。",
+    "dominantThemes": ["infra", "model-capability"],
+    "confidence": "medium"
+  },
+  "marketTrend": {
+    "summary": "科技风险资产整体偏强，而贵金属并未形成领涨，当前市场更接近 risk-on。",
+    "marketRegime": "risk-on",
+    "confidence": "medium"
+  },
+  "evidence": [
+    {
+      "type": "theme-market-alignment",
+      "theme": "infra",
+      "symbols": ["SMH", "QQQ"],
+      "note": "基础设施关注度提升，同时半导体和广义科技风险资产也在同步走强。"
+    }
+  ],
+  "risks": [
+    "综合判断基于规则联动，不代表稳定长期因果关系。",
+    "短窗口内，市场反馈可能滞后于叙事变化。"
+  ],
+  "confidence": "medium"
+}
+```
+
+错误响应：
+
+`400 Bad Request`
+
+```json
+{
+  "message": "invalid analysis window",
+  "code": "INVALID_ANALYSIS_WINDOW"
+}
+```
+
+`422 Unprocessable Entity`
+
+```json
+{
+  "message": "insufficient ai daily data for analysis",
+  "code": "INSUFFICIENT_AI_DAILY_DATA"
+}
+```
+
+或：
+
+```json
+{
+  "message": "insufficient market history for analysis",
+  "code": "INSUFFICIENT_MARKET_HISTORY"
+}
+```
+
+说明：
+
+- 当 AI 日报样本不足，或全部命中回退到 `FetchedAt`、无法形成可信 AI 时间窗口时，返回 `INSUFFICIENT_AI_DAILY_DATA`
+- 当市场侧样本不足，或 `overview` 因任一子结果存在 `partial` 而拒绝输出综合结论时，返回 `INSUFFICIENT_MARKET_HISTORY`
+
+`500 Internal Server Error`
+
+```json
+{
+  "message": "analysis computation failed",
+  "code": "ANALYSIS_COMPUTATION_FAILED"
+}
+```
+
+字段说明：
+
+- `dataStatus.aiSampleCount`：纳入 overview 的 AI 日报篇数
+- `alignment`：AI 叙事与市场表现的一致性，固定为 `aligned` / `diverging` / `mixed`
+- `linkageTags`：联动标签，首期包括 `infra-chip-alignment`、`app-pricing-gap`、`policy-overhang`、`speculative-risk-on`、`defensive-rotation`、`mixed-conviction`
+- `keyAgreements`：信息面与市场面一致的要点
+- `keyTensions`：信息面与市场面冲突的要点
+- `aiTrend` / `marketTrend`：overview 里携带的精简子摘要
+- `overview` 严格依赖 AI 和市场两边结果，任一侧核心输入不足都会返回 `422`
+
 ## 认证接口
 
 ### `POST /api/v1/auth/register`
