@@ -8,7 +8,7 @@ import type { QuestionListPage, QuestionRecord } from '../types/api';
 type HomeFilters = {
   keyword: string;
   author: string;
-  searchType: 'content' | 'author' | 'phone';
+  phone: string;
 };
 
 const emptyPage: QuestionListPage = {
@@ -22,18 +22,39 @@ const homePageSize = 30;
 const defaultFilters: HomeFilters = {
   keyword: '',
   author: '',
-  searchType: 'content',
+  phone: '',
 };
 
 function readFiltersFromSearchParams(searchParams: URLSearchParams): HomeFilters {
   const nextKeyword = searchParams.get('keyword')?.trim() ?? defaultFilters.keyword;
   const nextAuthor = searchParams.get('author')?.trim() ?? defaultFilters.author;
-  const nextSearchType = nextAuthor ? (searchParams.get('searchType') === 'phone' ? 'phone' : 'author') : 'content';
-  return {
-    keyword: nextKeyword,
-    author: nextAuthor,
-    searchType: nextSearchType,
-  };
+  const nextPhone = searchParams.get('phone')?.trim() ?? defaultFilters.phone;
+
+  if (nextKeyword) {
+    return {
+      keyword: nextKeyword,
+      author: '',
+      phone: '',
+    };
+  }
+
+  if (nextPhone) {
+    return {
+      keyword: '',
+      author: '',
+      phone: nextPhone,
+    };
+  }
+
+  if (nextAuthor) {
+    return {
+      keyword: '',
+      author: nextAuthor,
+      phone: '',
+    };
+  }
+
+  return defaultFilters;
 }
 
 export function HomePage() {
@@ -49,14 +70,34 @@ export function HomePage() {
   const [submittingQid, setSubmittingQid] = useState<number | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [hasMore, setHasMore] = useState(true);
+  const resultSummaryRef = useRef<HTMLDivElement | null>(null);
   const listBusy = loading || loadingMore;
 
   useEffect(() => {
     const nextFilters = readFiltersFromSearchParams(searchParams);
     setFilters((current) =>
-      current.keyword === nextFilters.keyword && current.author === nextFilters.author && current.searchType === nextFilters.searchType ? current : nextFilters,
+      current.keyword === nextFilters.keyword && current.author === nextFilters.author && current.phone === nextFilters.phone ? current : nextFilters,
     );
   }, [searchParams]);
+
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('keyword');
+    next.delete('author');
+    next.delete('phone');
+
+    if (filters.keyword) {
+      next.set('keyword', filters.keyword);
+    } else if (filters.phone) {
+      next.set('phone', filters.phone);
+    } else if (filters.author) {
+      next.set('author', filters.author);
+    }
+
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [filters, searchParams, setSearchParams]);
 
   useEffect(() => {
     void loadData(1, true);
@@ -98,6 +139,7 @@ export function HomePage() {
         pageSize: homePageSize,
         keyword: filters.keyword,
         author: filters.author,
+        phone: filters.phone,
         isUpload: 'true',
       });
 
@@ -150,6 +192,7 @@ export function HomePage() {
             pageSize: homePageSize,
             keyword: filters.keyword,
             author: filters.author,
+            phone: filters.phone,
             isUpload: 'true',
           }),
         ),
@@ -206,49 +249,52 @@ export function HomePage() {
     setSearchParams({});
   }
 
-  function clearFilter(key: 'keyword' | 'author' | 'searchType') {
+  function clearFilter(key: 'keyword' | 'author' | 'phone') {
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
       next.delete(key);
-      if (key === 'author' || key === 'searchType') {
+      if (key === 'author') {
         next.delete('author');
-        next.delete('searchType');
+      }
+      if (key === 'phone') {
+        next.delete('phone');
       }
       return next;
     });
   }
 
-  const hasActiveFilters = Boolean(filters.keyword || filters.author);
-  const activeSearchLabel = filters.author ? (filters.searchType === 'phone' ? '手机号检索' : '作者检索') : filters.keyword ? '内容检索' : '公开动态';
-  const activeSearchValue = filters.author || filters.keyword;
+  const hasActiveFilters = Boolean(filters.keyword || filters.author || filters.phone);
+  const activeSearchLabel = filters.phone ? '手机号检索' : filters.author ? '作者检索' : filters.keyword ? '内容检索' : '公开动态';
+  const activeSearchValue = filters.phone || filters.author || filters.keyword;
   const resultHint = hasActiveFilters
     ? page.total > 0
-      ? `当前正在按${activeSearchLabel}查看“${activeSearchValue}”相关结果，仅展示已发布帖子。`
-      : `没有找到与“${activeSearchValue}”相关的公开帖子，可以清空条件后继续浏览广场。`
+      ? filters.phone
+        ? `当前正在按手机号检索查看“${activeSearchValue}”相关结果，仅展示已发布帖子。`
+        : filters.author
+          ? `当前正在按作者检索查看“${activeSearchValue}”相关结果，仅展示已发布帖子。`
+          : `当前正在按内容检索查看“${activeSearchValue}”相关结果，仅展示已发布帖子。`
+      : filters.phone
+        ? `没有找到与手机号“${activeSearchValue}”相关的公开帖子，可以清空条件后继续浏览广场。`
+        : filters.author
+          ? `没有找到与作者“${activeSearchValue}”相关的公开帖子，可以清空条件后继续浏览广场。`
+          : `没有找到与“${activeSearchValue}”相关的公开帖子，可以清空条件后继续浏览广场。`
     : '当前展示社区里所有已发布帖子，支持按内容、作者或手机号快速收缩结果范围。';
+
+  useEffect(() => {
+    if (!hasActiveFilters) {
+      return;
+    }
+
+    resultSummaryRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }, [hasActiveFilters, filters.keyword, filters.author, filters.phone]);
 
   return (
     <>
       <section className="content whisper-content legacy-home-scene">
         <div className="cont">
-          <div className="legacy-home-stage legacy-home-stage-compact">
-            <div className="legacy-home-stage-copy">
-              <span className="legacy-home-stage-kicker">3X Community Feed</span>
-              <h2>浏览社区公开动态</h2>
-              <p>用首页这一处入口完成内容、作者和手机号检索，再继续往下看帖子流。</p>
-            </div>
-            <div className="legacy-home-stage-metrics">
-              <article className="legacy-home-stage-card">
-                <strong>{loading ? '--' : page.total}</strong>
-                <span>公开帖子</span>
-              </article>
-              <article className="legacy-home-stage-card">
-                <strong>{page.records.length}</strong>
-                <span>当前已加载</span>
-              </article>
-            </div>
-          </div>
-
           {hasActiveFilters ? (
             <div className="legacy-active-filters">
               {filters.keyword ? (
@@ -258,7 +304,12 @@ export function HomePage() {
               ) : null}
               {filters.author ? (
                 <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearFilter('author')} type="button">
-                  {filters.searchType === 'phone' ? '手机号' : '作者'}：{filters.author} ×
+                  作者：{filters.author} ×
+                </button>
+              ) : null}
+              {filters.phone ? (
+                <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearFilter('phone')} type="button">
+                  手机号：{filters.phone} ×
                 </button>
               ) : null}
               <button className="legacy-action-button secondary small" disabled={listBusy} onClick={handleReset} type="button">
@@ -267,10 +318,10 @@ export function HomePage() {
             </div>
           ) : null}
 
-          <div className="legacy-home-result-summary legacy-home-status-card">
+          <div className="legacy-home-result-summary legacy-home-status-card" ref={resultSummaryRef}>
             <div className="legacy-home-result-copy">
-              <span className="legacy-home-stage-kicker">Result Scope</span>
-              <strong>{hasActiveFilters ? `${activeSearchLabel} · ${page.total} 条结果` : `公开动态 · ${page.total} 条结果`}</strong>
+              <span className="legacy-home-stage-kicker">结果范围</span>
+              <strong>{hasActiveFilters ? `${activeSearchLabel} · ${page.total} 条结果` : `公开帖子 · ${page.total} 条结果`}</strong>
               <p>{loading ? '正在同步最新帖子结果...' : resultHint}</p>
             </div>
             <div className="legacy-summary-strip">
@@ -286,9 +337,9 @@ export function HomePage() {
           <div className="whisper-list legacy-home-deck">
             {!loading && page.records.length === 0 ? (
               <div className="legacy-home-empty-state">
-                <span className="legacy-home-stage-kicker">No Signal</span>
-                <h3>{hasActiveFilters ? '当前筛选条件下没有匹配帖子' : '广场里暂时还没有公开帖子'}</h3>
-                <p>{hasActiveFilters ? '可以清空搜索条件，或者切换作者 / 手机号 / 内容重新检索。' : '等第一批公开帖子进入广场后，这里会开始持续滚动加载。'}</p>
+                <span className="legacy-home-stage-kicker">暂无结果</span>
+                <h3>{hasActiveFilters ? '当前条件下没有匹配帖子' : '当前还没有公开帖子'}</h3>
+                <p>{hasActiveFilters ? filters.phone ? '可以换一个手机号关键字，或清空条件后继续浏览广场。' : filters.author ? '可以换一个作者关键字，或清空条件后继续浏览广场。' : '可以清空条件，或换一个内容关键字后再试。' : '等有帖子发布后，这里会开始持续加载。'}</p>
                 {hasActiveFilters ? (
                   <button className="legacy-action-button secondary" disabled={listBusy} onClick={handleReset} type="button">
                     清空当前筛选

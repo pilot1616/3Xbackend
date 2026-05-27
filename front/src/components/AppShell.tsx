@@ -33,7 +33,8 @@ export function AppShell() {
     const params = new URLSearchParams(location.search);
     const keyword = params.get('keyword') ?? '';
     const author = params.get('author') ?? '';
-    const type = params.get('searchType');
+    const phone = params.get('phone') ?? '';
+    const legacySearchType = params.get('searchType');
 
     if (keyword) {
       setSearchMode('content');
@@ -41,8 +42,20 @@ export function AppShell() {
       return;
     }
 
+    if (phone) {
+      setSearchMode('phone');
+      setSearchKeyword(phone);
+      return;
+    }
+
+    if (author && legacySearchType === 'phone') {
+      setSearchMode('phone');
+      setSearchKeyword(author);
+      return;
+    }
+
     if (author) {
-      setSearchMode(type === 'phone' ? 'phone' : 'author');
+      setSearchMode('author');
       setSearchKeyword(author);
       return;
     }
@@ -86,14 +99,16 @@ export function AppShell() {
 
     params.delete('keyword');
     params.delete('author');
+    params.delete('phone');
     params.delete('searchType');
 
     if (keyword) {
       if (searchMode === 'content') {
         params.set('keyword', keyword);
+      } else if (searchMode === 'phone') {
+        params.set('phone', keyword);
       } else {
         params.set('author', keyword);
-        params.set('searchType', searchMode);
       }
     }
 
@@ -114,12 +129,37 @@ export function AppShell() {
   return (
     <div className="legacy-app-shell">
       <header className={`simple-page-header${showHeaderSearch ? ' has-search' : ' compact'}`}>
-        <div className="simple-header-top-row">
+        <div className="simple-header-main-row">
           <h1 className="simple-header-brand">
             <Link to="/">
               <img alt="3X" className="legacy-brand-mark" src="/legacy/res/img/logo.png" />
             </Link>
           </h1>
+
+          <nav className="simple-header-links" aria-label="主导航">
+            <NavLink className={navClassName} end to="/">
+              首页
+            </NavLink>
+            <NavLink className={navClassName} to="/publish">
+              发布问题
+            </NavLink>
+            <NavLink className={navClassName} to="/market">
+              市场动态
+            </NavLink>
+            <NavLink className={navClassName} to="/analysis">
+              AI 分析
+            </NavLink>
+            <NavLink className={navClassName} to="/ai-daily">
+              AI 日报
+            </NavLink>
+            <NavLink className={navClassName} to="/album">
+              相册
+            </NavLink>
+            <NavLink className={navClassName} to="/profile">
+              我的资料
+            </NavLink>
+          </nav>
+
           <div className="simple-header-auth">
             {session ? (
               <div className="simple-session-bar">
@@ -142,33 +182,9 @@ export function AppShell() {
           </div>
         </div>
 
-        <nav className="simple-header-links" aria-label="主导航">
-          <NavLink className={navClassName} to="/">
-            首页
-          </NavLink>
-          <NavLink className={navClassName} to="/publish">
-            发布问题
-          </NavLink>
-          <NavLink className={navClassName} to="/market">
-            市场动态
-          </NavLink>
-          <NavLink className={navClassName} to="/ai-daily">
-            AI 日报
-          </NavLink>
-          <NavLink className={navClassName} to="/album">
-            相册
-          </NavLink>
-          <NavLink className={navClassName} to="/profile">
-            我的资料
-          </NavLink>
-        </nav>
-
         {showHeaderSearch ? (
           <div className="simple-header-search-wrap">
             <form className="simple-header-search" onSubmit={handleHeaderSearchSubmit}>
-              <label className="simple-header-search-label" htmlFor="global-home-search">
-                全站搜索
-              </label>
               <select aria-label="搜索类型" className="simple-header-search-mode" onChange={(event) => setSearchMode(event.target.value as GlobalSearchMode)} value={searchMode}>
                 <option value="content">按内容</option>
                 <option value="author">按作者</option>

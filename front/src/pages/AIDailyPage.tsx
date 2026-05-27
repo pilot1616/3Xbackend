@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { getAIDailies, syncAIDailies } from '../api/forum';
 import { useSession } from '../lib/session';
@@ -100,9 +101,10 @@ function buildSummary(record: AIDailyRecord) {
 
 export function AIDailyPage() {
   const session = useSession();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [records, setRecords] = useState<AIDailyRecord[]>([]);
-  const [activeSlug, setActiveSlug] = useState('');
-  const [searchInput, setSearchInput] = useState('');
+  const [activeSlug, setActiveSlug] = useState(searchParams.get('slug') ?? '');
+  const [searchInput, setSearchInput] = useState(searchParams.get('q') ?? '');
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -112,9 +114,37 @@ export function AIDailyPage() {
   const [priming, setPriming] = useState(false);
   const [updatedAt, setUpdatedAt] = useState('');
   const [message, setMessage] = useState('');
+  const [copyingLink, setCopyingLink] = useState(false);
   const deferredKeyword = useDeferredValue(searchInput.trim());
   const requestRef = useRef(0);
   const activeButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    const nextKeyword = searchParams.get('q') ?? '';
+    const nextSlug = searchParams.get('slug') ?? '';
+    setSearchInput((current) => (current === nextKeyword ? current : nextKeyword));
+    setActiveSlug((current) => (current === nextSlug ? current : nextSlug));
+  }, [searchParams]);
+
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    const keyword = searchInput.trim();
+    if (keyword) {
+      next.set('q', keyword);
+    } else {
+      next.delete('q');
+    }
+
+    if (activeSlug) {
+      next.set('slug', activeSlug);
+    } else {
+      next.delete('slug');
+    }
+
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchInput, activeSlug, searchParams, setSearchParams]);
 
   useEffect(() => {
     setOffset(0);
@@ -206,6 +236,22 @@ export function AIDailyPage() {
     }
   }
 
+  async function handleCopyLink() {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    setCopyingLink(true);
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setMessage('当前 AI 日报链接已复制');
+    } catch {
+      setMessage('复制链接失败，请手动复制地址栏');
+    } finally {
+      setCopyingLink(false);
+    }
+  }
+
   const activeRecord = useMemo(() => records.find((record) => record.slug === activeSlug) ?? records[0] ?? null, [activeSlug, records]);
   const activeIndex = useMemo(() => (activeRecord ? records.findIndex((record) => record.slug === activeRecord.slug) : -1), [activeRecord, records]);
   const previousRecord = activeIndex > 0 ? records[activeIndex - 1] ?? null : null;
@@ -245,26 +291,31 @@ export function AIDailyPage() {
               {activeRecord ? <span>{formatElapsed(activeRecord.fetchedAt)}</span> : null}
             </div>
 
-            {session ? (
-              <div className="ai-daily-sync-actions ai-daily-sync-actions-minimal">
-                <button
-                  className="ai-daily-secondary-button"
-                  disabled={syncing || priming}
-                  onClick={() => void handleSync(6, 1200, 'prime')}
-                  type="button"
-                >
-                  {priming ? '补拉中...' : '补拉归档'}
-                </button>
-                <button
-                  className="ai-daily-primary-button"
-                  disabled={syncing || priming}
-                  onClick={() => void handleSync(1, 800, 'sync')}
-                  type="button"
-                >
-                  {syncing ? '同步中...' : '立即同步'}
-                </button>
-              </div>
-            ) : null}
+            <div className="ai-daily-sync-actions ai-daily-sync-actions-minimal">
+              <button className="ai-daily-secondary-button" disabled={copyingLink} onClick={() => void handleCopyLink()} type="button">
+                {copyingLink ? '复制中...' : '复制链接'}
+              </button>
+              {session ? (
+                <>
+                  <button
+                    className="ai-daily-secondary-button"
+                    disabled={syncing || priming}
+                    onClick={() => void handleSync(6, 1200, 'prime')}
+                    type="button"
+                  >
+                    {priming ? '补拉中...' : '补拉归档'}
+                  </button>
+                  <button
+                    className="ai-daily-primary-button"
+                    disabled={syncing || priming}
+                    onClick={() => void handleSync(1, 800, 'sync')}
+                    type="button"
+                  >
+                    {syncing ? '同步中...' : '立即同步'}
+                  </button>
+                </>
+              ) : null}
+            </div>
           </div>
         </section>
 

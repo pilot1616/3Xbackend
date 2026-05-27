@@ -401,12 +401,11 @@ func (s *AnalysisService) AnalyzeOverview(window AnalysisWindow) (*OverviewAnaly
 	if err != nil {
 		return nil, err
 	}
-	if aiTrend.DataStatus.Partial || marketTrend.DataStatus.Partial {
-		return nil, ErrInsufficientMarketHistory
-	}
+	return buildOverviewResponse(window, aiTrend, marketTrend, time.Now()), nil
+}
 
+func buildOverviewResponse(window AnalysisWindow, aiTrend *AITrendAnalysisResponse, marketTrend *MarketTrendAnalysisResponse, now time.Time) *OverviewAnalysisResponse {
 	linkage := buildOverviewLinkage(aiTrend, marketTrend)
-	now := time.Now()
 	response := &OverviewAnalysisResponse{
 		Window:      window,
 		GeneratedAt: now.Format(time.RFC3339),
@@ -441,22 +440,24 @@ func (s *AnalysisService) AnalyzeOverview(window AnalysisWindow) (*OverviewAnaly
 		Risks:      linkage.Risks,
 		Confidence: linkage.Confidence,
 	}
-	return response, nil
+	return response
 }
 
 func (s *AnalysisService) listAIDailyInputs(window AnalysisWindow, now time.Time) ([]aiDailyAnalysisInput, int, error) {
 	if s.db == nil {
 		return nil, 0, ErrAnalysisComputationFailed
 	}
-	start := windowStart(window, now)
 	var snapshots []database.AIDailySnapshot
-	if err := s.db.Where("fetched_at >= ? AND fetched_at <= ?", aiDailyQueryStart(window, now), now).Order("fetched_at ASC").Find(&snapshots).Error; err != nil {
+	if err := s.db.Where("fetched_at <= ?", now).Order("fetched_at ASC").Find(&snapshots).Error; err != nil {
 		return nil, 0, ErrAnalysisComputationFailed
 	}
+	return buildAIDailyInputs(window, now, snapshots), countAIDailyFallbacks(window, now, snapshots), nil
+}
 
+func buildAIDailyInputs(window AnalysisWindow, now time.Time, snapshots []database.AIDailySnapshot) []aiDailyAnalysisInput {
+	start := windowStart(window, now)
 	end := now
 	inputs := make([]aiDailyAnalysisInput, 0, len(snapshots))
-	fallbackCount := 0
 	for _, snapshot := range snapshots {
 		sections := make([]aiDailySection, 0)
 		if snapshot.SectionsJSON != "" {
@@ -469,9 +470,6 @@ func (s *AnalysisService) listAIDailyInputs(window AnalysisWindow, now time.Time
 		fallback := !usedPublished
 		if effectiveTime.Before(start) || effectiveTime.After(end) {
 			continue
-		}
-		if fallback {
-			fallbackCount++
 		}
 		input := aiDailyAnalysisInput{
 			Title:             snapshot.Title,
@@ -491,7 +489,23 @@ func (s *AnalysisService) listAIDailyInputs(window AnalysisWindow, now time.Time
 	sort.Slice(inputs, func(i, j int) bool {
 		return inputs[i].EffectiveTime.Before(inputs[j].EffectiveTime)
 	})
-	return inputs, fallbackCount, nil
+	return inputs
+}
+
+func countAIDailyFallbacks(window AnalysisWindow, now time.Time, snapshots []database.AIDailySnapshot) int {
+	start := windowStart(window, now)
+	end := now
+	fallbackCount := 0
+	for _, snapshot := range snapshots {
+		effectiveTime, usedPublished := resolveAIDailyTime(snapshot.PublishedDate, snapshot.FetchedAt)
+		if effectiveTime.Before(start) || effectiveTime.After(end) {
+			continue
+		}
+		if !usedPublished {
+			fallbackCount++
+		}
+	}
+	return fallbackCount
 }
 
 func (s *AnalysisService) listTechMarketInputs(window AnalysisWindow, now time.Time) (map[string][]marketSeriesPoint, int, error) {
@@ -585,10 +599,6 @@ func windowStart(window AnalysisWindow, now time.Time) time.Time {
 	default:
 		return dayStart.AddDate(0, 0, -6)
 	}
-}
-
-func aiDailyQueryStart(window AnalysisWindow, now time.Time) time.Time {
-	return windowStart(window, now).AddDate(0, 0, -1)
 }
 
 func minAIDailySamples(window AnalysisWindow) int {
@@ -731,27 +741,28 @@ func countThemeHits(inputs []aiDailyAnalysisInput, theme string) int {
 }
 
 func buildAISummary(window AnalysisWindow, stats themeStats) string {
+	windowLabel := analysisWindowNarrativeLabel(window)
 	if len(stats.DominantThemes) == 0 {
-		return fmt.Sprintf("最近 %s 的 AI 日报主题分布较分散，暂时没有形成明确的主导焦点。", window)
+		return fmt.Sprintf("%s内的 AI 日报主题分布较分散，暂时没有形成明确的主导焦点。", windowLabel)
 	}
-	first := stats.DominantThemes[0].Theme
+	first := analysisThemeLabel(stats.DominantThemes[0].Theme)
 	if len(stats.DominantThemes) == 1 {
-		return fmt.Sprintf("最近 %s 的 AI 日报主要由 %s 主题主导，关注点明显集中在这一方向。", window, first)
+		return fmt.Sprintf("%s内的 AI 日报主要由%s主题主导，关注点明显集中在这一方向。", windowLabel, first)
 	}
-	second := stats.DominantThemes[1].Theme
-	return fmt.Sprintf("最近 %s 的 AI 日报主要围绕 %s 和 %s 展开，信息重心仍然集中在这两个主题。", window, first, second)
+	second := analysisThemeLabel(stats.DominantThemes[1].Theme)
+	return fmt.Sprintf("%s内的 AI 日报主要围绕%s和%s展开，信息重心仍然集中在这两个主题。", windowLabel, first, second)
 }
 
 func buildAIHeadlineSignals(stats themeStats) []string {
 	signals := make([]string, 0, 3)
 	if len(stats.DominantThemes) > 0 {
-		signals = append(signals, fmt.Sprintf("%s 是当前窗口内出现频率最高的 AI 主题。", stats.DominantThemes[0].Theme))
+		signals = append(signals, fmt.Sprintf("%s是当前窗口内出现频率最高的 AI 主题。", analysisThemeLabel(stats.DominantThemes[0].Theme)))
 	}
 	if len(stats.DominantThemes) > 1 {
-		signals = append(signals, fmt.Sprintf("%s 虽然不是第一主题，但保持了持续出现。", stats.DominantThemes[1].Theme))
+		signals = append(signals, fmt.Sprintf("%s虽然不是第一主题，但保持了持续出现。", analysisThemeLabel(stats.DominantThemes[1].Theme)))
 	}
 	if len(stats.EmergingThemes) > 0 {
-		signals = append(signals, fmt.Sprintf("%s 主题在窗口后半段出现得更集中，存在升温迹象。", stats.EmergingThemes[0].Theme))
+		signals = append(signals, fmt.Sprintf("%s主题在窗口后半段出现得更集中，存在升温迹象。", analysisThemeLabel(stats.EmergingThemes[0].Theme)))
 	}
 	return signals
 }
@@ -979,11 +990,11 @@ func buildMarketSummary(result marketRegimeResult) string {
 		if result.Partial {
 			return "科技风险资产整体更强，但贵金属覆盖有限，因此当前市场判断会更偏向科技组证据。"
 		}
-		return "科技风险资产整体偏强，而贵金属并未形成领涨，当前市场更接近 risk-on。"
+		return "科技风险资产整体偏强，而贵金属并未形成领涨，当前市场更接近风险偏好环境。"
 	case marketRegimeRiskOff:
-		return "科技资产整体偏弱，而黄金或白银更强，当前市场更接近 risk-off。"
+		return "科技资产整体偏弱，而黄金或白银更强，当前市场更接近避险偏好环境。"
 	default:
-		return "科技资产与避险资产信号分化，因此当前市场状态更接近 mixed。"
+		return "科技资产与避险资产信号分化，因此当前市场状态更接近分化环境。"
 	}
 }
 
@@ -1027,7 +1038,7 @@ func buildOverviewLinkage(ai *AITrendAnalysisResponse, market *MarketTrendAnalys
 	}
 	if hasEnterprise && market.MarketRegime != marketRegimeRiskOn {
 		result.Tags = append(result.Tags, "app-pricing-gap")
-		result.Tensions = append(result.Tensions, "企业应用叙事正在升温，但市场尚未用明确的 risk-on 表现去确认它。")
+		result.Tensions = append(result.Tensions, "企业应用叙事正在升温，但市场尚未用明确的风险偏好表现去确认它。")
 	}
 	if hasRegulation && (market.MarketRegime == marketRegimeRiskOff || market.MarketRegime == marketRegimeMixed) {
 		result.Tags = append(result.Tags, "policy-overhang")
@@ -1035,7 +1046,7 @@ func buildOverviewLinkage(ai *AITrendAnalysisResponse, market *MarketTrendAnalys
 	}
 	if hasModelOrAgent && market.MarketRegime == marketRegimeRiskOn && market.SafeHavenMomentum.AverageChangePercent <= 0 {
 		result.Tags = append(result.Tags, "speculative-risk-on")
-		result.Agreements = append(result.Agreements, "模型能力与 agent 叙事，正在获得科技风险偏好改善的支持。")
+		result.Agreements = append(result.Agreements, "模型能力与智能体叙事，正在获得科技风险偏好改善的支持。")
 	}
 	if market.MarketRegime == marketRegimeRiskOff && (containsStringValue(aiDominant, "infra") || hasModelOrAgent) {
 		result.Tags = append(result.Tags, "defensive-rotation")
@@ -1062,17 +1073,18 @@ func buildOverviewLinkage(ai *AITrendAnalysisResponse, market *MarketTrendAnalys
 }
 
 func buildOverviewSummary(ai *AITrendAnalysisResponse, market *MarketTrendAnalysisResponse, linkage overviewLinkageResult) string {
-	primaryTheme := "mixed AI themes"
+	primaryTheme := "分散主题"
 	if len(ai.DominantThemes) > 0 {
-		primaryTheme = ai.DominantThemes[0].Theme
+		primaryTheme = analysisThemeLabel(ai.DominantThemes[0].Theme)
 	}
+	regimeLabel := marketRegimeNarrativeLabel(market.MarketRegime)
 	switch linkage.Alignment {
 	case overviewAlignmentAligned:
-		return fmt.Sprintf("AI 信息面目前由 %s 主导，而市场也通过 %s 状态对这一叙事做出了确认。", primaryTheme, market.MarketRegime)
+		return fmt.Sprintf("AI 信息面目前由%s主导，而市场也通过%s状态对这一叙事做出了确认。", primaryTheme, regimeLabel)
 	case overviewAlignmentDiverging:
-		return fmt.Sprintf("AI 信息面目前由 %s 主导，但市场定价尚未确认这一叙事，当前仍表现为 %s。", primaryTheme, market.MarketRegime)
+		return fmt.Sprintf("AI 信息面目前由%s主导，但市场定价尚未确认这一叙事，当前仍表现为%s。", primaryTheme, regimeLabel)
 	default:
-		return fmt.Sprintf("AI 信息面目前由 %s 主导，但市场确认信号仍然分化，当前整体更接近 %s。", primaryTheme, market.MarketRegime)
+		return fmt.Sprintf("AI 信息面目前由%s主导，但市场确认信号仍然分化，当前整体更接近%s。", primaryTheme, regimeLabel)
 	}
 }
 
@@ -1103,6 +1115,47 @@ func normalizePriceText(raw string) string {
 
 func aiWindowDateString(t time.Time) string {
 	return t.In(time.Local).Format("2006-01-02")
+}
+
+func analysisWindowNarrativeLabel(window AnalysisWindow) string {
+	switch window {
+	case AnalysisWindow1D:
+		return "近 1 天"
+	case AnalysisWindow30D:
+		return "近 30 天"
+	default:
+		return "近 7 天"
+	}
+}
+
+func analysisThemeLabel(theme string) string {
+	switch theme {
+	case "infra":
+		return "基础设施"
+	case "model-capability":
+		return "模型能力"
+	case "agent":
+		return "智能体"
+	case "enterprise-app":
+		return "企业应用"
+	case "open-source":
+		return "开源生态"
+	case "regulation":
+		return "监管政策"
+	default:
+		return theme
+	}
+}
+
+func marketRegimeNarrativeLabel(regime string) string {
+	switch regime {
+	case marketRegimeRiskOn:
+		return "风险偏好"
+	case marketRegimeRiskOff:
+		return "避险偏好"
+	default:
+		return "分化"
+	}
 }
 
 func extractThemeNames(themes []ThemeCount) []string {

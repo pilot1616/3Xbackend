@@ -92,6 +92,7 @@ type QuestionListInput struct {
 	Page     int
 	PageSize int
 	Author   string
+	Phone    string
 	Username string
 	Keyword  string
 	Sort     string
@@ -378,23 +379,7 @@ func (s *ForumService) ListQuestionsPaged(input QuestionListInput) (*QuestionLis
 	pageSize := normalizePageSize(input.PageSize)
 	sortClause := questionSortClause(input.Sort)
 
-	query := s.db.Model(&database.Question{})
-	author := strings.TrimSpace(input.Author)
-	username := strings.TrimSpace(input.Username)
-	keyword := strings.TrimSpace(input.Keyword)
-	if username != "" {
-		query = query.Where("username = ?", username)
-	}
-	if author != "" {
-		query = query.Where("username = ? OR nickname = ?", author, author)
-	}
-	if keyword != "" {
-		like := "%" + keyword + "%"
-		query = query.Where("text LIKE ?", like)
-	}
-	if input.IsUpload != nil {
-		query = query.Where("is_upload = ?", *input.IsUpload)
-	}
+	query := applyQuestionListFilters(s.db.Model(&database.Question{}), input)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -412,6 +397,34 @@ func (s *ForumService) ListQuestionsPaged(input QuestionListInput) (*QuestionLis
 	}
 
 	return &QuestionListPage{Page: page, PageSize: pageSize, Total: total, Records: records}, nil
+}
+
+func applyQuestionListFilters(query *gorm.DB, input QuestionListInput) *gorm.DB {
+	if query == nil {
+		return nil
+	}
+	author := strings.TrimSpace(input.Author)
+	phone := strings.TrimSpace(input.Phone)
+	username := strings.TrimSpace(input.Username)
+	keyword := strings.TrimSpace(input.Keyword)
+	if username != "" {
+		query = query.Where("username = ?", username)
+	}
+	if author != "" {
+		like := "%" + author + "%"
+		query = query.Where("username LIKE ? OR nickname LIKE ?", like, like)
+	}
+	if phone != "" {
+		query = query.Where("username LIKE ?", "%"+phone+"%")
+	}
+	if keyword != "" {
+		like := "%" + keyword + "%"
+		query = query.Where("text LIKE ?", like)
+	}
+	if input.IsUpload != nil {
+		query = query.Where("is_upload = ?", *input.IsUpload)
+	}
+	return query
 }
 
 func (s *ForumService) ListMyQuestions(userID uint, username string, page, pageSize int, keyword, sort string, isUpload *bool) (*QuestionListPage, error) {

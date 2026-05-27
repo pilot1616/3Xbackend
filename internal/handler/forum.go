@@ -81,6 +81,7 @@ func (h *ForumHandler) ListQuestionsPaginated(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 	author := c.Query("author")
+	phone := c.Query("phone")
 	keyword := c.Query("keyword")
 	sort := c.Query("sort")
 
@@ -94,6 +95,7 @@ func (h *ForumHandler) ListQuestionsPaginated(c *gin.Context) {
 		Page:     page,
 		PageSize: pageSize,
 		Author:   author,
+		Phone:    phone,
 		Keyword:  keyword,
 		Sort:     sort,
 		IsUpload: isUpload,

@@ -31,3 +31,21 @@ func TestNextQuestionQIDMonotonicWithinSameMillisecond(t *testing.T) {
 		t.Fatalf("expected second qid to increment from first, got first=%d second=%d", first, second)
 	}
 }
+
+func TestApplyQuestionListFiltersNilQuery(t *testing.T) {
+	published := true
+	input := QuestionListInput{
+		Author:   "  Alice  ",
+		Phone:    " 1380013 ",
+		Username: "  user-1 ",
+		Keyword:  "  hello world  ",
+		IsUpload: &published,
+	}
+
+	if got := applyQuestionListFilters(nil, input); got != nil {
+		t.Fatalf("expected nil query to remain nil")
+	}
+	if input.Author != "  Alice  " || input.Phone != " 1380013 " || input.Username != "  user-1 " || input.Keyword != "  hello world  " {
+		t.Fatalf("expected input to remain unchanged: %+v", input)
+	}
+}

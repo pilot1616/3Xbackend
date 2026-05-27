@@ -349,7 +349,7 @@ Authorization: Bearer <token>
     "windowEnd": "2026-05-21",
     "note": ""
   },
-  "summary": "最近 7d 的 AI 日报主要围绕 infra 和 model-capability 展开，信息重心仍然集中在这两个主题。",
+  "summary": "近 7 天内的 AI 日报主要围绕基础设施和模型能力展开，信息重心仍然集中在这两个主题。",
   "dominantThemes": [
     {
       "theme": "infra",
@@ -370,9 +370,9 @@ Authorization: Bearer <token>
     }
   ],
   "headlineSignals": [
-    "infra appears most often across the windowed AI dailies.",
-    "model-capability remains a secondary but persistent theme.",
-    "enterprise-app is clustering in the later part of the window."
+    "基础设施是当前窗口内出现频率最高的 AI 主题。",
+    "模型能力虽然不是第一主题，但保持了持续出现。",
+    "企业应用主题在窗口后半段出现得更集中，存在升温迹象。"
   ],
   "risks": [
     "主题识别基于规则关键词，可能遗漏隐含主题或语义相近表达。",
@@ -455,7 +455,7 @@ Authorization: Bearer <token>
     "expectedSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
     "note": ""
   },
-  "summary": "科技风险资产整体偏强，而贵金属并未形成领涨，当前市场更接近 risk-on。",
+  "summary": "科技风险资产整体偏强，而贵金属并未形成领涨，当前市场更接近风险偏好环境。",
   "marketRegime": "risk-on",
   "techMomentum": {
     "averageChangePercent": 2.6,
@@ -484,8 +484,8 @@ Authorization: Bearer <token>
     }
   ],
   "risks": [
-    "Market analysis is based on fetched snapshots rather than exchange-grade high-frequency data.",
-    "Different symbols may have uneven snapshot density inside the same window."
+    "市场分析基于抓取快照，不是交易所级别的高频实时行情。",
+    "不同标的在同一窗口内的快照密度可能并不完全一致。"
   ],
   "confidence": "medium",
   "evidence": [
@@ -567,7 +567,7 @@ Authorization: Bearer <token>
     "expectedSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
     "note": ""
   },
-  "summary": "AI 信息面目前由 infra 主导，而市场也通过 risk-on 状态对这一叙事做出了确认。",
+  "summary": "AI 信息面目前由基础设施主导，而市场也通过风险偏好状态对这一叙事做出了确认。",
   "alignment": "aligned",
   "linkageTags": ["infra-chip-alignment"],
   "keyAgreements": [
@@ -575,12 +575,12 @@ Authorization: Bearer <token>
   ],
   "keyTensions": [],
   "aiTrend": {
-    "summary": "最近 7d 的 AI 日报主要围绕 infra 和 model-capability 展开，信息重心仍然集中在这两个主题。",
+    "summary": "近 7 天内的 AI 日报主要围绕基础设施和模型能力展开，信息重心仍然集中在这两个主题。",
     "dominantThemes": ["infra", "model-capability"],
     "confidence": "medium"
   },
   "marketTrend": {
-    "summary": "科技风险资产整体偏强，而贵金属并未形成领涨，当前市场更接近 risk-on。",
+    "summary": "科技风险资产整体偏强，而贵金属并未形成领涨，当前市场更接近风险偏好环境。",
     "marketRegime": "risk-on",
     "confidence": "medium"
   },
@@ -632,7 +632,8 @@ Authorization: Bearer <token>
 说明：
 
 - 当 AI 日报样本不足，或全部命中回退到 `FetchedAt`、无法形成可信 AI 时间窗口时，返回 `INSUFFICIENT_AI_DAILY_DATA`
-- 当市场侧样本不足，或 `overview` 因任一子结果存在 `partial` 而拒绝输出综合结论时，返回 `INSUFFICIENT_MARKET_HISTORY`
+- 当市场侧样本不足，或市场子结果存在 `partial`、无法支撑严格的 overview 输出时，返回 `INSUFFICIENT_MARKET_HISTORY`
+- 当 AI 子结果因 `PublishedDate` 回退等原因进入 `partial`、无法支撑严格的 overview 输出时，返回 `INSUFFICIENT_AI_DAILY_DATA`
 
 `500 Internal Server Error`
 
@@ -971,7 +972,8 @@ Authorization: Bearer <token>
 
 - `page`：页码，默认 `1`
 - `page_size`：每页条数，默认 `20`，最大 `100`
-- `author`：按用户名或昵称过滤
+- `author`：按用户名或昵称模糊过滤
+- `phone`：按手机号模糊过滤
 - `keyword`：按帖子正文关键字过滤
 - `sort`：排序方式，支持 `latest`、`oldest`、`most_liked`、`most_commented`，默认 `latest`
 - `is_upload`：按发布状态过滤，支持 `true/false/1/0`
@@ -979,7 +981,7 @@ Authorization: Bearer <token>
 请求示例：
 
 ```http
-GET /api/v1/questions?page=1&page_size=10&author=pilot1616&keyword=hello&sort=most_liked&is_upload=true
+GET /api/v1/questions?page=1&page_size=10&phone=13800138000&keyword=hello&sort=most_liked&is_upload=true
 ```
 
 成功响应 `200`：

@@ -2,6 +2,8 @@ import { request, uploadRequest } from './client';
 import type {
   AIDailyResponse,
   AIDailySyncResult,
+  AITrendAnalysisResponse,
+  AnalysisWindow,
   CommentListPage,
   DeleteQuestionResult,
   FileDeleteResult,
@@ -11,6 +13,7 @@ import type {
   MyCommentListPage,
   MyLikeListPage,
   MySummaryResult,
+  OverviewAnalysisResponse,
   PreciousMetalMarketResponse,
   PreciousMetalSyncResult,
   QuestionListPage,
@@ -18,12 +21,14 @@ import type {
   TechMarketResponse,
   TechMarketSyncResult,
   ToggleUploadResult,
+  MarketTrendAnalysisResponse,
 } from '../types/api';
 
 export interface QuestionQuery {
   page?: number;
   pageSize?: number;
   author?: string;
+  phone?: string;
   keyword?: string;
   sort?: string;
   isUpload?: string;
@@ -46,6 +51,7 @@ export function listQuestions(query: QuestionQuery = {}) {
       page: query.page,
       page_size: query.pageSize,
       author: query.author,
+      phone: query.phone,
       keyword: query.keyword,
       sort: query.sort,
       is_upload: query.isUpload,
@@ -178,6 +184,18 @@ export function syncAIDailies(rounds = 1, intervalMs = 800) {
   return request<AIDailySyncResult>(`/api/v1/ai-dailies/sync${toQueryString({ rounds, interval_ms: intervalMs })}`, {
     method: 'POST',
   });
+}
+
+export function getAITrend(window?: AnalysisWindow) {
+  return request<AITrendAnalysisResponse>(`/api/v1/analysis/ai-trend${toQueryString({ window })}`);
+}
+
+export function getMarketTrend(window?: AnalysisWindow) {
+  return request<MarketTrendAnalysisResponse>(`/api/v1/analysis/market-trend${toQueryString({ window })}`);
+}
+
+export function getOverview(window?: AnalysisWindow) {
+  return request<OverviewAnalysisResponse>(`/api/v1/analysis/overview${toQueryString({ window })}`);
 }
 
 export function uploadQuestionFiles(qid: number, files: File[], onProgress?: (percent: number) => void) {

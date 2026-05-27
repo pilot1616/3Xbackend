@@ -283,6 +283,136 @@ export interface AIDailySyncResult {
   partial: boolean;
 }
 
+export type AnalysisWindow = '1d' | '7d' | '30d';
+
+export type AnalysisConfidence = 'low' | 'medium' | 'high';
+
+export interface AnalysisDataStatus {
+  sufficient: boolean;
+  partial: boolean;
+  windowStart: string;
+  windowEnd: string;
+  note: string;
+}
+
+export interface AITrendDataStatus extends AnalysisDataStatus {
+  sampleCount: number;
+}
+
+export interface MarketTrendDataStatus extends AnalysisDataStatus {
+  techCoveredSymbolCount: number;
+  metalCoveredSymbolCount: number;
+  coveredSymbols: string[];
+  expectedSymbols: string[];
+}
+
+export interface OverviewDataStatus extends AnalysisDataStatus {
+  aiSampleCount: number;
+  techCoveredSymbolCount: number;
+  metalCoveredSymbolCount: number;
+  coveredSymbols: string[];
+  expectedSymbols: string[];
+}
+
+export interface ThemeCount {
+  theme: string;
+  count: number;
+  share: number;
+}
+
+export interface EmergingTheme {
+  theme: string;
+  count: number;
+  reason: string;
+}
+
+export interface AIEvidenceItem {
+  title: string;
+  publishedDate: string;
+  themes: string[];
+}
+
+export interface MarketMomentum {
+  averageChangePercent: number;
+  advancers: number;
+  decliners: number;
+}
+
+export interface MarketMover {
+  symbol: string;
+  changePercent: number;
+}
+
+export interface MarketEvidenceItem {
+  symbol: string;
+  startPrice: string;
+  endPrice: string;
+  changePercent: number;
+}
+
+export interface OverviewEvidenceItem {
+  type: string;
+  theme: string;
+  symbols: string[];
+  note: string;
+}
+
+export interface OverviewAITrendSummary {
+  summary: string;
+  dominantThemes: string[];
+  confidence: AnalysisConfidence;
+}
+
+export interface OverviewMarketTrendSummary {
+  summary: string;
+  marketRegime: 'risk-on' | 'risk-off' | 'mixed';
+  confidence: AnalysisConfidence;
+}
+
+export interface AITrendAnalysisResponse {
+  window: AnalysisWindow;
+  generatedAt: string;
+  dataStatus: AITrendDataStatus;
+  summary: string;
+  dominantThemes: ThemeCount[];
+  emergingThemes: EmergingTheme[];
+  headlineSignals: string[];
+  risks: string[];
+  confidence: AnalysisConfidence;
+  evidence: AIEvidenceItem[];
+}
+
+export interface MarketTrendAnalysisResponse {
+  window: AnalysisWindow;
+  generatedAt: string;
+  dataStatus: MarketTrendDataStatus;
+  summary: string;
+  marketRegime: 'risk-on' | 'risk-off' | 'mixed';
+  techMomentum: MarketMomentum;
+  safeHavenMomentum: MarketMomentum;
+  leaders: MarketMover[];
+  laggards: MarketMover[];
+  risks: string[];
+  confidence: AnalysisConfidence;
+  evidence: MarketEvidenceItem[];
+}
+
+export interface OverviewAnalysisResponse {
+  window: AnalysisWindow;
+  generatedAt: string;
+  dataStatus: OverviewDataStatus;
+  summary: string;
+  alignment: 'aligned' | 'diverging' | 'mixed';
+  linkageTags: string[];
+  keyAgreements: string[];
+  keyTensions: string[];
+  aiTrend: OverviewAITrendSummary;
+  marketTrend: OverviewMarketTrendSummary;
+  evidence?: OverviewEvidenceItem[];
+  risks: string[];
+  confidence: AnalysisConfidence;
+}
+
 export interface SessionData {
   token: string;
   user: User;

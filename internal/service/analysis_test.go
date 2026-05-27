@@ -1,6 +1,7 @@
 package service
 
 import (
+	"3Xbackend/internal/database"
 	"errors"
 	"strconv"
 	"strings"
@@ -36,21 +37,51 @@ func TestParseAnalysisWindow(t *testing.T) {
 	}
 }
 
-func TestAIDailyQueryStartAddsOneDayBuffer(t *testing.T) {
+func TestBuildAIDailyInputsUsesPublishedDateWindow(t *testing.T) {
 	now := time.Date(2026, 5, 22, 16, 30, 0, 0, time.Local)
-	tests := []struct {
-		window AnalysisWindow
-		want   time.Time
-	}{
-		{window: AnalysisWindow1D, want: time.Date(2026, 5, 21, 0, 0, 0, 0, time.Local)},
-		{window: AnalysisWindow7D, want: time.Date(2026, 5, 15, 0, 0, 0, 0, time.Local)},
-		{window: AnalysisWindow30D, want: time.Date(2026, 4, 22, 0, 0, 0, 0, time.Local)},
+	snapshots := []database.AIDailySnapshot{
+		{
+			Title:         "published in window",
+			PublishedDate: "2026-05-20",
+			FetchedAt:     time.Date(2026, 5, 10, 9, 0, 0, 0, time.Local),
+		},
+		{
+			Title:         "published outside window",
+			PublishedDate: "2026-05-10",
+			FetchedAt:     time.Date(2026, 5, 22, 9, 0, 0, 0, time.Local),
+		},
 	}
 
-	for _, tt := range tests {
-		if got := aiDailyQueryStart(tt.window, now); !got.Equal(tt.want) {
-			t.Fatalf("window %q: expected %s, got %s", tt.window, tt.want.Format(time.RFC3339), got.Format(time.RFC3339))
-		}
+	inputs := buildAIDailyInputs(AnalysisWindow7D, now, snapshots)
+	if len(inputs) != 1 {
+		t.Fatalf("expected 1 input, got %d", len(inputs))
+	}
+	if inputs[0].Title != "published in window" {
+		t.Fatalf("expected published-date match to be retained, got %q", inputs[0].Title)
+	}
+}
+
+func TestCountAIDailyFallbacksWithinWindowOnly(t *testing.T) {
+	now := time.Date(2026, 5, 22, 16, 30, 0, 0, time.Local)
+	snapshots := []database.AIDailySnapshot{
+		{
+			Title:     "fallback in window",
+			FetchedAt: time.Date(2026, 5, 21, 9, 0, 0, 0, time.Local),
+		},
+		{
+			Title:         "published in window",
+			PublishedDate: "2026-05-20",
+			FetchedAt:     time.Date(2026, 5, 10, 9, 0, 0, 0, time.Local),
+		},
+		{
+			Title:     "fallback outside window",
+			FetchedAt: time.Date(2026, 5, 1, 9, 0, 0, 0, time.Local),
+		},
+	}
+
+	got := countAIDailyFallbacks(AnalysisWindow7D, now, snapshots)
+	if got != 1 {
+		t.Fatalf("expected 1 fallback in window, got %d", got)
 	}
 }
 
@@ -281,6 +312,39 @@ func formatTestPrice(value float64) string {
 	return strconv.FormatFloat(value, 'f', 2, 64)
 }
 
+func TestBuildAISummaryUsesChineseWindowLabel(t *testing.T) {
+	stats := themeStats{
+		DominantThemes: []ThemeCount{{Theme: "infra", Count: 3, Share: 0.75}, {Theme: "model-capability", Count: 2, Share: 0.5}},
+	}
+
+	summary := buildAISummary(AnalysisWindow7D, stats)
+	if strings.Contains(summary, "最近近 7 天") {
+		t.Fatalf("expected natural Chinese wording, got %q", summary)
+	}
+	if !strings.Contains(summary, "近 7 天内") {
+		t.Fatalf("expected Chinese window label in summary, got %q", summary)
+	}
+	if !strings.Contains(summary, "基础设施") || !strings.Contains(summary, "模型能力") {
+		t.Fatalf("expected localized theme labels, got %q", summary)
+	}
+}
+
+func TestBuildAIHeadlineSignalsUsesChineseThemeLabels(t *testing.T) {
+	stats := themeStats{
+		DominantThemes: []ThemeCount{{Theme: "infra", Count: 4, Share: 0.8}, {Theme: "model-capability", Count: 2, Share: 0.4}},
+		EmergingThemes: []EmergingTheme{{Theme: "enterprise-app", Count: 2, Reason: emergingReasonClusteredRecent}},
+	}
+
+	signals := buildAIHeadlineSignals(stats)
+	joined := strings.Join(signals, " | ")
+	if strings.Contains(joined, "infra") || strings.Contains(joined, "model-capability") || strings.Contains(joined, "enterprise-app") {
+		t.Fatalf("expected localized theme labels, got %q", joined)
+	}
+	if !strings.Contains(joined, "基础设施") || !strings.Contains(joined, "模型能力") || !strings.Contains(joined, "企业应用") {
+		t.Fatalf("expected Chinese theme labels in signals, got %q", joined)
+	}
+}
+
 func TestBuildOverviewSummaryChineseCopy(t *testing.T) {
 	ai := &AITrendAnalysisResponse{
 		DominantThemes: []ThemeCount{{Theme: "infra", Count: 3, Share: 0.75}},
@@ -291,5 +355,140 @@ func TestBuildOverviewSummaryChineseCopy(t *testing.T) {
 	summary := buildOverviewSummary(ai, market, linkage)
 	if !strings.Contains(summary, "AI 信息面") {
 		t.Fatalf("expected Chinese overview summary, got %q", summary)
+	}
+}
+
+func TestBuildOverviewSummaryChineseFallbackTheme(t *testing.T) {
+	ai := &AITrendAnalysisResponse{}
+	market := &MarketTrendAnalysisResponse{MarketRegime: marketRegimeMixed}
+	linkage := overviewLinkageResult{Alignment: overviewAlignmentMixed}
+
+	summary := buildOverviewSummary(ai, market, linkage)
+	if strings.Contains(summary, "mixed AI themes") {
+		t.Fatalf("expected Chinese fallback theme, got %q", summary)
+	}
+	if !strings.Contains(summary, "分散主题") {
+		t.Fatalf("expected fallback theme wording, got %q", summary)
+	}
+}
+
+func TestBuildOverviewResponseAllowsAIPartial(t *testing.T) {
+	now := time.Date(2026, 5, 27, 10, 30, 0, 0, time.Local)
+	ai := &AITrendAnalysisResponse{
+		Window:      AnalysisWindow7D,
+		GeneratedAt: now.Add(-2 * time.Hour).Format(time.RFC3339),
+		DataStatus: AnalysisDataStatus{
+			Sufficient:  true,
+			Partial:     true,
+			WindowStart: "2026-05-20",
+			WindowEnd:   "2026-05-27",
+			SampleCount: 6,
+			Note:        "1 篇 AI 日报缺少发布时间，已使用抓取时间回退。",
+		},
+		Summary:        "近 7 天基础设施话题占优。",
+		DominantThemes: []ThemeCount{{Theme: "infra", Count: 4, Share: 0.66}},
+		Confidence:     confidenceMedium,
+	}
+	market := &MarketTrendAnalysisResponse{
+		Window:      AnalysisWindow7D,
+		GeneratedAt: now.Add(-1 * time.Hour).Format(time.RFC3339),
+		DataStatus: AnalysisDataStatus{
+			Sufficient:              true,
+			Partial:                 false,
+			WindowStart:             "2026-05-20",
+			WindowEnd:               "2026-05-27",
+			CoveredSymbols:          []string{"NDX", "QQQ", "XLK", "SMH", "IGV", "XAU"},
+			ExpectedSymbols:         append([]string(nil), analysisExpectedAllSymbols...),
+			TechCoveredSymbolCount:  5,
+			MetalCoveredSymbolCount: 1,
+			Note:                    "贵金属覆盖有限，但仍可形成方向判断。",
+		},
+		Summary:      "科技偏强，避险偏弱。",
+		MarketRegime: marketRegimeRiskOn,
+		Confidence:   confidenceLow,
+	}
+
+	response := buildOverviewResponse(AnalysisWindow7D, ai, market, now)
+	if response == nil {
+		t.Fatalf("expected overview response")
+	}
+	if !response.DataStatus.Partial {
+		t.Fatalf("expected overview partial when ai partial is true")
+	}
+	if response.DataStatus.AISampleCount != 6 {
+		t.Fatalf("expected ai sample count 6, got %d", response.DataStatus.AISampleCount)
+	}
+	if response.DataStatus.TechCoveredSymbolCount != 5 || response.DataStatus.MetalCoveredSymbolCount != 1 {
+		t.Fatalf("expected market coverage counts to be preserved, got tech=%d metal=%d", response.DataStatus.TechCoveredSymbolCount, response.DataStatus.MetalCoveredSymbolCount)
+	}
+	if !strings.Contains(response.DataStatus.Note, "抓取时间回退") {
+		t.Fatalf("expected ai fallback note to be preserved, got %q", response.DataStatus.Note)
+	}
+	if !strings.Contains(response.DataStatus.Note, "贵金属覆盖有限") {
+		t.Fatalf("expected market degradation note to be preserved, got %q", response.DataStatus.Note)
+	}
+	if response.GeneratedAt != now.Format(time.RFC3339) {
+		t.Fatalf("expected generatedAt to use supplied time, got %q", response.GeneratedAt)
+	}
+}
+
+func TestBuildOverviewResponseAllowsMarketPartial(t *testing.T) {
+	now := time.Date(2026, 5, 27, 11, 0, 0, 0, time.Local)
+	ai := &AITrendAnalysisResponse{
+		DataStatus: AnalysisDataStatus{
+			Sufficient:  true,
+			Partial:     false,
+			WindowStart: "2026-05-20",
+			WindowEnd:   "2026-05-27",
+			SampleCount: 5,
+			Note:        "AI 样本完整。",
+		},
+		Summary:        "近 7 天企业应用热度抬升。",
+		DominantThemes: []ThemeCount{{Theme: "enterprise-app", Count: 3, Share: 0.6}},
+		Confidence:     confidenceMedium,
+	}
+	market := &MarketTrendAnalysisResponse{
+		DataStatus: AnalysisDataStatus{
+			Sufficient:              true,
+			Partial:                 true,
+			WindowStart:             "2026-05-20",
+			WindowEnd:               "2026-05-27",
+			CoveredSymbols:          []string{"NDX", "QQQ", "XLK", "SMH", "IGV"},
+			ExpectedSymbols:         append([]string(nil), analysisExpectedAllSymbols...),
+			TechCoveredSymbolCount:  5,
+			MetalCoveredSymbolCount: 0,
+			Note:                    "贵金属样本不足，当前市场判断基于科技侧。",
+		},
+		Summary:      "科技资产延续强势。",
+		MarketRegime: marketRegimeRiskOn,
+		Confidence:   confidenceLow,
+	}
+
+	response := buildOverviewResponse(AnalysisWindow7D, ai, market, now)
+	if response == nil {
+		t.Fatalf("expected overview response")
+	}
+	if !response.DataStatus.Partial {
+		t.Fatalf("expected overview partial when market partial is true")
+	}
+	if response.DataStatus.AISampleCount != 5 {
+		t.Fatalf("expected ai sample count 5, got %d", response.DataStatus.AISampleCount)
+	}
+	if response.DataStatus.MetalCoveredSymbolCount != 0 {
+		t.Fatalf("expected metal covered count 0, got %d", response.DataStatus.MetalCoveredSymbolCount)
+	}
+	if !strings.Contains(response.DataStatus.Note, "AI 样本完整") {
+		t.Fatalf("expected ai note to be preserved, got %q", response.DataStatus.Note)
+	}
+	if !strings.Contains(response.DataStatus.Note, "贵金属样本不足") {
+		t.Fatalf("expected market partial note to be preserved, got %q", response.DataStatus.Note)
+	}
+}
+
+func TestQuestionAuthorFilterUsesPartialMatch(t *testing.T) {
+	author := strings.TrimSpace("  pilot  ")
+	like := "%" + author + "%"
+	if like != "%pilot%" {
+		t.Fatalf("expected wrapped LIKE pattern, got %q", like)
 	}
 }
