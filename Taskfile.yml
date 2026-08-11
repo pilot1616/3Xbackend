@@ -181,3 +181,12 @@ tasks:
     deps: [init, db:up, db:wait]
     cmds:
       - task ai:daily:sync
+
+  agent:
+    desc: 运行 LangGraph AI Agent 服务
+    deps: [init]
+    cmds:
+      - |
+        cd agent && \
+        [ -f .env ] && set -a && . ./.env && set +a || true; \
+        python3 -m uvicorn app.main:app --host "${AGENT_HOST:-0.0.0.0}" --port "${AGENT_PORT:-8010}"
