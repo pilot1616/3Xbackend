@@ -10,6 +10,7 @@ tasks:
       - mkdir -p public/images public/uploads
       - sh -c '[ -f .env ] || cp .env.example .env'
       - sh -c '[ -f front/.env ] || cp front/.env.example front/.env'
+      - sh -c '[ -f agent/.env ] || cp agent/.env.example agent/.env'
       - cd front && npm install
 
   db:up:
@@ -80,15 +81,18 @@ tasks:
     cmds:
       - |
         sh -c 'trap "kill 0" EXIT INT TERM; \
-        SERVER_PORT="${SERVER_PORT:-3000}" \
-        DATABASE_MYSQL_USER="${DATABASE_MYSQL_USER:-root}" \
-        DATABASE_MYSQL_PASSWORD="${DATABASE_MYSQL_PASSWORD:-root}" \
-        DATABASE_MYSQL_ADDRESS="${DATABASE_MYSQL_ADDRESS:-127.0.0.1}" \
-        DATABASE_MYSQL_PORT="${DATABASE_MYSQL_PORT:-3306}" \
-        DATABASE_MYSQL_SCHEMA="${DATABASE_MYSQL_SCHEMA:-3X}" \
-        AUTH_SECRET="${AUTH_SECRET:-3Xbackend-dev-secret}" \
-        go run ./cmd & \
-        cd front && npm run dev -- --host 0.0.0.0'
+        ( SERVER_PORT="${SERVER_PORT:-3000}" \
+          DATABASE_MYSQL_USER="${DATABASE_MYSQL_USER:-root}" \
+          DATABASE_MYSQL_PASSWORD="${DATABASE_MYSQL_PASSWORD:-root}" \
+          DATABASE_MYSQL_ADDRESS="${DATABASE_MYSQL_ADDRESS:-127.0.0.1}" \
+          DATABASE_MYSQL_PORT="${DATABASE_MYSQL_PORT:-3306}" \
+          DATABASE_MYSQL_SCHEMA="${DATABASE_MYSQL_SCHEMA:-3X}" \
+          AUTH_SECRET="${AUTH_SECRET:-3Xbackend-dev-secret}" \
+          go run ./cmd ) & \
+        ( cd agent && \
+          [ -f .env ] && set -a && . ./.env && set +a || true; \
+          python3 -m uvicorn app.main:app --host "${AGENT_HOST:-0.0.0.0}" --port "${AGENT_PORT:-8010}" ) & \
+        ( cd front && npm run dev -- --host 0.0.0.0 )'
 
   dev:docker:
     desc: 启动 Docker MySQL 后进行本地前后端联调

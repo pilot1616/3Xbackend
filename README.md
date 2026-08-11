@@ -26,6 +26,7 @@
 - 启动后定时同步 `Investing.com` 贵金属数据
 - 启动后定时同步 `Investing.com` AI / 科技市场数据
 - 启动后定时同步 `hex2077.dev` AI 日报数据
+- 独立 `agent/` 服务：接收外部 prompt，联动数据库与 LLM 做分析
 - 假数据脚本：可注入千级帖子、评论、点赞和演示图片
 
 ## 目录结构
@@ -146,6 +147,7 @@ npm run build
 - [Dockerfile](/Users/zhangxinghui/Desktop/web/3Xbackend/Dockerfile)
 - [docker-compose.yml](/Users/zhangxinghui/Desktop/web/3Xbackend/docker-compose.yml)
 - [.dockerignore](/Users/zhangxinghui/Desktop/web/3Xbackend/.dockerignore)
+- [agent/Dockerfile](/Users/zhangxinghui/Desktop/web/3Xbackend/agent/Dockerfile)
 
 完整 Compose 启动：
 
@@ -164,6 +166,22 @@ task compose:down
 - Docker 镜像会同时构建 `front/` 前端产物和 Go 后端二进制
 - 运行容器后，前端静态文件由 Go 服务统一托管
 - 推荐挂载 `public/` 目录，保留头像和帖子附件
+- `agent` 服务会随 Compose 一起启动，监听 `8010`
+
+## Agent
+
+`agent/` 下是一个独立的 LangGraph 服务，默认提供：
+
+- `GET /health`
+- `POST /prompt`
+
+本地启动：
+
+```bash
+task agent
+```
+
+开发模式下，`task dev` 也会一并拉起 agent。
 
 ## 市场动态、AI 分析与 AI 日报
 
