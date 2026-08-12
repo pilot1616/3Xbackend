@@ -1,5 +1,7 @@
-import { request, uploadRequest } from './client';
+import { request, requestAgent, uploadRequest } from './client';
 import type {
+  AgentPromptRequest,
+  AgentPromptResponse,
   AIDailyResponse,
   AIDailySyncResult,
   AITrendAnalysisResponse,
@@ -196,6 +198,13 @@ export function getMarketTrend(window?: AnalysisWindow) {
 
 export function getOverview(window?: AnalysisWindow) {
   return request<OverviewAnalysisResponse>(`/api/v1/analysis/overview${toQueryString({ window })}`);
+}
+
+export function askAgentAnalysis(payload: AgentPromptRequest) {
+  return requestAgent<AgentPromptResponse>('/prompt', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export function uploadQuestionFiles(qid: number, files: File[], onProgress?: (percent: number) => void) {

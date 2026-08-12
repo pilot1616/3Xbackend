@@ -418,3 +418,23 @@ export interface SessionData {
   user: User;
   expiresAt: string;
 }
+
+export interface AgentPromptRequest {
+  prompt: string;
+  context?: Record<string, unknown>;
+  db_scope?: string | null;
+}
+
+export interface AgentSourceSample {
+  table?: string;
+  sql?: string;
+  columns: string[];
+  rows: Array<Record<string, unknown>>;
+}
+
+export interface AgentPromptResponse {
+  answer: string;
+  query_summary: string;
+  sources: AgentSourceSample[];
+  error: string;
+}

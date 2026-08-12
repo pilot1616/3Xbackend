@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import { getAITrend, getMarketTrend, getOverview } from '../api/forum';
+import { askAgentAnalysis, getAITrend, getMarketTrend, getOverview } from '../api/forum';
 import { ApiError } from '../api/client';
 import type {
+  AgentPromptResponse,
   AITrendAnalysisResponse,
   AnalysisConfidence,
   AnalysisWindow,
@@ -12,11 +13,18 @@ import type {
 } from '../types/api';
 
 const analysisWindows: AnalysisWindow[] = ['1d', '7d', '30d'];
+const agentCacheTTL = 60 * 60 * 1000;
+const agentCachePrefix = '3x-analysis-agent-cache';
 
 type ModuleError = {
   title: string;
   detail: string;
   status: number | null;
+};
+
+type AgentAnalysisCacheRecord = {
+  generatedAt: string;
+  value: AgentPromptResponse;
 };
 
 function formatDateTime(value: string) {
@@ -168,6 +176,51 @@ function buildModuleError(error: unknown, fallbackTitle: string, fallbackDetail:
   };
 }
 
+function getAgentCacheKey(window: AnalysisWindow) {
+  return `${agentCachePrefix}:${window}`;
+}
+
+function readAgentAnalysisCache(window: AnalysisWindow): AgentAnalysisCacheRecord | null {
+  if (typeof globalThis.localStorage === 'undefined') {
+    return null;
+  }
+
+  try {
+    const raw = globalThis.localStorage.getItem(getAgentCacheKey(window));
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw) as Partial<AgentAnalysisCacheRecord>;
+    if (!parsed.generatedAt || !parsed.value) {
+      return null;
+    }
+    const generatedAt = new Date(parsed.generatedAt).getTime();
+    if (Number.isNaN(generatedAt) || Date.now() - generatedAt > agentCacheTTL) {
+      globalThis.localStorage.removeItem(getAgentCacheKey(window));
+      return null;
+    }
+    return parsed as AgentAnalysisCacheRecord;
+  } catch {
+    return null;
+  }
+}
+
+function writeAgentAnalysisCache(window: AnalysisWindow, value: AgentPromptResponse) {
+  if (typeof globalThis.localStorage === 'undefined') {
+    return;
+  }
+
+  const record: AgentAnalysisCacheRecord = {
+    generatedAt: new Date().toISOString(),
+    value,
+  };
+  try {
+    globalThis.localStorage.setItem(getAgentCacheKey(window), JSON.stringify(record));
+  } catch {
+    // 缓存失败不影响页面主流程。
+  }
+}
+
 export function AnalysisPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialWindow = (() => {
@@ -185,6 +238,9 @@ export function AnalysisPage() {
   const [aiTrendError, setAITrendError] = useState<ModuleError | null>(null);
   const [marketTrendError, setMarketTrendError] = useState<ModuleError | null>(null);
   const [overviewError, setOverviewError] = useState<ModuleError | null>(null);
+  const [agentAnalysis, setAgentAnalysis] = useState<AgentPromptResponse | null>(null);
+  const [agentError, setAgentError] = useState<ModuleError | null>(null);
+  const [agentLoading, setAgentLoading] = useState(true);
   const requestRef = useRef(0);
 
   useEffect(() => {
@@ -218,11 +274,23 @@ export function AnalysisPage() {
     setAITrendError(null);
     setMarketTrendError(null);
     setOverviewError(null);
+    setAgentError(null);
+
+    const cachedAgentAnalysis = readAgentAnalysisCache(nextWindow);
+    if (cachedAgentAnalysis) {
+      setAgentAnalysis(cachedAgentAnalysis.value);
+      setAgentLoading(false);
+    } else {
+      setAgentLoading(true);
+    }
 
     if (!isRefresh) {
       setOverview(null);
       setAITrend(null);
       setMarketTrend(null);
+      if (!cachedAgentAnalysis) {
+        setAgentAnalysis(null);
+      }
     }
 
     if (isRefresh) {
@@ -232,10 +300,22 @@ export function AnalysisPage() {
     }
 
     try {
-      const [overviewResult, aiTrendResult, marketTrendResult] = await Promise.allSettled([
+      const agentPrompt = `请结合当前数据库中的内容，分析近 ${formatWindowLabel(nextWindow)} 的 AI 主题与市场相关数据，输出结论、依据、风险和建议。`;
+      const agentRequest = cachedAgentAnalysis
+        ? Promise.resolve(cachedAgentAnalysis.value)
+        : askAgentAnalysis({
+          prompt: agentPrompt,
+          context: {
+            window: nextWindow,
+            source: 'analysis-page',
+          },
+          db_scope: 'auto',
+        });
+      const [overviewResult, aiTrendResult, marketTrendResult, agentResult] = await Promise.allSettled([
         getOverview(nextWindow),
         getAITrend(nextWindow),
         getMarketTrend(nextWindow),
+        agentRequest,
       ]);
 
       if (requestID !== requestRef.current) {
@@ -268,13 +348,25 @@ export function AnalysisPage() {
         setMarketTrendError(buildModuleError(marketTrendResult.reason, '市场趋势数据不足', '市场趋势加载失败。'));
       }
 
-      if (failedCount === 3) {
-        setMessage('当前三个分析模块都未返回可用结果，请稍后重试或切换到更长窗口。');
+      if (agentResult.status === 'fulfilled') {
+        setAgentAnalysis(agentResult.value);
+        if (!cachedAgentAnalysis) {
+          writeAgentAnalysisCache(nextWindow, agentResult.value);
+        }
+      } else {
+        failedCount += 1;
+        setAgentAnalysis(null);
+        setAgentError(buildModuleError(agentResult.reason, 'Agent 分析暂不可用', 'Agent 分析加载失败。'));
+      }
+
+      if (failedCount === 4) {
+        setMessage('当前分析模块都未返回可用结果，请稍后重试或切换到更长窗口。');
       }
     } finally {
       if (requestID === requestRef.current) {
         setLoading(false);
         setRefreshing(false);
+        setAgentLoading(false);
       }
     }
   }
@@ -318,6 +410,9 @@ export function AnalysisPage() {
     ...marketLaggingHighlights.map((item) => ({ label: '偏弱', symbol: item.symbol, change: formatChangePercent(item.changePercent), tone: 'warning' as const })),
   ].slice(0, 4);
   const marketWatchItems = marketTrend ? [...marketTrend.risks, marketTrend.dataStatus.note].filter(Boolean).slice(0, 2) : [];
+  const agentSources = agentAnalysis?.sources ?? [];
+  const agentSummary = agentAnalysis?.answer?.trim() || '';
+  const agentQuerySummary = agentAnalysis?.query_summary?.trim() || '';
   const heroSummary = useMemo(() => {
     if (overview) {
       const state = overview.dataStatus.sufficient ? '样本相对充分' : '样本偏少';
@@ -402,6 +497,54 @@ export function AnalysisPage() {
 
         {message ? <div className="legacy-feedback analysis-page-feedback">{message}</div> : null}
         {loading ? <div className="legacy-feedback analysis-page-feedback">正在加载分析结果...</div> : null}
+
+        <section className="analysis-panel analysis-panel-agent">
+          <div className="analysis-panel-head">
+            <div>
+              <span className="analysis-panel-kicker">Agent 智能分析</span>
+              <h2>数据库驱动判断</h2>
+              <p>1 小时内复用上次结果，避免重复消耗 LLM token。</p>
+            </div>
+            <div className="analysis-panel-badges">
+              <span className="analysis-chip-badge is-confidence">{agentLoading ? '加载中' : agentAnalysis ? '已生成' : '未生成'}</span>
+              {agentSources.length > 0 ? <span className="analysis-chip-badge is-mixed">{agentSources.length} 个来源</span> : null}
+            </div>
+          </div>
+
+          {agentError ? (
+            <div className="analysis-panel-error">
+              <strong>{agentError.title}</strong>
+              <p>{agentError.detail}</p>
+              <button className="legacy-action-button secondary small" disabled={pageBusy} onClick={handleRetry} type="button">
+                {refreshing ? '重试中...' : '重试'}
+              </button>
+            </div>
+          ) : null}
+
+          {agentAnalysis ? (
+            <div className="analysis-panel-body">
+              <p className="analysis-panel-summary">{agentSummary || 'Agent 未返回可读结论。'}</p>
+              {agentQuerySummary ? (
+                <div className="analysis-risk-block">
+                  <span className="analysis-list-label">查询摘要</span>
+                  <p className="analysis-inline-note">{agentQuerySummary}</p>
+                </div>
+              ) : null}
+              {agentSources.length > 0 ? (
+                <div className="analysis-risk-block">
+                  <span className="analysis-list-label">来源表</span>
+                  <ul className="analysis-list analysis-list-muted">
+                    {agentSources.map((item) => (
+                      <li key={item.table ?? item.sql ?? item.columns.join(',')}>
+                        {item.table ?? item.sql ?? '查询结果'} · {item.columns.length} 列 · {item.rows.length} 行结果
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
 
         <div className="analysis-page-grid">
           <section className="analysis-panel analysis-panel-overview">

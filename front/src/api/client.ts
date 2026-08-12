@@ -1,6 +1,7 @@
 import { clearSession, getSession } from '../lib/session';
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+export const AGENT_BASE_URL = (import.meta.env.VITE_AGENT_BASE_URL ?? 'http://localhost:8010').replace(/\/$/, '');
 
 const ASSET_BASE_URL = (import.meta.env.VITE_ASSET_BASE_URL ?? API_BASE_URL).replace(/\/$/, '');
 
@@ -57,6 +58,33 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
       clearSession();
     }
     const message = payload && typeof payload.message === 'string' ? payload.message : 'request failed';
+    throw new ApiError(response.status, message);
+  }
+
+  return payload as T;
+}
+
+export async function requestAgent<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers ?? {});
+  if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  const response = await fetch(`${AGENT_BASE_URL}${path}`, {
+    ...init,
+    headers,
+  });
+
+  const isJson = response.headers.get('content-type')?.includes('application/json');
+  const rawText = await response.text();
+  const payload = isJson && rawText ? safeParseJson(rawText) : null;
+
+  if (!response.ok) {
+    const body = payload as Record<string, unknown> | null;
+    const message =
+      (body && typeof body.detail === 'string' && body.detail) ||
+      (body && typeof body.message === 'string' && body.message) ||
+      'request failed';
     throw new ApiError(response.status, message);
   }
 

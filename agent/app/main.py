@@ -46,12 +46,13 @@ def prompt(request: PromptRequest) -> PromptResponse:
         return PromptResponse(answer="", query_summary="", sources=[], error=str(exc))
 
     sources = []
-    for sample in result.get("samples", []):
+    query_result = result.get("query_result")
+    if query_result:
         sources.append(
             {
-                "table": sample.table,
-                "columns": sample.columns,
-                "rows": sample.rows,
+                "sql": query_result.sql,
+                "columns": query_result.columns,
+                "rows": query_result.rows,
             }
         )
     return PromptResponse(
