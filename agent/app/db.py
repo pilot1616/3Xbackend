@@ -32,7 +32,6 @@ blocked_sql_tokens = {
     "grant",
     "insert",
     "load",
-    "replace",
     "revoke",
     "set",
     "truncate",
@@ -103,7 +102,29 @@ def clean_sql(raw_sql: str) -> str:
     if sql.startswith("```"):
         sql = re.sub(r"^```(?:sql)?", "", sql, flags=re.IGNORECASE).strip()
         sql = re.sub(r"```$", "", sql).strip()
-    return sql.rstrip(";").strip()
+    return re.sub(r";+\s*$", "", sql).strip()
+
+
+def has_unquoted_semicolon(sql: str) -> bool:
+    quote = ""
+    escaped = False
+    for char in sql:
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\" and quote:
+            escaped = True
+            continue
+        if quote:
+            if char == quote:
+                quote = ""
+            continue
+        if char in {"'", '"', "`"}:
+            quote = char
+            continue
+        if char == ";":
+            return True
+    return False
 
 
 def validate_readonly_sql(sql: str, allowed_tables: set[str]) -> None:
@@ -111,9 +132,9 @@ def validate_readonly_sql(sql: str, allowed_tables: set[str]) -> None:
     lowered = normalized.lower()
     if not normalized:
         raise ValueError("SQL is empty")
-    if ";" in normalized:
+    if has_unquoted_semicolon(normalized):
         raise ValueError("Only one SQL statement is allowed")
-    if not lowered.startswith(("select ", "with ", "show ", "describe ", "desc ", "explain ")):
+    if not re.match(r"^(select|with|show|describe|desc|explain)\b", lowered):
         raise ValueError("Only readonly SQL is allowed")
     tokens = set(re.findall(r"[a-z_]+", lowered))
     blocked = sorted(tokens.intersection(blocked_sql_tokens))
@@ -132,7 +153,7 @@ def execute_readonly_sql(engine: Engine, raw_sql: str, limit: int = 50) -> Query
     validate_readonly_sql(sql, settings.allowed_table_set)
     safe_limit = max(1, min(limit, 100))
     lowered = sql.lower()
-    if lowered.startswith(("select ", "with ")):
+    if re.match(r"^(select|with)\b", lowered):
         run_sql = f"SELECT * FROM ({sql}) AS agent_result LIMIT {safe_limit}"
     else:
         run_sql = sql

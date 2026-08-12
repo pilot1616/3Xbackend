@@ -43,6 +43,16 @@ def build_graph(db_engine) -> Any:
         from .db import list_tables, table_fingerprint
 
         prompt = state["prompt"].lower()
+        context = state.get("context") or {}
+        if context.get("source") == "analysis-page":
+            analysis_tables = [
+                "ai_daily_snapshots",
+                "precious_metal_snapshots",
+                "tech_market_snapshots",
+            ]
+            available = set(list_tables(db_engine))
+            return {**state, "selected_tables": [table for table in analysis_tables if table in available]}
+
         explicit_scope = state.get("db_scope")
         if explicit_scope not in (None, "", "auto"):
             return {**state, "selected_tables": [explicit_scope]}
@@ -73,6 +83,7 @@ def build_graph(db_engine) -> Any:
             "你只能输出一条 MySQL 只读 SQL，不要解释，不要 Markdown。"
             "只能使用给定 schema 中存在的表和字段。"
             "禁止 INSERT、UPDATE、DELETE、DROP、ALTER、CREATE、TRUNCATE。"
+            "如果用户问题涉及 AI 与市场联动，必须同时查询 AI 日报表和金融行情表。"
             "如果用户问题无法精确回答，输出一个用于获取最相关事实的 SELECT 查询。"
         )
         user_prompt = (

@@ -19,6 +19,7 @@ type Server struct {
 	authHandler     *handler.AuthHandler
 	forumHandler    *handler.ForumHandler
 	analysisHandler *handler.AnalysisHandler
+	agentHandler    *handler.AgentHandler
 	authGuard       gin.HandlerFunc
 	optionalAuth    gin.HandlerFunc
 }
@@ -40,6 +41,7 @@ func (s *Server) Init(db *gorm.DB, cfg *config.Config) error {
 	aiDailySyncService := service.NewAIDailySyncService(db, cfg.Sync.AIDaily)
 	s.forumHandler = handler.NewForumHandler(forumService, metalSyncService, techSyncService, aiDailySyncService)
 	s.analysisHandler = handler.NewAnalysisHandler(service.NewAnalysisService(db))
+	s.agentHandler = handler.NewAgentHandler(authService)
 	s.router.Static("/public", cfg.Storage.PublicRoot())
 
 	s.registerRoutes()
@@ -82,6 +84,12 @@ func (s *Server) registerRoutes() {
 	api.GET("/analysis/ai-trend", s.analysisHandler.GetAITrend)
 	api.GET("/analysis/market-trend", s.analysisHandler.GetMarketTrend)
 	api.GET("/analysis/overview", s.analysisHandler.GetOverview)
+
+	agentGroup := api.Group("/agent")
+	agentGroup.Use(s.authGuard)
+	agentGroup.GET("/conversations", s.agentHandler.ListConversations)
+	agentGroup.GET("/conversations/:conversationID/messages", s.agentHandler.ListMessages)
+	agentGroup.POST("/chat", s.agentHandler.Chat)
 
 	userGroup := api.Group("/users")
 	userGroup.Use(s.authGuard)

@@ -2,6 +2,10 @@ import { request, requestAgent, uploadRequest } from './client';
 import type {
   AgentPromptRequest,
   AgentPromptResponse,
+  AgentChatRequest,
+  AgentChatResponse,
+  AgentConversationListResponse,
+  AgentMessageListResponse,
   AIDailyResponse,
   AIDailySyncResult,
   AITrendAnalysisResponse,
@@ -202,6 +206,21 @@ export function getOverview(window?: AnalysisWindow) {
 
 export function askAgentAnalysis(payload: AgentPromptRequest) {
   return requestAgent<AgentPromptResponse>('/prompt', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listAgentConversations() {
+  return request<AgentConversationListResponse>('/api/v1/agent/conversations');
+}
+
+export function listAgentMessages(conversationID: string) {
+  return request<AgentMessageListResponse>(`/api/v1/agent/conversations/${encodeURIComponent(conversationID)}/messages`);
+}
+
+export function sendAgentChat(payload: AgentChatRequest) {
+  return request<AgentChatResponse>('/api/v1/agent/chat', {
     method: 'POST',
     body: JSON.stringify(payload),
   });

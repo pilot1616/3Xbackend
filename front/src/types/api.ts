@@ -438,3 +438,46 @@ export interface AgentPromptResponse {
   sources: AgentSourceSample[];
   error: string;
 }
+
+export interface AgentConversation {
+  conversation_id: string;
+  source: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentConversationListResponse {
+  records: AgentConversation[];
+}
+
+export type AgentChatRole = 'user' | 'assistant';
+
+export interface AgentChatMessage {
+  message_id: string;
+  role: AgentChatRole;
+  content: string;
+  created_at: string;
+  run_id?: string;
+  query_summary?: string;
+}
+
+export interface AgentMessageListResponse {
+  records: AgentChatMessage[];
+}
+
+export interface AgentChatRequest {
+  conversation_id?: string;
+  message: string;
+  context?: Record<string, unknown>;
+}
+
+export interface AgentChatResponse {
+  conversation_id: string;
+  message_id: string;
+  reply: string;
+  query_summary: string;
+  sources: AgentSourceSample[];
+  run_id: string;
+  error: string;
+}

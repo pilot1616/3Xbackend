@@ -57,7 +57,11 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
     if (response.status === 401) {
       clearSession();
     }
-    const message = payload && typeof payload.message === 'string' ? payload.message : 'request failed';
+    const body = payload as Record<string, unknown> | null;
+    const message =
+      (body && typeof body.message === 'string' && body.message) ||
+      (body && typeof body.detail === 'string' && body.detail) ||
+      'request failed';
     throw new ApiError(response.status, message);
   }
 

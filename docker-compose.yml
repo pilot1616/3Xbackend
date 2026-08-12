@@ -32,6 +32,7 @@ services:
       DATABASE_MYSQL_ADDRESS: mysql
       DATABASE_MYSQL_PORT: 3306
       DATABASE_MYSQL_SCHEMA: ${DATABASE_MYSQL_SCHEMA:-3X}
+      AGENT_BASE_URL: ${AGENT_BASE_URL:-http://agent:8010}
     ports:
       - "${SERVER_PORT:-3000}:3000"
     volumes:
