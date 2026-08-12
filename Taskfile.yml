@@ -176,11 +176,52 @@ tasks:
         [ -f .env ] && set -a && . ./.env && set +a || true; \
         python3 -m app.main once
 
+  data:fetch:history:
+    desc: 使用 AkShare 拉取历年金融数据并写入数据库
+    deps: [init]
+    cmds:
+      - |
+        cd data-fetch && \
+        [ -f .env ] && set -a && . ./.env && set +a || true; \
+        python3 -m app.main history
+
   data:fetch:docker:
     desc: 启动 Docker MySQL 后使用 AkShare 拉取金融数据
     deps: [init, db:up, db:wait]
     cmds:
       - task data:fetch
+
+  startup:init:
+    desc: 启动初始化：历年金融数据、AI 日报全量、随机用户数据
+    deps: [init, db:up, db:wait]
+    cmds:
+      - task data:fetch:history
+      - |
+        SERVER_PORT="${SERVER_PORT:-3000}" \
+        DATABASE_MYSQL_USER="${DATABASE_MYSQL_USER:-root}" \
+        DATABASE_MYSQL_PASSWORD="${DATABASE_MYSQL_PASSWORD:-root}" \
+        DATABASE_MYSQL_ADDRESS="${DATABASE_MYSQL_ADDRESS:-127.0.0.1}" \
+        DATABASE_MYSQL_PORT="${DATABASE_MYSQL_PORT:-3306}" \
+        DATABASE_MYSQL_SCHEMA="${DATABASE_MYSQL_SCHEMA:-3X}" \
+        AUTH_SECRET="${AUTH_SECRET:-3Xbackend-dev-secret}" \
+        SYNC_AI_DAILY_MAX_ENTRIES="${SYNC_AI_DAILY_MAX_ENTRIES:-10000}" \
+        go run ./cmd/ai-daily-sync
+      - |
+        SERVER_PORT="${SERVER_PORT:-3000}" \
+        DATABASE_MYSQL_USER="${DATABASE_MYSQL_USER:-root}" \
+        DATABASE_MYSQL_PASSWORD="${DATABASE_MYSQL_PASSWORD:-root}" \
+        DATABASE_MYSQL_ADDRESS="${DATABASE_MYSQL_ADDRESS:-127.0.0.1}" \
+        DATABASE_MYSQL_PORT="${DATABASE_MYSQL_PORT:-3306}" \
+        DATABASE_MYSQL_SCHEMA="${DATABASE_MYSQL_SCHEMA:-3X}" \
+        AUTH_SECRET="${AUTH_SECRET:-3Xbackend-dev-secret}" \
+        go run ./cmd/seed \
+          -users "${SEED_USERS:-80}" \
+          -questions "${SEED_QUESTIONS:-120}" \
+          -min-comments "${SEED_MIN_COMMENTS:-1}" \
+          -max-comments "${SEED_MAX_COMMENTS:-8}" \
+          -min-likes "${SEED_MIN_LIKES:-0}" \
+          -max-likes "${SEED_MAX_LIKES:-20}" \
+          -max-assets "${SEED_MAX_ASSETS:-4}"
 
   ai:daily:sync:
     desc: 手动执行一次 AI 日报同步

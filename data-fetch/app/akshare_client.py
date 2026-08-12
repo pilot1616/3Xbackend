@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 from typing import Any
 
@@ -156,6 +156,30 @@ def _history_change(latest: pd.Series, previous: pd.Series | None) -> tuple[str,
     return f"{change:.4f}", f"{percent:.4f}"
 
 
+def _history_records(df: pd.DataFrame, start_year: int) -> list[tuple[pd.Series, pd.Series | None]]:
+    if df.empty:
+        return []
+    normalized = _normalize_columns(df)
+    if "date" in normalized.columns:
+        normalized = normalized.sort_values("date")
+        dates = pd.to_datetime(normalized["date"], errors="coerce")
+        normalized = normalized[dates.dt.year >= start_year]
+    records: list[tuple[pd.Series, pd.Series | None]] = []
+    previous: pd.Series | None = None
+    for _, row in normalized.iterrows():
+        records.append((row, previous))
+        previous = row
+    return records
+
+
+def _row_date(row: pd.Series, fallback: datetime) -> datetime:
+    raw = _row_value(row, "date", "日期")
+    parsed = pd.to_datetime(raw, errors="coerce")
+    if pd.isna(parsed):
+        return fallback
+    return parsed.to_pydatetime()
+
+
 def _tech_history(target: MarketTarget) -> tuple[pd.Series | None, pd.Series | None, str]:
     if target.symbol == "NDX":
         df = ak.index_us_stock_sina(symbol=target.source_symbol)
@@ -212,4 +236,98 @@ def fetch_tech_markets(fetched_at: datetime) -> tuple[list[dict[str, Any]], list
                 "fetched_at": fetched_at,
             }
         )
+    return records, failures
+
+
+def fetch_precious_metal_history(start_year: int) -> tuple[list[dict[str, Any]], list[str]]:
+    failures: list[str] = []
+    records: list[dict[str, Any]] = []
+    for target in PRECIOUS_METALS:
+        try:
+            df = ak.futures_foreign_hist(symbol=target.source_symbol)
+        except Exception as exc:
+            failures.append(f"{target.symbol}: history failed: {exc}")
+            continue
+        for row, previous in _history_records(df, start_year):
+            change, change_percent = _history_change(row, previous)
+            fetched_at = _row_date(row, datetime.now())
+            overview = _overview(row)
+            records.append(
+                {
+                    "source": "akshare",
+                    "symbol": target.symbol,
+                    "name": target.name,
+                    "source_url": "akshare:futures_foreign_hist",
+                    "price": _row_value(row, "close"),
+                    "change": change,
+                    "change_percent": change_percent,
+                    "prev_close": _row_value(previous, "close") if previous is not None else "",
+                    "open": _row_value(row, "open"),
+                    "bid": "",
+                    "ask": "",
+                    "day_range": " - ".join(value for value in [_row_value(row, "low"), _row_value(row, "high")] if value),
+                    "week52_range": "",
+                    "volume": _row_value(row, "volume"),
+                    "avg_volume": "",
+                    "last_update_text": _row_value(row, "date"),
+                    "contract_month": "",
+                    "settlement_date": "",
+                    "tick_size": "",
+                    "contract_size": "",
+                    "tick_value": "",
+                    "base_unit": "",
+                    "overview_json": json.dumps(overview, ensure_ascii=False),
+                    "fetched_at": fetched_at,
+                }
+            )
+    return records, failures
+
+
+def fetch_tech_market_history(start_year: int) -> tuple[list[dict[str, Any]], list[str]]:
+    failures: list[str] = []
+    records: list[dict[str, Any]] = []
+    for target in TECH_MARKETS:
+        try:
+            if target.symbol == "NDX":
+                df = ak.index_us_stock_sina(symbol=target.source_symbol)
+                source_url = "akshare:index_us_stock_sina"
+            else:
+                df = ak.stock_us_daily(symbol=target.source_symbol)
+                source_url = "akshare:stock_us_daily"
+        except Exception as exc:
+            failures.append(f"{target.symbol}: history failed: {exc}")
+            continue
+        for row, previous in _history_records(df, start_year):
+            change, change_percent = _history_change(row, previous)
+            fetched_at = _row_date(row, datetime.now())
+            overview = _overview(row)
+            records.append(
+                {
+                    "source": "akshare",
+                    "category": target.category,
+                    "symbol": target.symbol,
+                    "name": target.name,
+                    "source_url": source_url,
+                    "price": _row_value(row, "close"),
+                    "change": change,
+                    "change_percent": change_percent,
+                    "prev_close": _row_value(previous, "close") if previous is not None else "",
+                    "open": _row_value(row, "open"),
+                    "bid": "",
+                    "ask": "",
+                    "day_range": " - ".join(value for value in [_row_value(row, "low"), _row_value(row, "high")] if value),
+                    "week52_range": "",
+                    "volume": _row_value(row, "volume"),
+                    "avg_volume": "",
+                    "market_cap": "",
+                    "pe_ratio": "",
+                    "beta": "",
+                    "eps": "",
+                    "dividend": "",
+                    "yield": "",
+                    "last_update_text": _row_value(row, "date"),
+                    "overview_json": json.dumps(overview, ensure_ascii=False),
+                    "fetched_at": fetched_at,
+                }
+            )
     return records, failures

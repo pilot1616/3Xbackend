@@ -28,6 +28,7 @@ class Settings:
     db_port: int = _env_int("DATABASE_MYSQL_PORT", 3306)
     db_schema: str = _env("DATABASE_MYSQL_SCHEMA", "3X")
     interval_seconds: int = _env_int("DATA_FETCH_INTERVAL_SECONDS", 3600)
+    history_start_year: int = _env_int("DATA_FETCH_HISTORY_START_YEAR", 2018)
 
     @property
     def db_url(self) -> str:
@@ -38,4 +39,3 @@ class Settings:
 
 
 settings = Settings()
-
