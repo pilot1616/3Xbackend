@@ -129,14 +129,14 @@ def chat(request: ChatRequest) -> ChatResponse:
             raise
 
         query_result = execute_readonly_sql(engine, sql_call.content)
-        query_summary = f"sql={query_result.sql}\ncolumns={query_result.columns}\nrows={len(query_result.rows)}"
+        visible_query_summary = f"columns={query_result.columns}\nrows={len(query_result.rows)}"
         sources = jsonable_encoder([{"sql": query_result.sql, "columns": query_result.columns, "rows": query_result.rows}])
 
         answer_system = "你是企业内部 AI 金融分析助手。请根据查询结果和对话历史回答，给出结论、依据、风险和建议。"
         answer_user = (
             f"用户问题：{request.message}\n\n"
             f"最近对话：\n{history_text}\n\n"
-            f"查询摘要：\n{query_summary}\n\n"
+            f"查询摘要：\n{visible_query_summary}\n\n"
             f"查询结果：\n{sources[0]['rows']}"
         )
         try:
@@ -152,11 +152,11 @@ def chat(request: ChatRequest) -> ChatResponse:
             "success",
             assistant_message_id=assistant_message_id,
             generated_sql=query_result.sql,
-            query_summary=query_summary,
+            query_summary=visible_query_summary,
             sources_json=json.dumps(sources, ensure_ascii=False),
             latency_ms=sql_call.latency_ms + answer_call.latency_ms,
         )
-        return ChatResponse(conversation_id=conversation_id, message_id=assistant_message_id, reply=answer_call.content, query_summary=query_summary, sources=sources, run_id=run_id)
+        return ChatResponse(conversation_id=conversation_id, message_id=assistant_message_id, reply=answer_call.content, query_summary=visible_query_summary, sources=sources, run_id=run_id)
     except Exception as exc:
         finish_run(engine, run_id, "failed", error=str(exc))
         raise HTTPException(status_code=500, detail=str(exc)) from exc

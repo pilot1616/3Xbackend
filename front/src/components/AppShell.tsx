@@ -153,7 +153,7 @@ export function AppShell() {
               AI 日报
             </NavLink>
             <NavLink className={navClassName} to="/album">
-              相册
+              AI 聊天
             </NavLink>
             <NavLink className={navClassName} to="/profile">
               我的资料
@@ -213,7 +213,7 @@ export function AppShell() {
           <div className="legacy-site-footer-top">
             <section className="legacy-site-footer-brand">
               <span className="legacy-site-footer-badge">3X Community Console</span>
-              <h2>把提问、相册和个人轨迹收纳进一块可持续浏览的数字工作台。</h2>
+              <h2>把提问、AI 聊天和个人轨迹收纳进一块可持续浏览的数字工作台。</h2>
               <p>现在的前端已经改写为 TypeScript 单页应用，页面通过空间层次、玻璃质感和冷色光影统一到同一套 3D Elements 视觉系统。</p>
             </section>
 

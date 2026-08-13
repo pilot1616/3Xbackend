@@ -608,6 +608,19 @@
   gap: 16px;
 }
 
+.ai-chat-page-shell .analysis-page-container {
+  gap: 18px;
+}
+
+.analysis-chat-panel-standalone .analysis-chat-layout {
+  min-height: 560px;
+}
+
+.analysis-chat-panel-standalone .analysis-chat-messages {
+  min-height: 420px;
+  max-height: 640px;
+}
+
 .analysis-chat-layout {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
