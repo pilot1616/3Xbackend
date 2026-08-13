@@ -80,6 +80,7 @@ export function QuestionCard({
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const editorTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const visibleFiles = question.files.slice(0, compact ? 4 : question.files.length);
+  const hiddenFileCount = Math.max(0, question.files.length - visibleFiles.length);
   const trimmedCommentText = commentText.trim();
   const commentDraftLength = trimmedCommentText.length;
   const totalCommentCount = commentsPage.total || question.commentsNum;
@@ -309,10 +310,11 @@ export function QuestionCard({
         <p className="text-cont">{question.text}</p>
 
         {question.files.length > 0 ? (
-          <div className="img-box forum-media-grid">
+          <div className={`img-box forum-media-grid${compact ? ' is-compact' : ''} has-${Math.min(visibleFiles.length, 4)}-items`}>
             {visibleFiles.map((fileName, index) => (
               <button className="forum-media-trigger" key={fileName} onClick={() => setPreviewIndex(index)} type="button">
                 {isImage(fileName) ? <img alt={fileName} src={buildUploadAssetUrl(fileName)} /> : <video muted src={buildUploadAssetUrl(fileName)} />}
+                {compact && hiddenFileCount > 0 && index === visibleFiles.length - 1 ? <span className="forum-media-more">+{hiddenFileCount}</span> : null}
               </button>
             ))}
           </div>
