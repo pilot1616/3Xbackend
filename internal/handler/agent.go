@@ -28,6 +28,12 @@ type agentChatRequest struct {
 	Context        map[string]any `json:"context,omitempty"`
 }
 
+type agentPromptRequest struct {
+	Prompt  string         `json:"prompt" binding:"required,max=4000"`
+	Context map[string]any `json:"context,omitempty"`
+	DBScope string         `json:"db_scope,omitempty"`
+}
+
 type agentUser struct {
 	ID       uint   `json:"id"`
 	Username string `json:"username"`
@@ -110,6 +116,32 @@ func (h *AgentHandler) Chat(c *gin.Context) {
 		return
 	}
 	h.proxy(c, http.MethodPost, "/chat", body)
+}
+
+func (h *AgentHandler) Prompt(c *gin.Context) {
+	var req agentPromptRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+	req.Prompt = strings.TrimSpace(req.Prompt)
+	if req.Prompt == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "prompt is required"})
+		return
+	}
+	if req.Context == nil {
+		req.Context = map[string]any{}
+	}
+	if _, exists := req.Context["source"]; !exists {
+		req.Context["source"] = "analysis-page"
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "encode agent request failed"})
+		return
+	}
+	h.proxy(c, http.MethodPost, "/prompt", body)
 }
 
 func (h *AgentHandler) currentUser(c *gin.Context) (*service.UserResponse, bool) {

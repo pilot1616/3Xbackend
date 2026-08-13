@@ -84,6 +84,7 @@ func (s *Server) registerRoutes() {
 	api.GET("/analysis/ai-trend", s.analysisHandler.GetAITrend)
 	api.GET("/analysis/market-trend", s.analysisHandler.GetMarketTrend)
 	api.GET("/analysis/overview", s.analysisHandler.GetOverview)
+	api.POST("/agent/prompt", s.agentHandler.Prompt)
 
 	agentGroup := api.Group("/agent")
 	agentGroup.Use(s.authGuard)

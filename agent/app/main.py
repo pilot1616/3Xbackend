@@ -28,7 +28,6 @@ from .types import ChatRequest, ChatResponse, PromptRequest, PromptResponse
 
 
 engine = build_engine()
-ensure_chat_tables(engine)
 workflow = build_graph(engine)
 
 app = FastAPI(title="3X Agent", version="0.1.0")
@@ -81,12 +80,14 @@ def prompt(request: PromptRequest) -> PromptResponse:
 
 @app.get("/conversations")
 def conversations(user_id: int) -> dict[str, object]:
+    ensure_chat_tables(engine)
     return {"records": list_conversations(engine, user_id)}
 
 
 @app.get("/conversations/{conversation_id}/messages")
 def conversation_messages(conversation_id: str, user_id: int) -> dict[str, object]:
     try:
+        ensure_chat_tables(engine)
         return {"records": list_messages(engine, conversation_id, user_id)}
     except PermissionError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -97,6 +98,7 @@ def chat(request: ChatRequest) -> ChatResponse:
     if not settings.llm_api_key:
         raise HTTPException(status_code=500, detail="LLM_API_KEY is not configured")
 
+    ensure_chat_tables(engine)
     llm = LLMClient()
     user = request.user.model_dump()
     source = str(request.context.get("source") or "analysis-page")

@@ -1,4 +1,4 @@
-import { request, requestAgent, uploadRequest } from './client';
+import { request, uploadRequest } from './client';
 import type {
   AgentPromptRequest,
   AgentPromptResponse,
@@ -205,7 +205,7 @@ export function getOverview(window?: AnalysisWindow) {
 }
 
 export function askAgentAnalysis(payload: AgentPromptRequest) {
-  return requestAgent<AgentPromptResponse>('/prompt', {
+  return request<AgentPromptResponse>('/api/v1/agent/prompt', {
     method: 'POST',
     body: JSON.stringify(payload),
   });

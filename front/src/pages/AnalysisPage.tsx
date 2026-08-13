@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 
 import { askAgentAnalysis, getAITrend, getMarketTrend, getOverview } from '../api/forum';
 import { ApiError } from '../api/client';
-import { AgentChatPanel } from '../components/AgentChatPanel';
 import type {
   AgentPromptResponse,
   AITrendAnalysisResponse,
@@ -222,6 +221,25 @@ function writeAgentAnalysisCache(window: AnalysisWindow, value: AgentPromptRespo
   }
 }
 
+function removeAgentAnalysisCache(window: AnalysisWindow) {
+  if (typeof globalThis.localStorage === 'undefined') {
+    return;
+  }
+  try {
+    globalThis.localStorage.removeItem(getAgentCacheKey(window));
+  } catch {
+    // 缓存删除失败不影响手动刷新。
+  }
+}
+
+function buildAgentPrompt(window: AnalysisWindow) {
+  return [
+    `请分析近 ${formatWindowLabel(window)} 的 AI 主题与金融市场联动。`,
+    '必须同时使用 ai_daily_snapshots、precious_metal_snapshots、tech_market_snapshots 三类数据。',
+    '请输出结论、依据、异常点和建议。',
+  ].join('\n');
+}
+
 export function AnalysisPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialWindow = (() => {
@@ -242,6 +260,7 @@ export function AnalysisPage() {
   const [agentAnalysis, setAgentAnalysis] = useState<AgentPromptResponse | null>(null);
   const [agentError, setAgentError] = useState<ModuleError | null>(null);
   const [agentLoading, setAgentLoading] = useState(true);
+  const [agentRefreshing, setAgentRefreshing] = useState(false);
   const requestRef = useRef(0);
 
   useEffect(() => {
@@ -301,15 +320,10 @@ export function AnalysisPage() {
     }
 
     try {
-      const agentPrompt = [
-        `请分析近 ${formatWindowLabel(nextWindow)} 的 AI 主题与金融市场联动。`,
-        '必须同时使用 ai_daily_snapshots、precious_metal_snapshots、tech_market_snapshots 三类数据。',
-        '请输出结论、依据、异常点和建议。',
-      ].join('\n');
       const agentRequest = cachedAgentAnalysis
         ? Promise.resolve(cachedAgentAnalysis.value)
         : askAgentAnalysis({
-          prompt: agentPrompt,
+          prompt: buildAgentPrompt(nextWindow),
           context: {
             window: nextWindow,
             source: 'analysis-page',
@@ -373,6 +387,41 @@ export function AnalysisPage() {
         setRefreshing(false);
         setAgentLoading(false);
       }
+    }
+  }
+
+  async function handleRefreshAgentAnalysis() {
+    if (agentRefreshing) {
+      return;
+    }
+    removeAgentAnalysisCache(selectedWindow);
+    setAgentLoading(true);
+    setAgentRefreshing(true);
+    setAgentError(null);
+    setAgentAnalysis(null);
+    setMessage('正在重新请求 LLM 回答...');
+    try {
+      const result = await askAgentAnalysis({
+        prompt: buildAgentPrompt(selectedWindow),
+        context: {
+          window: selectedWindow,
+          source: 'analysis-page',
+          refresh: true,
+        },
+        db_scope: 'auto',
+      });
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      setAgentAnalysis(result);
+      writeAgentAnalysisCache(selectedWindow, result);
+      setMessage('LLM 回答已刷新');
+    } catch (error) {
+      setAgentError(buildModuleError(error, 'Agent 分析暂不可用', 'Agent 分析刷新失败。'));
+      setMessage('');
+    } finally {
+      setAgentLoading(false);
+      setAgentRefreshing(false);
     }
   }
 
@@ -508,12 +557,18 @@ export function AnalysisPage() {
             <div>
               <span className="analysis-panel-kicker">Agent 智能分析</span>
               <h2>数据库驱动判断</h2>
-              <p>1 小时内复用上次结果，避免重复消耗 LLM token。</p>
+              <p>1 小时内复用上次结果，也可以手动刷新 LLM 回答。</p>
             </div>
             <div className="analysis-panel-badges">
-              <span className="analysis-chip-badge is-confidence">{agentLoading ? '加载中' : agentAnalysis ? '已生成' : '未生成'}</span>
+              <span className="analysis-chip-badge is-confidence">{agentRefreshing ? '刷新中' : agentLoading ? '加载中' : agentAnalysis ? '已生成' : '未生成'}</span>
               {agentSources.length > 0 ? <span className="analysis-chip-badge is-mixed">{agentSources.length} 个来源</span> : null}
             </div>
+          </div>
+
+          <div className="analysis-panel-action-row">
+            <button className="legacy-action-button secondary small" disabled={agentRefreshing} onClick={() => void handleRefreshAgentAnalysis()} type="button">
+              {agentRefreshing ? '刷新中...' : '刷新 LLM 回答'}
+            </button>
           </div>
 
           {agentError ? (
@@ -550,8 +605,6 @@ export function AnalysisPage() {
             </div>
           ) : null}
         </section>
-
-        <AgentChatPanel selectedWindow={selectedWindow} />
 
         <div className="analysis-page-grid">
           <section className="analysis-panel analysis-panel-overview">

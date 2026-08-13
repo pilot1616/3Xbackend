@@ -92,7 +92,9 @@ tasks:
           go run ./cmd ) & \
         ( cd agent && \
           [ -f .env ] && set -a && . ./.env && set +a || true; \
-          python3 -m uvicorn app.main:app --host "${AGENT_HOST:-0.0.0.0}" --port "${AGENT_PORT:-8010}" ) & \
+          PYTHON_BIN="./.venv/bin/python"; \
+          [ -x "$PYTHON_BIN" ] || PYTHON_BIN="python3"; \
+          "$PYTHON_BIN" -m uvicorn app.main:app --host "${AGENT_HOST:-0.0.0.0}" --port "${AGENT_PORT:-8010}" ) & \
         ( cd front && npm run dev -- --host 0.0.0.0 )'
 
   dev:docker:
@@ -250,4 +252,6 @@ tasks:
       - |
         cd agent && \
         [ -f .env ] && set -a && . ./.env && set +a || true; \
-        python3 -m uvicorn app.main:app --host "${AGENT_HOST:-0.0.0.0}" --port "${AGENT_PORT:-8010}"
+        PYTHON_BIN="./.venv/bin/python"; \
+        [ -x "$PYTHON_BIN" ] || PYTHON_BIN="python3"; \
+        "$PYTHON_BIN" -m uvicorn app.main:app --host "${AGENT_HOST:-0.0.0.0}" --port "${AGENT_PORT:-8010}"

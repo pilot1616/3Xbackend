@@ -459,6 +459,13 @@
   align-items: start;
 }
 
+.analysis-panel-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .analysis-panel-body,
 .analysis-risk-block,
 .analysis-copy-block,
