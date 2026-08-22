@@ -23,6 +23,31 @@ function normalizeRedirectPath(value: string | null) {
   return value;
 }
 
+function describeRedirectAction(path: string) {
+  if (path.startsWith('/publish')) {
+    return '登录后继续发布或管理帖子';
+  }
+  if (path.startsWith('/questions/')) {
+    return '登录后回到帖子继续互动';
+  }
+  if (path.startsWith('/market')) {
+    return '登录后回到市场页手动同步';
+  }
+  if (path.startsWith('/ai-daily')) {
+    return '登录后回到 AI 日报页手动同步';
+  }
+  if (path.startsWith('/analysis')) {
+    return '登录后回到 AI 分析页继续查看';
+  }
+  if (path.startsWith('/ai-chat') || path.startsWith('/album')) {
+    return '登录后继续 AI 对话';
+  }
+  if (path.startsWith('/profile')) {
+    return '登录后查看我的资料';
+  }
+  return '登录后返回首页';
+}
+
 export function AuthPage() {
   const session = useSession();
   const [searchParams] = useSearchParams();
@@ -174,7 +199,7 @@ export function AuthPage() {
       : mode === 'register'
         ? '注册需要手机号、字母数字组合密码和密保答案，注册成功后会直接进入社区。'
         : '先查询该手机号绑定的密保问题，再提交新密码完成重置。';
-  const authReturnLabel = redirectPath === '/' ? '登录后返回首页' : `登录后返回 ${redirectPath}`;
+  const authReturnLabel = describeRedirectAction(redirectPath);
 
   return (
     <div className="auth-legacy-page">

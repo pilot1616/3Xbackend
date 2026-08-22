@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { askAgentAnalysis, getAITrend, getMarketTrend, getOverview } from '../api/forum';
 import { ApiError } from '../api/client';
@@ -631,6 +631,12 @@ export function AnalysisPage() {
                 <button className="legacy-action-button secondary small" disabled={pageBusy} onClick={handleRetry} type="button">
                   {refreshing ? '重试中...' : '重试'}
                 </button>
+                {overviewError.status === 422 ? (
+                  <div className="legacy-summary-strip">
+                    <Link className="legacy-summary-chip legacy-summary-chip-button" to="/ai-daily">补 AI 日报</Link>
+                    <Link className="legacy-summary-chip legacy-summary-chip-button" to="/market">补市场数据</Link>
+                  </div>
+                ) : null}
               </div>
             ) : null}
 
@@ -703,6 +709,11 @@ export function AnalysisPage() {
                 <button className="legacy-action-button secondary small" disabled={pageBusy} onClick={handleRetry} type="button">
                   {refreshing ? '重试中...' : '重试'}
                 </button>
+                {aiTrendError.status === 422 ? (
+                  <Link className="legacy-action-button secondary small" to="/ai-daily">
+                    去同步 AI 日报
+                  </Link>
+                ) : null}
               </div>
             ) : null}
 
@@ -772,6 +783,11 @@ export function AnalysisPage() {
                 <button className="legacy-action-button secondary small" disabled={pageBusy} onClick={handleRetry} type="button">
                   {refreshing ? '重试中...' : '重试'}
                 </button>
+                {marketTrendError.status === 422 ? (
+                  <Link className="legacy-action-button secondary small" to="/market">
+                    去同步市场数据
+                  </Link>
+                ) : null}
               </div>
             ) : null}
 

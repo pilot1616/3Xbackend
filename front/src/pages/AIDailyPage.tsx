@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { getAIDailies, syncAIDailies } from '../api/forum';
 import { useSession } from '../lib/session';
@@ -429,7 +429,20 @@ export function AIDailyPage() {
           </section>
         ) : null}
 
-        {!loading && records.length === 0 && !message ? <div className="legacy-feedback market-feedback">当前还没有同步到 AI 日报数据，请先触发同步任务。</div> : null}
+        {!loading && records.length === 0 && !message ? (
+          <div className="legacy-feedback market-feedback">
+            <p>当前还没有同步到 AI 日报数据。</p>
+            {session ? (
+              <button className="ai-daily-primary-button" disabled={syncing || priming} onClick={() => void handleSync(1, 800, 'sync')} type="button">
+                {syncing ? '同步中...' : '立即同步'}
+              </button>
+            ) : (
+              <Link className="ai-daily-primary-button" to="/auth?redirect=/ai-daily">
+                登录后手动同步
+              </Link>
+            )}
+          </div>
+        ) : null}
       </div>
     </section>
   );

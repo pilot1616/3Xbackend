@@ -141,7 +141,7 @@ export function AppShell() {
               首页
             </NavLink>
             <NavLink className={navClassName} to="/publish">
-              发布问题
+              发布/管理
             </NavLink>
             <NavLink className={navClassName} to="/market">
               市场动态
@@ -152,7 +152,7 @@ export function AppShell() {
             <NavLink className={navClassName} to="/ai-daily">
               AI 日报
             </NavLink>
-            <NavLink className={navClassName} to="/album">
+            <NavLink className={navClassName} to="/ai-chat">
               AI 聊天
             </NavLink>
             <NavLink className={navClassName} to="/profile">
@@ -175,7 +175,7 @@ export function AppShell() {
                 </button>
               </div>
             ) : (
-              <Link className="simple-session-action" to="/auth">
+              <Link className="simple-session-action" to={`/auth?redirect=${encodeURIComponent(`${location.pathname}${location.search}`)}`}>
                 登录/注册
               </Link>
             )}
@@ -213,49 +213,61 @@ export function AppShell() {
           <div className="legacy-site-footer-top">
             <section className="legacy-site-footer-brand">
               <span className="legacy-site-footer-badge">3X Community Console</span>
-              <h2>把提问、AI 聊天和个人轨迹收纳进一块可持续浏览的数字工作台。</h2>
-              <p>现在的前端已经改写为 TypeScript 单页应用，页面通过空间层次、玻璃质感和冷色光影统一到同一套 3D Elements 视觉系统。</p>
+              <h2>社区提问、市场数据和 AI 分析在这里汇合。</h2>
+              <p>帖子互动、行情同步、日报阅读和数据库问答共用同一套账号与数据链路，适合作为持续浏览的内部工作台。</p>
             </section>
 
             <section className="legacy-site-footer-card">
-              <span className="legacy-site-footer-label">联系信息</span>
+              <span className="legacy-site-footer-label">常用入口</span>
               <div className="legacy-site-footer-list">
                 <div>
-                  <LegacyIcon name="home" size={14} />
-                  <span>15 Cliff St, New York NY 10038, USA</span>
+                  <LegacyIcon name="survey" size={14} />
+                  <Link to="/publish">发布与管理帖子</Link>
                 </div>
                 <div>
-                  <LegacyIcon name="cellphone" size={14} />
-                  <span>+1 212-602-9641</span>
+                  <LegacyIcon name="survey" size={14} />
+                  <Link to="/market">查看市场动态</Link>
                 </div>
                 <div>
-                  <LegacyIcon name="email" size={14} />
-                  <span>info@example.com</span>
+                  <LegacyIcon name="reply-fill" size={14} />
+                  <Link to="/ai-chat">继续 AI 对话</Link>
                 </div>
               </div>
             </section>
 
             <section className="legacy-site-footer-card">
-              <span className="legacy-site-footer-label">社区触点</span>
-              <div className="legacy-site-footer-social">
-                <span><LegacyIcon name="friends" size={18} /></span>
-                <span><LegacyIcon name="weibo" size={18} /></span>
-                <span><LegacyIcon name="survey" size={18} /></span>
-                <span><LegacyIcon name="wechat" size={18} /></span>
-                <span><LegacyIcon name="qq" size={18} /></span>
+              <span className="legacy-site-footer-label">数据状态</span>
+              <div className="legacy-site-footer-list">
+                <div>
+                  <LegacyIcon name="date" size={14} />
+                  <span>市场与日报由后台定时同步</span>
+                </div>
+                <div>
+                  <LegacyIcon name="friends" size={14} />
+                  <span>登录后可手动同步和继续会话</span>
+                </div>
               </div>
-              <p className="legacy-site-footer-note">保留原示例站的社交触点信息，同时统一到新的深色控制台语义里。</p>
+              <p className="legacy-site-footer-note">如果页面暂无数据，请先确认后端同步任务或在登录后手动触发同步。</p>
             </section>
 
             <section className="legacy-site-footer-card legacy-site-footer-ad-card">
-              <span className="legacy-site-footer-label">展示位</span>
-              <img alt="ad" className="legacy-site-footer-ad" src="/legacy/res/img/ad.jpg" />
+              <span className="legacy-site-footer-label">当前会话</span>
+              <div className="legacy-site-footer-list">
+                <div>
+                  <LegacyIcon name="cellphone" size={14} />
+                  <span>{session ? session.user.username : '未登录'}</span>
+                </div>
+                <div>
+                  <LegacyIcon name="home" size={14} />
+                  <span>{session ? session.user.nickname || '已登录用户' : '登录后可发布、点赞和同步'}</span>
+                </div>
+              </div>
             </section>
           </div>
 
           <div className="legacy-site-footer-bottom">
-            <span>@2019 Digiqole-News Magazine html Template. All rights reserved.</span>
-            <span>Rebuilt for 3X with Go backend and TypeScript frontend.</span>
+            <span>3Xbackend · Go API + React Console + LangGraph Agent</span>
+            <span>页面数据来自 MySQL 快照表和社区内容表。</span>
           </div>
         </div>
       </footer>

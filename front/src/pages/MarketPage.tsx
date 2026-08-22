@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { getPreciousMetalMarket, getTechMarket, syncPreciousMetalMarket, syncTechMarket } from '../api/forum';
 import { useSession } from '../lib/session';
@@ -707,7 +708,22 @@ export function MarketPage() {
 
         {!loading && visibleRecords.length === 0 && !message ? (
           <div className="legacy-feedback market-feedback">
-            {marketType === 'precious-metals' ? '当前还没有同步到贵金属数据，请先运行后端同步任务。' : techCategoryFilter === 'all' ? '当前还没有同步到 AI / 科技市场数据，请先触发同步任务。' : '当前筛选分类下还没有可展示的 AI / 科技市场数据。'}
+            <p>
+              {marketType === 'precious-metals'
+                ? '当前还没有同步到贵金属数据。'
+                : techCategoryFilter === 'all'
+                  ? '当前还没有同步到 AI / 科技市场数据。'
+                  : '当前筛选分类下还没有可展示的 AI / 科技市场数据。'}
+            </p>
+            {techCategoryFilter !== 'all' && marketType === 'ai-tech' ? null : session ? (
+              <button className="legacy-action-button small" disabled={syncing || priming} onClick={() => void handleManualSync()} type="button">
+                {syncing ? '同步中...' : '立即同步'}
+              </button>
+            ) : (
+              <Link className="legacy-action-button small" to="/auth?redirect=/market">
+                登录后手动同步
+              </Link>
+            )}
           </div>
         ) : null}
       </div>

@@ -37,8 +37,8 @@ const publishSortLabelMap: Record<string, string> = {
 };
 
 const uploadFilterLabelMap: Record<string, string> = {
-  true: '仅看已发布',
-  false: '仅看未发布',
+  true: '仅看公开',
+  false: '仅看仅自己可见',
 };
 
 const publishDraftStorageKey = 'front-publish-draft';
@@ -141,12 +141,12 @@ export function PublishPage() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const listBusy = loading || loadingMore;
   const hasActiveFilters = Boolean(filters.keyword || filters.uploadFilter || filters.sort !== defaultFilters.sort);
-  const publishScopeLabel = filters.uploadFilter ? uploadFilterLabelMap[filters.uploadFilter] : '全部状态';
+  const publishScopeLabel = filters.uploadFilter ? uploadFilterLabelMap[filters.uploadFilter] : '全部可见性';
   const publishScopeHint = loading
     ? '正在同步你的帖子列表与筛选结果。'
     : hasActiveFilters
       ? `当前仅展示你自己的${publishScopeLabel}帖子，并按“${publishSortLabelMap[filters.sort]}”排序${filters.keyword ? `，关键字为“${filters.keyword}”` : ''}。`
-      : '当前展示你发布或暂存的全部帖子，支持按内容、发布状态和排序方式快速切换管理范围。';
+      : '当前展示你的全部帖子，支持按内容、可见性和排序方式快速切换管理范围。';
 
   useEffect(() => {
     const nextFilters = readMyQuestionFiltersFromSearchParams(searchParams);
@@ -401,9 +401,16 @@ export function PublishPage() {
     setMessage('');
     try {
       const created = await createQuestion({ text });
-      if (createFiles.length > 0) {
-        setComposerUploadProgress(0);
-        await uploadQuestionFiles(created.qid, createFiles, (percent) => setComposerUploadProgress(percent));
+      try {
+        if (createFiles.length > 0) {
+          setComposerUploadProgress(0);
+          await uploadQuestionFiles(created.qid, createFiles, (percent) => setComposerUploadProgress(percent));
+        }
+      } catch (uploadError) {
+        setLatestCreatedQid(created.qid);
+        setMessage(`帖子已创建，但附件上传失败：${uploadError instanceof Error ? uploadError.message : '请进入详情重新上传附件'}`);
+        await loadMyQuestions(1, true);
+        return;
       }
       resetComposer();
       setLatestCreatedQid(created.qid);
@@ -469,7 +476,7 @@ export function PublishPage() {
         <div className="legacy-gated-card" id="loginReminder">
           <span className="legacy-home-stage-kicker">Access Required</span>
           <h2>请先登录</h2>
-          <p>当前页面需要登录才能访问，请先登录。</p>
+          <p>登录后可以发布新帖子、恢复本地草稿，并管理自己的公开或仅自己可见内容。</p>
           <Link className="legacy-action-button" to="/auth?redirect=/publish">
             去登录
           </Link>
@@ -484,8 +491,12 @@ export function PublishPage() {
         <div className="legacy-publish-stage">
           <div className="legacy-publish-stage-copy">
             <span className="legacy-home-stage-kicker">3X Creator Deck</span>
-            <h2>把新问题和附件投放到你的创作工作台</h2>
-            <p>这里用于发布、筛选和回看你自己的帖子。正文编辑、附件上传和状态管理被组织成一组连续的悬浮模块。</p>
+            <h2>写新帖子，也管理自己的内容</h2>
+            <p>上半区用于发布新帖子和附件，下半区用于筛选、回看和进入详情管理已有帖子。</p>
+            <div className="legacy-summary-strip">
+              <a className="legacy-summary-chip legacy-summary-chip-button" href="#publish-composer">写新帖子</a>
+              <a className="legacy-summary-chip legacy-summary-chip-button" href="#my-question-manager">管理我的帖子</a>
+            </div>
           </div>
           <div className="legacy-publish-stage-metrics">
             <article className="legacy-home-stage-card">
@@ -497,14 +508,14 @@ export function PublishPage() {
               <span>待上传附件</span>
             </article>
             <article className="legacy-home-stage-card">
-              <strong>{filters.uploadFilter ? uploadFilterLabelMap[filters.uploadFilter] : '全部状态'}</strong>
-              <span>当前查看范围</span>
+              <strong>{filters.uploadFilter ? uploadFilterLabelMap[filters.uploadFilter] : '全部可见性'}</strong>
+              <span>当前管理范围</span>
             </article>
           </div>
         </div>
 
         <div className="review-version">
-          <div className="form-box legacy-publish-form-box">
+          <div className="form-box legacy-publish-form-box" id="publish-composer">
             <div className="form legacy-panel legacy-publish-form-panel">
             <form className="layui-form" onSubmit={handleSubmit}>
               <div className="layui-form-item layui-form-text">
@@ -572,16 +583,16 @@ export function PublishPage() {
           </div>
         </div>
 
-        <div className="volume">
-          我发表的问题 <span>{page.total}</span>
+        <div className="volume" id="my-question-manager">
+          我的内容 <span>{page.total}</span>
         </div>
 
         <form className="legacy-home-filter-row legacy-publish-filter-row" onSubmit={handleFilterSubmit}>
           <input onChange={(event) => setKeywordInput(event.target.value)} placeholder="按帖子内容关键字筛选" value={keywordInput} />
           <select onChange={(event) => setUploadFilterInput(event.target.value)} value={uploadFilterInput}>
-            <option value="">全部状态</option>
-            <option value="true">仅看已发布</option>
-            <option value="false">仅看未发布</option>
+            <option value="">全部可见性</option>
+            <option value="true">仅看公开</option>
+            <option value="false">仅看仅自己可见</option>
           </select>
           <select onChange={(event) => setSortInput(event.target.value)} value={sortInput}>
             <option value="latest">最新发布</option>
@@ -608,7 +619,7 @@ export function PublishPage() {
             ) : null}
             {filters.uploadFilter ? (
               <button className="legacy-summary-chip legacy-summary-chip-button" onClick={() => clearFilter('uploadFilter')} type="button">
-                状态：{uploadFilterLabelMap[filters.uploadFilter]} ×
+                可见性：{uploadFilterLabelMap[filters.uploadFilter]} ×
               </button>
             ) : null}
             {filters.sort !== defaultFilters.sort ? (
@@ -641,7 +652,7 @@ export function PublishPage() {
 
           {!loading && page.records.length === 0 ? (
             <div className="legacy-feedback">
-              {filters.keyword || filters.uploadFilter ? '当前筛选条件下还没有帖子，换个关键字或发布状态再看。' : '你还没有发过帖子，先在上面发布第一条内容。'}
+              {filters.keyword || filters.uploadFilter ? '当前筛选条件下还没有帖子，换个关键字或可见性再看。' : '你还没有发过帖子，先在上面发布第一条内容。'}
             </div>
           ) : null}
 
@@ -661,7 +672,7 @@ export function PublishPage() {
                         <span className="nickname">{question.nickName}</span>
                         <span className="legacy-my-question-qid">QID {question.qid}</span>
                         <span className={`legacy-my-question-status${question.isUpload ? ' is-published' : ''}`}>
-                          {question.isUpload ? '已发布' : '未发布'}
+                          {question.isUpload ? '公开' : '仅自己可见'}
                         </span>
                       </div>
                       <div className="legacy-my-question-title-time">
