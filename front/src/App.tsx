@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { AIChatPage } from './pages/AIChatPage';
 import { AIDailyPage } from './pages/AIDailyPage';
+import { AdminSyncPage } from './pages/AdminSyncPage';
 import { AnalysisPage } from './pages/AnalysisPage';
 import { AuthPage } from './pages/AuthPage';
 import { HomePage } from './pages/HomePage';
@@ -21,6 +22,7 @@ export default function App() {
           <Route element={<MarketPage />} path="market" />
           <Route element={<AnalysisPage />} path="analysis" />
           <Route element={<AIDailyPage />} path="ai-daily" />
+          <Route element={<AdminSyncPage />} path="admin/sync" />
           <Route element={<PublishPage />} path="publish" />
           <Route element={<AIChatPage />} path="ai-chat" />
           <Route element={<Navigate replace to="/ai-chat" />} path="album" />

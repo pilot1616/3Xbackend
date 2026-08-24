@@ -158,6 +158,11 @@ export function AppShell() {
             <NavLink className={navClassName} to="/profile">
               我的资料
             </NavLink>
+            {session?.user.is_admin ? (
+              <NavLink className={navClassName} to="/admin/sync">
+                后台同步
+              </NavLink>
+            ) : null}
           </nav>
 
           <div className="simple-header-auth">
