@@ -133,6 +133,13 @@ tasks:
         [ -x "$PYTHON_BIN" ] || PYTHON_BIN="python3"; \
         "$PYTHON_BIN" -m pytest
 
+  test:all:
+    desc: 运行所有已配置测试
+    cmds:
+      - task test:backend
+      - task test:data-fetch
+      - task test:agent
+
   seed:
     desc: 注入一批论坛假数据和演示图片
     deps: [init]
