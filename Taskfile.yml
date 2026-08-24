@@ -115,6 +115,13 @@ tasks:
       - mkdir -p .cache/go-build
       - GOCACHE=$(pwd)/.cache/go-build go test ./...
 
+  test:frontend:
+    desc: 运行前端类型检查和 E2E 测试
+    dir: front
+    cmds:
+      - npm run typecheck
+      - NO_PROXY=127.0.0.1,localhost no_proxy=127.0.0.1,localhost npm run test:e2e
+
   test:data-fetch:
     desc: 运行 data-fetch Python 测试
     dir: data-fetch
@@ -137,6 +144,7 @@ tasks:
     desc: 运行所有已配置测试
     cmds:
       - task test:backend
+      - task test:frontend
       - task test:data-fetch
       - task test:agent
 

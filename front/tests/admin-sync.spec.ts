@@ -20,6 +20,6 @@ test('admins can see sync console actions', async ({ page }) => {
   await mockCoreApis(page);
   await page.goto('/admin/sync');
   await expect(page.getByText('后台同步控制台')).toBeVisible();
-  await expect(page.getByText('同步完整历史')).toBeVisible();
-  await expect(page.getByText('同步最新贵金属')).toBeVisible();
+  await expect(page.getByRole('button', { name: '同步完整历史' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '同步最新贵金属' })).toBeVisible();
 });
