@@ -57,3 +57,21 @@ func OptionalAuth(authService *service.AuthService) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func AdminRequired(authService *service.AuthService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userIDValue, exists := c.Get(ContextUserIDKey)
+		if !exists {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
+			return
+		}
+
+		userID, ok := userIDValue.(uint)
+		if !ok || !authService.IsAdminUserID(userID) {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"message": "admin access required"})
+			return
+		}
+
+		c.Next()
+	}
+}

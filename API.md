@@ -23,7 +23,7 @@ Authorization: Bearer <token>
 
 - `/api/v1/users/*` 全部需要登录
 - `POST/PATCH/DELETE /api/v1/questions/*` 需要登录，并带作者/所有权校验
-- `POST /api/v1/market/*/sync` 和 `POST /api/v1/ai-dailies/sync` 需要登录
+- `POST /api/v1/admin/sync/*` 需要管理员权限
 - `GET /api/v1/questions` 和 `GET /api/v1/questions/:qid` 支持可选登录态
 
 公开帖子接口在带有效 token 时会额外返回：
@@ -106,7 +106,7 @@ Authorization: Bearer <token>
 - `history` 按时间升序返回，前端可直接用于折线图
 - 数据来自后端抓取 `Investing.com` 页面，不是实时第三方行情 API
 
-### `POST /api/v1/market/precious-metals/sync`
+### `POST /api/v1/admin/sync/precious-metals`
 
 受保护接口，需要 Bearer Token。用于手动触发一次贵金属同步，适合首次初始化、前端手动更新、补少量历史点位。
 
@@ -200,7 +200,7 @@ Authorization: Bearer <token>
 - `category` 用于区分 `equity / index / etf`
 - `history` 按时间升序返回，前端可直接用于价格图
 
-### `POST /api/v1/market/ai-tech/sync`
+### `POST /api/v1/admin/sync/ai-tech`
 
 受保护接口，需要 Bearer Token。用于手动触发一次 AI / 科技市场同步。
 
@@ -290,7 +290,7 @@ Authorization: Bearer <token>
 - 前端“加载更多”建议使用：`offset = 当前已经加载的 records.length`
 - `hasMore = true` 表示后面仍有更多去重后的日报可继续翻页
 
-### `POST /api/v1/ai-dailies/sync`
+### `POST /api/v1/admin/sync/ai-dailies`
 
 受保护接口，需要 Bearer Token。用于手动触发一次 AI 日报同步，适合首次拉取、手动补数据、前端点击“立即同步”。
 

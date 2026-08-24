@@ -21,6 +21,7 @@ type Server struct {
 	analysisHandler *handler.AnalysisHandler
 	agentHandler    *handler.AgentHandler
 	authGuard       gin.HandlerFunc
+	adminGuard      gin.HandlerFunc
 	optionalAuth    gin.HandlerFunc
 }
 
@@ -31,6 +32,7 @@ func (s *Server) Init(db *gorm.DB, cfg *config.Config) error {
 	authService := service.NewAuthService(db, cfg.Auth)
 	s.authHandler = handler.NewAuthHandler(authService)
 	s.authGuard = middleware.AuthRequired(authService)
+	s.adminGuard = middleware.AdminRequired(authService)
 	s.optionalAuth = middleware.OptionalAuth(authService)
 	forumService, err := service.NewForumService(db, cfg.Storage)
 	if err != nil {
@@ -76,15 +78,19 @@ func (s *Server) registerRoutes() {
 	api.GET("/questions/:qid/comments", s.forumHandler.ListCommentsPaginated)
 	api.GET("/questions/:qid/likes", s.forumHandler.ListLikesPaginated)
 	api.GET("/market/precious-metals", s.forumHandler.ListPreciousMetalMarket)
-	api.POST("/market/precious-metals/sync", s.authGuard, s.forumHandler.SyncPreciousMetalMarket)
 	api.GET("/market/ai-tech", s.forumHandler.ListTechMarket)
-	api.POST("/market/ai-tech/sync", s.authGuard, s.forumHandler.SyncTechMarket)
 	api.GET("/ai-dailies", s.forumHandler.ListAIDailies)
-	api.POST("/ai-dailies/sync", s.authGuard, s.forumHandler.SyncAIDailies)
 	api.GET("/analysis/ai-trend", s.analysisHandler.GetAITrend)
 	api.GET("/analysis/market-trend", s.analysisHandler.GetMarketTrend)
 	api.GET("/analysis/overview", s.analysisHandler.GetOverview)
 	api.POST("/agent/prompt", s.agentHandler.Prompt)
+
+	adminGroup := api.Group("/admin")
+	adminGroup.Use(s.authGuard, s.adminGuard)
+	adminSyncGroup := adminGroup.Group("/sync")
+	adminSyncGroup.POST("/precious-metals", s.forumHandler.SyncPreciousMetalMarket)
+	adminSyncGroup.POST("/ai-tech", s.forumHandler.SyncTechMarket)
+	adminSyncGroup.POST("/ai-dailies", s.forumHandler.SyncAIDailies)
 
 	agentGroup := api.Group("/agent")
 	agentGroup.Use(s.authGuard)

@@ -167,7 +167,7 @@ export function getPreciousMetalMarket(historyLimit = 24) {
 }
 
 export function syncPreciousMetalMarket(rounds = 1, intervalMs = 800) {
-  return request<PreciousMetalSyncResult>(`/api/v1/market/precious-metals/sync${toQueryString({ rounds, interval_ms: intervalMs })}`, {
+  return request<PreciousMetalSyncResult>(`/api/v1/admin/sync/precious-metals${toQueryString({ rounds, interval_ms: intervalMs })}`, {
     method: 'POST',
   });
 }
@@ -177,7 +177,7 @@ export function getTechMarket(historyLimit = 24) {
 }
 
 export function syncTechMarket(rounds = 1, intervalMs = 800) {
-  return request<TechMarketSyncResult>(`/api/v1/market/ai-tech/sync${toQueryString({ rounds, interval_ms: intervalMs })}`, {
+  return request<TechMarketSyncResult>(`/api/v1/admin/sync/ai-tech${toQueryString({ rounds, interval_ms: intervalMs })}`, {
     method: 'POST',
   });
 }
@@ -187,7 +187,7 @@ export function getAIDailies(limit = 20, keyword = '', offset = 0) {
 }
 
 export function syncAIDailies(rounds = 1, intervalMs = 800) {
-  return request<AIDailySyncResult>(`/api/v1/ai-dailies/sync${toQueryString({ rounds, interval_ms: intervalMs })}`, {
+  return request<AIDailySyncResult>(`/api/v1/admin/sync/ai-dailies${toQueryString({ rounds, interval_ms: intervalMs })}`, {
     method: 'POST',
   });
 }
