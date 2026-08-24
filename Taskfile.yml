@@ -124,6 +124,15 @@ tasks:
         [ -x "$PYTHON_BIN" ] || PYTHON_BIN="python3"; \
         "$PYTHON_BIN" -m pytest
 
+  test:agent:
+    desc: 运行 Agent Python 测试
+    dir: agent
+    cmds:
+      - |
+        PYTHON_BIN="./.venv/bin/python"; \
+        [ -x "$PYTHON_BIN" ] || PYTHON_BIN="python3"; \
+        "$PYTHON_BIN" -m pytest
+
   seed:
     desc: 注入一批论坛假数据和演示图片
     deps: [init]
