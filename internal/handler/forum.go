@@ -15,8 +15,6 @@ import (
 
 type ForumHandler struct {
 	forumService       *service.ForumService
-	metalSyncService   *service.PreciousMetalSyncService
-	techSyncService    *service.TechMarketSyncService
 	aiDailySyncService *service.AIDailySyncService
 }
 
@@ -64,8 +62,8 @@ type UpdateCommentRequest struct {
 	Text string `json:"text" binding:"required"`
 }
 
-func NewForumHandler(forumService *service.ForumService, metalSyncService *service.PreciousMetalSyncService, techSyncService *service.TechMarketSyncService, aiDailySyncService *service.AIDailySyncService) *ForumHandler {
-	return &ForumHandler{forumService: forumService, metalSyncService: metalSyncService, techSyncService: techSyncService, aiDailySyncService: aiDailySyncService}
+func NewForumHandler(forumService *service.ForumService, aiDailySyncService *service.AIDailySyncService) *ForumHandler {
+	return &ForumHandler{forumService: forumService, aiDailySyncService: aiDailySyncService}
 }
 
 func (h *ForumHandler) QuestionRequest(c *gin.Context) {
@@ -207,34 +205,6 @@ func (h *ForumHandler) ListPreciousMetalMarket(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func (h *ForumHandler) SyncPreciousMetalMarket(c *gin.Context) {
-	if h.metalSyncService == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"message": "precious metal sync service unavailable"})
-		return
-	}
-
-	if _, _, ok := h.getCurrentUser(c); !ok {
-		return
-	}
-
-	rounds, interval := parseSyncBatchOptions(c)
-	result, err := runSyncRoundsWithResult(context.Background(), rounds, interval, h.metalSyncService.SyncWithResult)
-	if err != nil {
-		h.handleForumError(c, err, "sync precious metal market failed")
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message":       buildSyncMessage("precious metal sync completed", rounds, interval),
-		"targetCount":   result.TargetCount,
-		"successCount":  result.SuccessCount,
-		"failedSymbols": result.FailedSymbols,
-		"failedDetails": result.FailedDetails,
-		"fetchedAt":     result.FetchedAt,
-		"partial":       result.Partial,
-	})
-}
-
 func (h *ForumHandler) ListTechMarket(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("history_limit", "24"))
 
@@ -245,34 +215,6 @@ func (h *ForumHandler) ListTechMarket(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, result)
-}
-
-func (h *ForumHandler) SyncTechMarket(c *gin.Context) {
-	if h.techSyncService == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"message": "ai tech sync service unavailable"})
-		return
-	}
-
-	if _, _, ok := h.getCurrentUser(c); !ok {
-		return
-	}
-
-	rounds, interval := parseSyncBatchOptions(c)
-	result, err := runSyncRoundsWithResult(context.Background(), rounds, interval, h.techSyncService.SyncWithResult)
-	if err != nil {
-		h.handleForumError(c, err, "sync tech market failed")
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message":       buildSyncMessage("ai tech market sync completed", rounds, interval),
-		"targetCount":   result.TargetCount,
-		"successCount":  result.SuccessCount,
-		"failedSymbols": result.FailedSymbols,
-		"failedDetails": result.FailedDetails,
-		"fetchedAt":     result.FetchedAt,
-		"partial":       result.Partial,
-	})
 }
 
 func (h *ForumHandler) ListAIDailies(c *gin.Context) {

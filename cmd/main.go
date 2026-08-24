@@ -38,10 +38,6 @@ func main() {
 	appCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	metalSyncService := service.NewPreciousMetalSyncService(db.Connect, cfg.Sync.PreciousMetals)
-	metalSyncService.Start(appCtx)
-	techSyncService := service.NewTechMarketSyncService(db.Connect, cfg.Sync.AITech)
-	techSyncService.Start(appCtx)
 	aiDailySyncService := service.NewAIDailySyncService(db.Connect, cfg.Sync.AIDaily)
 	aiDailySyncService.Start(appCtx)
 

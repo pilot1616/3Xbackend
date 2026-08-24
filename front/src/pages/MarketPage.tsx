@@ -388,7 +388,7 @@ export function MarketPage() {
             <h2>市场动态</h2>
             <p>{marketType === 'precious-metals' ? '先看当前价格和窗口变化，再进入图表与合约详情。' : '先看当前价格和窗口变化，再进入图表与估值详情。'}</p>
             <div className="legacy-summary-strip market-stage-actions">
-              <span className="legacy-summary-chip">数据源：Investing</span>
+              <span className="legacy-summary-chip">数据源：AkShare</span>
               <span className="legacy-summary-chip">标的数：{visibleRecords.length}</span>
               <span className="legacy-summary-chip">更新时间：{formatUpdatedAt(updatedAt)}</span>
             </div>

@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"regexp"
@@ -76,6 +77,30 @@ func NewAIDailySyncService(db *gorm.DB, cfg config.AIDailySync) *AIDailySyncServ
 		config: cfg,
 		client: &http.Client{Timeout: cfg.RequestTimeout()},
 	}
+}
+
+func fetchRemotePage(ctx context.Context, client *http.Client, userAgent, url string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("remote source returned %d", resp.StatusCode)
+	}
+	return string(body), nil
 }
 
 func (s *AIDailySyncService) Start(ctx context.Context) {
@@ -182,7 +207,7 @@ func (s *AIDailySyncService) syncWithResult(ctx context.Context, maxEntries int)
 }
 
 func (s *AIDailySyncService) fetchDailyIndex(ctx context.Context) ([]aiDailyListEntry, error) {
-	body, err := fetchInvestingPage(ctx, s.client, s.config.EffectiveUserAgent(), s.config.EffectiveSourceBaseURL()+s.config.EffectiveIndexPath())
+	body, err := fetchRemotePage(ctx, s.client, s.config.EffectiveUserAgent(), s.config.EffectiveSourceBaseURL()+s.config.EffectiveIndexPath())
 	if err != nil {
 		return nil, fmt.Errorf("fetch ai daily index failed: %w", err)
 	}
@@ -220,7 +245,7 @@ func (s *AIDailySyncService) fetchDailyIndex(ctx context.Context) ([]aiDailyList
 }
 
 func (s *AIDailySyncService) fetchDaily(ctx context.Context, entry aiDailyListEntry, fetchedAt time.Time) (*AIDailyPayload, error) {
-	body, err := fetchInvestingPage(ctx, s.client, s.config.EffectiveUserAgent(), entry.URL)
+	body, err := fetchRemotePage(ctx, s.client, s.config.EffectiveUserAgent(), entry.URL)
 	if err != nil {
 		return nil, err
 	}

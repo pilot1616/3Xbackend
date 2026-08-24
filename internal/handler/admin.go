@@ -60,6 +60,33 @@ func (h *AdminHandler) SyncFullHistory(c *gin.Context) {
 	})
 }
 
+func (h *AdminHandler) SyncFinancialLatest(c *gin.Context) {
+	financialLatest, err := h.callDataFetch(c.Request.Context(), "/sync/latest")
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"message": "sync financial latest failed", "detail": err.Error()})
+		return
+	}
+
+	successCount := intFromAny(financialLatest["preciousMetals"]) + intFromAny(financialLatest["techMarkets"])
+	if strings.Contains(c.FullPath(), "precious-metals") {
+		successCount = intFromAny(financialLatest["preciousMetals"])
+	}
+	if strings.Contains(c.FullPath(), "ai-tech") {
+		successCount = intFromAny(financialLatest["techMarkets"])
+	}
+	failures := stringSliceFromAny(financialLatest["failures"])
+	c.JSON(http.StatusOK, gin.H{
+		"message":         "financial latest sync completed",
+		"financialLatest": financialLatest,
+		"targetCount":     successCount,
+		"successCount":    successCount,
+		"failedSymbols":   []string{},
+		"failedDetails":   failures,
+		"fetchedAt":       financialLatest["fetchedAt"],
+		"partial":         len(failures) > 0,
+	})
+}
+
 func (h *AdminHandler) callDataFetch(ctx context.Context, path string) (map[string]any, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, h.dataFetchBaseURL+path, bytes.NewReader(nil))
 	if err != nil {
@@ -93,4 +120,34 @@ func parsePositiveInt(raw string, fallback int) int {
 		return fallback
 	}
 	return value
+}
+
+func intFromAny(value any) int {
+	switch typed := value.(type) {
+	case int:
+		return typed
+	case int64:
+		return int(typed)
+	case float64:
+		return int(typed)
+	case json.Number:
+		parsed, _ := typed.Int64()
+		return int(parsed)
+	default:
+		return 0
+	}
+}
+
+func stringSliceFromAny(value any) []string {
+	items, ok := value.([]any)
+	if !ok {
+		return []string{}
+	}
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		if text, ok := item.(string); ok && strings.TrimSpace(text) != "" {
+			result = append(result, text)
+		}
+	}
+	return result
 }

@@ -26,8 +26,7 @@
 - AI 联动分析页：AI 日报主题趋势、市场趋势、综合联动判断
 - AI 日报独立栏目：日报检索、阅读、章节导航
 - 管理员后台同步控制台：同步最新数据、补齐完整历史数据、查看失败提示
-- 启动后定时同步 `Investing.com` 贵金属数据
-- 启动后定时同步 `Investing.com` AI / 科技市场数据
+- `data-fetch` 定时同步 AkShare 金融快照和历史数据
 - 启动后定时同步 `hex2077.dev` AI 日报数据
 - 独立 `data-fetch/` 服务：通过 AkShare 拉取最新金融快照和历年金融历史数据
 - 独立 `agent/` 服务：接收外部 prompt，联动数据库与 LLM 做分析
@@ -273,7 +272,7 @@ task startup:init
 
 ### 1. 贵金属
 
-数据来源：`Investing.com`
+数据来源：`data-fetch` / AkShare
 
 当前默认同步：
 
@@ -282,28 +281,15 @@ task startup:init
 - Platinum
 - Palladium
 
-默认行为：
+同步行为：
 
-- 服务启动后立即同步一次
-- 后续每 `60` 分钟自动同步一次
-
-手动同步：
-
-```bash
-task metal:sync
-```
-
-现在的产品流程中，普通用户页面不再暴露贵金属手动同步入口；需要手动触发时请使用管理员后台 `/admin/sync` 或 Task 命令。
-
-如果 MySQL 在 Docker：
-
-```bash
-task metal:sync:docker
-```
+- `data-fetch` 服务按 `DATA_FETCH_INTERVAL_SECONDS` 定时同步最新快照
+- 管理员后台 `/admin/sync` 可手动触发最新同步和完整历史同步
+- 命令行可使用 `task data:fetch` 或 `task data:fetch:history`
 
 ### 2. AI / 科技市场
 
-数据来源：`Investing.com`
+数据来源：`data-fetch` / AkShare
 
 当前默认同步：
 
@@ -313,24 +299,11 @@ task metal:sync:docker
 - VanEck Semiconductor ETF (`SMH`)
 - iShares Expanded Tech-Software Sector ETF (`IGV`)
 
-默认行为：
+同步行为：
 
-- 服务启动后立即同步一次
-- 后续每 `120` 分钟自动同步一次
-
-手动同步：
-
-```bash
-task tech:sync
-```
-
-现在的产品流程中，普通用户页面不再暴露 AI / 科技市场手动同步入口；需要手动触发时请使用管理员后台 `/admin/sync` 或 Task 命令。
-
-如果 MySQL 在 Docker：
-
-```bash
-task tech:sync:docker
-```
+- `data-fetch` 服务按 `DATA_FETCH_INTERVAL_SECONDS` 定时同步最新快照
+- 管理员后台 `/admin/sync` 可手动触发最新同步和完整历史同步
+- 命令行可使用 `task data:fetch` 或 `task data:fetch:history`
 
 ### 3. AI 日报
 
@@ -476,8 +449,6 @@ brew install go-task/tap/go-task
 - `task test:agent`：运行 Agent pytest
 - `task test:all`：运行所有已配置测试
 - `task seed`：注入假数据
-- `task metal:sync`：手动执行贵金属同步
-- `task tech:sync`：手动执行 AI / 科技市场同步
 - `task data:fetch`：使用 AkShare 同步最新金融快照
 - `task data:fetch:history`：使用 AkShare 一次性补齐历年金融数据
 - `task startup:init`：初始化历年金融数据、AI 日报全量和论坛演示数据
@@ -514,18 +485,6 @@ brew install go-task/tap/go-task
 
 同步相关配置项：
 
-- `sync.precious_metals.enabled`
-- `sync.precious_metals.interval_minutes`
-- `sync.precious_metals.request_timeout_sec`
-- `sync.precious_metals.initial_run_on_startup`
-- `sync.precious_metals.source_base_url`
-- `sync.precious_metals.user_agent`
-- `sync.ai_tech.enabled`
-- `sync.ai_tech.interval_minutes`
-- `sync.ai_tech.request_timeout_sec`
-- `sync.ai_tech.initial_run_on_startup`
-- `sync.ai_tech.source_base_url`
-- `sync.ai_tech.user_agent`
 - `sync.ai_daily.enabled`
 - `sync.ai_daily.interval_minutes`
 - `sync.ai_daily.request_timeout_sec`

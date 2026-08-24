@@ -65,7 +65,7 @@ Authorization: Bearer <token>
     {
       "symbol": "XAU",
       "name": "Gold",
-      "sourceUrl": "https://www.investing.com/commodities/gold",
+      "sourceUrl": "akshare://precious-metal/XAU",
       "price": "3348.25",
       "change": "+12.80",
       "changePercent": "+0.38%",
@@ -104,16 +104,11 @@ Authorization: Bearer <token>
 
 - 当前默认同步 `Gold / Silver / Platinum / Palladium`
 - `history` 按时间升序返回，前端可直接用于折线图
-- 数据来自后端抓取 `Investing.com` 页面，不是实时第三方行情 API
+- 数据由 `data-fetch` 通过 AkShare 同步入库，不是实时第三方行情 API
 
 ### `POST /api/v1/admin/sync/precious-metals`
 
-受保护接口，需要 Bearer Token。用于手动触发一次贵金属同步，适合首次初始化、前端手动更新、补少量历史点位。
-
-查询参数：
-
-- `rounds`：连续同步轮数，默认 `1`，最大 `24`
-- `interval_ms`：轮次间隔毫秒数，默认 `800`，最大 `30000`
+受保护接口，需要 Bearer Token。用于通过 `data-fetch` 手动触发一次最新金融快照同步。
 
 请求头：
 
@@ -125,21 +120,27 @@ Authorization: Bearer <token>
 
 ```json
 {
-  "message": "precious metal sync completed",
+  "message": "financial latest sync completed",
   "targetCount": 4,
   "successCount": 4,
   "failedSymbols": [],
   "failedDetails": [],
   "fetchedAt": "2026-05-13T16:00:00+08:00",
-  "partial": false
+  "partial": false,
+  "financialLatest": {
+    "mode": "latest",
+    "preciousMetals": 4,
+    "techMarkets": 5,
+    "failures": [],
+    "fetchedAt": "2026-05-13T16:00:00+08:00"
+  }
 }
 ```
 
 说明：
 
-- 当 `rounds > 1` 时，`message` 会附带批量同步说明
-- 允许部分成功；如果个别品种失败，接口仍返回 `200`，并通过 `partial / failedSymbols / failedDetails` 说明失败项
-- 登录后前端“市场动态”页可直接调用这个接口做“立即同步”和“补历史”
+- 普通用户页面不暴露手动同步入口。
+- 管理员后台 `/admin/sync` 可触发最新同步和完整历史同步。
 
 ### `GET /api/v1/market/ai-tech`
 
@@ -159,7 +160,7 @@ Authorization: Bearer <token>
       "category": "etf",
       "symbol": "QQQ",
       "name": "Invesco QQQ Trust",
-      "sourceUrl": "https://www.investing.com/etfs/powershares-qqqq",
+      "sourceUrl": "akshare://tech-market/QQQ",
       "price": "714.71",
       "change": "+7.47",
       "changePercent": "(+1.06%)",
@@ -202,12 +203,7 @@ Authorization: Bearer <token>
 
 ### `POST /api/v1/admin/sync/ai-tech`
 
-受保护接口，需要 Bearer Token。用于手动触发一次 AI / 科技市场同步。
-
-查询参数：
-
-- `rounds`：连续同步轮数，默认 `1`，最大 `24`
-- `interval_ms`：轮次间隔毫秒数，默认 `800`，最大 `30000`
+受保护接口，需要 Bearer Token。用于通过 `data-fetch` 手动触发一次最新金融快照同步。
 
 请求头：
 
@@ -219,13 +215,20 @@ Authorization: Bearer <token>
 
 ```json
 {
-  "message": "ai tech market sync completed",
+  "message": "financial latest sync completed",
   "targetCount": 5,
   "successCount": 5,
   "failedSymbols": [],
   "failedDetails": [],
   "fetchedAt": "2026-05-13T16:00:00+08:00",
-  "partial": false
+  "partial": false,
+  "financialLatest": {
+    "mode": "latest",
+    "preciousMetals": 4,
+    "techMarkets": 5,
+    "failures": [],
+    "fetchedAt": "2026-05-13T16:00:00+08:00"
+  }
 }
 ```
 

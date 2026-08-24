@@ -39,10 +39,8 @@ func (s *Server) Init(db *gorm.DB, cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
-	metalSyncService := service.NewPreciousMetalSyncService(db, cfg.Sync.PreciousMetals)
-	techSyncService := service.NewTechMarketSyncService(db, cfg.Sync.AITech)
 	aiDailySyncService := service.NewAIDailySyncService(db, cfg.Sync.AIDaily)
-	s.forumHandler = handler.NewForumHandler(forumService, metalSyncService, techSyncService, aiDailySyncService)
+	s.forumHandler = handler.NewForumHandler(forumService, aiDailySyncService)
 	s.analysisHandler = handler.NewAnalysisHandler(service.NewAnalysisService(db))
 	s.agentHandler = handler.NewAgentHandler(authService)
 	s.adminHandler = handler.NewAdminHandler(aiDailySyncService)
@@ -90,8 +88,8 @@ func (s *Server) registerRoutes() {
 	adminGroup := api.Group("/admin")
 	adminGroup.Use(s.authGuard, s.adminGuard)
 	adminSyncGroup := adminGroup.Group("/sync")
-	adminSyncGroup.POST("/precious-metals", s.forumHandler.SyncPreciousMetalMarket)
-	adminSyncGroup.POST("/ai-tech", s.forumHandler.SyncTechMarket)
+	adminSyncGroup.POST("/precious-metals", s.adminHandler.SyncFinancialLatest)
+	adminSyncGroup.POST("/ai-tech", s.adminHandler.SyncFinancialLatest)
 	adminSyncGroup.POST("/ai-dailies", s.forumHandler.SyncAIDailies)
 	adminSyncGroup.POST("/full-history", s.adminHandler.SyncFullHistory)
 
