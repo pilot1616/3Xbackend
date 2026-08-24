@@ -7,6 +7,7 @@ export interface User {
   sign: string;
   avatar_path: string;
   created_at: string;
+  is_admin: boolean;
 }
 
 export interface AuthResult {

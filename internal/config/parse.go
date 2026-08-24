@@ -25,6 +25,7 @@ type Server struct {
 type Auth struct {
 	Secret           string `mapstructure:"secret"`
 	TokenExpireHours int    `mapstructure:"token_expire_hours"`
+	AdminUsernames   string `mapstructure:"admin_usernames"`
 }
 
 type Storage struct {
@@ -103,6 +104,7 @@ func bindEnv(v *viper.Viper) {
 		"server.port",
 		"auth.secret",
 		"auth.token_expire_hours",
+		"auth.admin_usernames",
 		"storage.public_dir",
 		"storage.image_dir",
 		"storage.upload_dir",
@@ -163,6 +165,19 @@ func (a Auth) TokenTTL() time.Duration {
 		hours = 24
 	}
 	return time.Duration(hours) * time.Hour
+}
+
+func (a Auth) IsAdminUsername(username string) bool {
+	username = strings.TrimSpace(username)
+	if username == "" {
+		return false
+	}
+	for _, value := range strings.Split(a.AdminUsernames, ",") {
+		if strings.TrimSpace(value) == username {
+			return true
+		}
+	}
+	return false
 }
 
 func (s Storage) PublicRoot() string {

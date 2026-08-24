@@ -46,6 +46,7 @@ type UserResponse struct {
 	Sign       string    `json:"sign"`
 	AvatarPath string    `json:"avatar_path"`
 	CreatedAt  time.Time `json:"created_at"`
+	IsAdmin    bool      `json:"is_admin"`
 }
 
 type AuthResult struct {
@@ -270,7 +271,7 @@ func (s *AuthService) UpdateProfile(userID uint, nickname string, age int, hobby
 
 	return &ProfileUpdateResult{
 		Message: "profile updated successfully",
-		User:    buildUserResponse(user),
+		User:    s.buildUserResponse(user),
 	}, nil
 }
 
@@ -282,8 +283,16 @@ func (s *AuthService) Me(userID uint) (*UserResponse, error) {
 		}
 		return nil, fmt.Errorf("query current user failed: %w", err)
 	}
-	resp := buildUserResponse(user)
+	resp := s.buildUserResponse(user)
 	return &resp, nil
+}
+
+func (s *AuthService) IsAdminUserID(userID uint) bool {
+	var user database.User
+	if err := s.db.Select("username").First(&user, userID).Error; err != nil {
+		return false
+	}
+	return s.cfg.IsAdminUsername(user.Username)
 }
 
 func (s *AuthService) ParseToken(token string) (uint, error) {
@@ -336,7 +345,7 @@ func (s *AuthService) newAuthResult(user database.User) (*AuthResult, error) {
 	return &AuthResult{
 		Token:     token,
 		ExpiresAt: expiresAt,
-		User:      buildUserResponse(user),
+		User:      s.buildUserResponse(user),
 	}, nil
 }
 
@@ -346,7 +355,7 @@ func (s *AuthService) sign(payload []byte) []byte {
 	return h.Sum(nil)
 }
 
-func buildUserResponse(user database.User) UserResponse {
+func (s *AuthService) buildUserResponse(user database.User) UserResponse {
 	return UserResponse{
 		ID:         user.ID,
 		Username:   user.Username,
@@ -356,6 +365,7 @@ func buildUserResponse(user database.User) UserResponse {
 		Sign:       user.Sign,
 		AvatarPath: user.AvatarPath,
 		CreatedAt:  user.CreatedAt,
+		IsAdmin:    s.cfg.IsAdminUsername(user.Username),
 	}
 }
 
