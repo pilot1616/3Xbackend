@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 
 import { askAgentAnalysis, getAITrend, getMarketTrend, getOverview } from '../api/forum';
 import { ApiError } from '../api/client';
@@ -631,12 +631,7 @@ export function AnalysisPage() {
                 <button className="legacy-action-button secondary small" disabled={pageBusy} onClick={handleRetry} type="button">
                   {refreshing ? '重试中...' : '重试'}
                 </button>
-                {overviewError.status === 422 ? (
-                  <div className="legacy-summary-strip">
-                    <Link className="legacy-summary-chip legacy-summary-chip-button" to="/ai-daily">补 AI 日报</Link>
-                    <Link className="legacy-summary-chip legacy-summary-chip-button" to="/market">补市场数据</Link>
-                  </div>
-                ) : null}
+                {overviewError.status === 422 ? <span className="analysis-panel-hint">后台同步补齐 AI 日报和市场数据后，这里会自动恢复。</span> : null}
               </div>
             ) : null}
 
@@ -709,11 +704,7 @@ export function AnalysisPage() {
                 <button className="legacy-action-button secondary small" disabled={pageBusy} onClick={handleRetry} type="button">
                   {refreshing ? '重试中...' : '重试'}
                 </button>
-                {aiTrendError.status === 422 ? (
-                  <Link className="legacy-action-button secondary small" to="/ai-daily">
-                    去同步 AI 日报
-                  </Link>
-                ) : null}
+                {aiTrendError.status === 422 ? <span className="analysis-panel-hint">后台 AI 日报同步完成后，这里会自动恢复。</span> : null}
               </div>
             ) : null}
 
@@ -783,11 +774,7 @@ export function AnalysisPage() {
                 <button className="legacy-action-button secondary small" disabled={pageBusy} onClick={handleRetry} type="button">
                   {refreshing ? '重试中...' : '重试'}
                 </button>
-                {marketTrendError.status === 422 ? (
-                  <Link className="legacy-action-button secondary small" to="/market">
-                    去同步市场数据
-                  </Link>
-                ) : null}
+                {marketTrendError.status === 422 ? <span className="analysis-panel-hint">后台市场同步完成后，这里会自动恢复。</span> : null}
               </div>
             ) : null}
 

@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 
-import { getPreciousMetalMarket, getTechMarket, syncPreciousMetalMarket, syncTechMarket } from '../api/forum';
-import { useSession } from '../lib/session';
+import { getPreciousMetalMarket, getTechMarket } from '../api/forum';
 import type { PreciousMetalPoint, TechMarketPoint } from '../types/api';
 
 const historyRangeOptions = [12, 24, 48, 96, 192] as const;
@@ -189,7 +187,6 @@ function buildLinePath(history: Array<PreciousMetalPoint | TechMarketPoint>): Ch
 }
 
 export function MarketPage() {
-  const session = useSession();
   const [marketType, setMarketType] = useState<MarketConsoleType>('precious-metals');
   const [records, setRecords] = useState<UnifiedMarketRecord[]>([]);
   const [activeSymbol, setActiveSymbol] = useState('XAU');
@@ -198,8 +195,6 @@ export function MarketPage() {
   const [updatedAt, setUpdatedAt] = useState('');
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
-  const [syncing, setSyncing] = useState(false);
-  const [priming, setPriming] = useState(false);
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -365,44 +360,6 @@ export function MarketPage() {
     setHoveredPointIndex(index);
   }
 
-  async function handleManualSync() {
-    if (!session || syncing || priming) {
-      return;
-    }
-
-    setSyncing(true);
-    setMessage('');
-    try {
-      const result = marketType === 'precious-metals' ? await syncPreciousMetalMarket() : await syncTechMarket();
-      const failedCopy = result.partial && result.failedSymbols.length > 0 ? `；未完成：${result.failedSymbols.join('、')}` : '';
-      setMessage((result.message || (marketType === 'precious-metals' ? '贵金属数据拉取完成' : 'AI / 科技市场数据拉取完成')) + failedCopy);
-      await loadMarket();
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : marketType === 'precious-metals' ? '贵金属数据拉取失败' : 'AI / 科技市场数据拉取失败');
-    } finally {
-      setSyncing(false);
-    }
-  }
-
-  async function handlePrimeHistory() {
-    if (!session || syncing || priming) {
-      return;
-    }
-
-    setPriming(true);
-    setMessage('');
-    try {
-      const result = marketType === 'precious-metals' ? await syncPreciousMetalMarket(6, 1200) : await syncTechMarket(6, 1200);
-      const failedCopy = result.partial && result.failedSymbols.length > 0 ? `；未完成：${result.failedSymbols.join('、')}` : '';
-      setMessage((result.message || '历史点位补齐完成') + failedCopy);
-      await loadMarket();
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : '历史点位补齐失败');
-    } finally {
-      setPriming(false);
-    }
-  }
-
   return (
     <section className="content whisper-content market-scene">
       <div className="cont w1000 market-shell">
@@ -421,18 +378,7 @@ export function MarketPage() {
                 AI / 科技
               </button>
             </div>
-            {session ? (
-              <>
-                <button className="legacy-action-button secondary small" disabled={syncing || priming} onClick={() => void handlePrimeHistory()} type="button">
-                  {priming ? '补拉中...' : '补历史'}
-                </button>
-                <button className="legacy-action-button" disabled={syncing || priming} onClick={() => void handleManualSync()} type="button">
-                  {syncing ? '同步中...' : '立即同步'}
-                </button>
-              </>
-            ) : (
-              <span className="legacy-summary-chip">登录后可手动触发首次拉取</span>
-            )}
+            <span className="legacy-summary-chip">后台定时更新</span>
           </div>
         </div>
 
@@ -715,15 +661,7 @@ export function MarketPage() {
                   ? '当前还没有同步到 AI / 科技市场数据。'
                   : '当前筛选分类下还没有可展示的 AI / 科技市场数据。'}
             </p>
-            {techCategoryFilter !== 'all' && marketType === 'ai-tech' ? null : session ? (
-              <button className="legacy-action-button small" disabled={syncing || priming} onClick={() => void handleManualSync()} type="button">
-                {syncing ? '同步中...' : '立即同步'}
-              </button>
-            ) : (
-              <Link className="legacy-action-button small" to="/auth?redirect=/market">
-                登录后手动同步
-              </Link>
-            )}
+            {techCategoryFilter !== 'all' && marketType === 'ai-tech' ? null : <p>后台同步任务完成后会自动出现在这里。</p>}
           </div>
         ) : null}
       </div>

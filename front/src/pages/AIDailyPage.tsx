@@ -1,8 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 
-import { getAIDailies, syncAIDailies } from '../api/forum';
-import { useSession } from '../lib/session';
+import { getAIDailies } from '../api/forum';
 import type { AIDailyRecord } from '../types/api';
 
 const aiDailyPageSize = 16;
@@ -100,7 +99,6 @@ function buildSummary(record: AIDailyRecord) {
 }
 
 export function AIDailyPage() {
-  const session = useSession();
   const [searchParams, setSearchParams] = useSearchParams();
   const [records, setRecords] = useState<AIDailyRecord[]>([]);
   const [activeSlug, setActiveSlug] = useState(searchParams.get('slug') ?? '');
@@ -110,8 +108,6 @@ export function AIDailyPage() {
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [priming, setPriming] = useState(false);
   const [updatedAt, setUpdatedAt] = useState('');
   const [message, setMessage] = useState('');
   const [copyingLink, setCopyingLink] = useState(false);
@@ -210,32 +206,6 @@ export function AIDailyPage() {
     }
   }
 
-  async function handleSync(rounds: number, intervalMs: number, mode: 'sync' | 'prime') {
-    if (!session || syncing || priming) {
-      return;
-    }
-
-    if (mode === 'sync') {
-      setSyncing(true);
-    } else {
-      setPriming(true);
-    }
-    setMessage('');
-
-    try {
-      const result = await syncAIDailies(rounds, intervalMs);
-      const failed = result.partial && result.failedSymbols.length > 0 ? `；未完成：${result.failedSymbols.join('、')}` : '';
-      setMessage((result.message || 'AI 日报同步完成') + failed);
-      setOffset(0);
-      await loadDailies();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : mode === 'sync' ? 'AI 日报同步失败' : 'AI 日报补拉失败');
-    } finally {
-      setSyncing(false);
-      setPriming(false);
-    }
-  }
-
   async function handleCopyLink() {
     if (typeof window === 'undefined') {
       return;
@@ -295,26 +265,7 @@ export function AIDailyPage() {
               <button className="ai-daily-secondary-button" disabled={copyingLink} onClick={() => void handleCopyLink()} type="button">
                 {copyingLink ? '复制中...' : '复制链接'}
               </button>
-              {session ? (
-                <>
-                  <button
-                    className="ai-daily-secondary-button"
-                    disabled={syncing || priming}
-                    onClick={() => void handleSync(6, 1200, 'prime')}
-                    type="button"
-                  >
-                    {priming ? '补拉中...' : '补拉归档'}
-                  </button>
-                  <button
-                    className="ai-daily-primary-button"
-                    disabled={syncing || priming}
-                    onClick={() => void handleSync(1, 800, 'sync')}
-                    type="button"
-                  >
-                    {syncing ? '同步中...' : '立即同步'}
-                  </button>
-                </>
-              ) : null}
+              <span className="legacy-summary-chip">后台定时更新</span>
             </div>
           </div>
         </section>
@@ -432,15 +383,7 @@ export function AIDailyPage() {
         {!loading && records.length === 0 && !message ? (
           <div className="legacy-feedback market-feedback">
             <p>当前还没有同步到 AI 日报数据。</p>
-            {session ? (
-              <button className="ai-daily-primary-button" disabled={syncing || priming} onClick={() => void handleSync(1, 800, 'sync')} type="button">
-                {syncing ? '同步中...' : '立即同步'}
-              </button>
-            ) : (
-              <Link className="ai-daily-primary-button" to="/auth?redirect=/ai-daily">
-                登录后手动同步
-              </Link>
-            )}
+            <p>后台日报任务完成后会自动出现在这里。</p>
           </div>
         ) : null}
       </div>
