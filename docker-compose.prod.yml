@@ -1,0 +1,80 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-3X}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    image: ${APP_IMAGE:-3xbackend-app:latest}
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      agent:
+        condition: service_started
+      data-fetch:
+        condition: service_started
+    environment:
+      SERVER_PORT: 3000
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env}
+      AUTH_ADMIN_USERNAMES: ${AUTH_ADMIN_USERNAMES:-}
+      DATABASE_MYSQL_USER: ${DATABASE_MYSQL_USER:-root}
+      DATABASE_MYSQL_PASSWORD: ${DATABASE_MYSQL_PASSWORD:?set DATABASE_MYSQL_PASSWORD in .env}
+      DATABASE_MYSQL_ADDRESS: mysql
+      DATABASE_MYSQL_PORT: 3306
+      DATABASE_MYSQL_SCHEMA: ${DATABASE_MYSQL_SCHEMA:-3X}
+      AGENT_BASE_URL: http://agent:8010
+      DATA_FETCH_BASE_URL: http://data-fetch:8020
+    ports:
+      - "${SERVER_PORT:-3000}:3000"
+    volumes:
+      - ./public:/app/public
+
+  agent:
+    image: ${AGENT_IMAGE:-3xbackend-agent:latest}
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      AGENT_HOST: 0.0.0.0
+      AGENT_PORT: 8010
+      DATABASE_MYSQL_USER: ${DATABASE_MYSQL_USER:-root}
+      DATABASE_MYSQL_PASSWORD: ${DATABASE_MYSQL_PASSWORD:?set DATABASE_MYSQL_PASSWORD in .env}
+      DATABASE_MYSQL_ADDRESS: mysql
+      DATABASE_MYSQL_PORT: 3306
+      DATABASE_MYSQL_SCHEMA: ${DATABASE_MYSQL_SCHEMA:-3X}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://ai-api-gateway.app.baizhi.cloud/api/openai}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-dev/gpt-5.5}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
+      AGENT_ALLOWED_TABLES: ${AGENT_ALLOWED_TABLES:-}
+      AGENT_SAMPLE_ROW_LIMIT: ${AGENT_SAMPLE_ROW_LIMIT:-5}
+
+  data-fetch:
+    image: ${DATA_FETCH_IMAGE:-3xbackend-data-fetch:latest}
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DATABASE_MYSQL_USER: ${DATABASE_MYSQL_USER:-root}
+      DATABASE_MYSQL_PASSWORD: ${DATABASE_MYSQL_PASSWORD:?set DATABASE_MYSQL_PASSWORD in .env}
+      DATABASE_MYSQL_ADDRESS: mysql
+      DATABASE_MYSQL_PORT: 3306
+      DATABASE_MYSQL_SCHEMA: ${DATABASE_MYSQL_SCHEMA:-3X}
+      DATA_FETCH_INTERVAL_SECONDS: ${DATA_FETCH_INTERVAL_SECONDS:-3600}
+      DATA_FETCH_HISTORY_START_YEAR: ${DATA_FETCH_HISTORY_START_YEAR:-2018}
+      DATA_FETCH_RUN_LOOP: ${DATA_FETCH_RUN_LOOP:-true}
+
+volumes:
+  mysql-data:

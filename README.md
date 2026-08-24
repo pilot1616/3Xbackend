@@ -164,6 +164,7 @@ npm run build
 
 - [Dockerfile](/Users/zhangxinghui/Desktop/web/3Xbackend/Dockerfile)
 - [docker-compose.yml](/Users/zhangxinghui/Desktop/web/3Xbackend/docker-compose.yml)
+- [docker-compose.prod.yml](/Users/zhangxinghui/Desktop/web/3Xbackend/docker-compose.prod.yml)
 - [.dockerignore](/Users/zhangxinghui/Desktop/web/3Xbackend/.dockerignore)
 - [agent/Dockerfile](/Users/zhangxinghui/Desktop/web/3Xbackend/agent/Dockerfile)
 
@@ -185,6 +186,28 @@ task compose:down
 - 运行容器后，前端静态文件由 Go 服务统一托管
 - 推荐挂载 `public/` 目录，保留头像和帖子附件
 - `agent` 服务会随 Compose 一起启动，监听 `8010`
+
+## 服务器部署
+
+如果要在本地打包后上传到服务器运行，推荐使用 release 包：
+
+```bash
+./scripts/package-release.sh
+scp dist/3xbackend-release.tar.gz user@server:/opt/
+```
+
+服务器上：
+
+```bash
+cd /opt
+tar -xzf 3xbackend-release.tar.gz
+cd 3xbackend-release
+cp .env.example .env
+vi .env
+./scripts/deploy-server.sh
+```
+
+详细说明见 [docs/deploy.md](/Users/zhangxinghui/Desktop/web/3Xbackend/docs/deploy.md)。
 
 ## Agent
 
