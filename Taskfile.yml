@@ -115,6 +115,15 @@ tasks:
       - mkdir -p .cache/go-build
       - GOCACHE=$(pwd)/.cache/go-build go test ./...
 
+  test:data-fetch:
+    desc: 运行 data-fetch Python 测试
+    dir: data-fetch
+    cmds:
+      - |
+        PYTHON_BIN="./.venv/bin/python"; \
+        [ -x "$PYTHON_BIN" ] || PYTHON_BIN="python3"; \
+        "$PYTHON_BIN" -m pytest
+
   seed:
     desc: 注入一批论坛假数据和演示图片
     deps: [init]
