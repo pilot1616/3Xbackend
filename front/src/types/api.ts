@@ -284,6 +284,23 @@ export interface AIDailySyncResult {
   partial: boolean;
 }
 
+export interface FinancialHistorySyncResult {
+  mode: string;
+  historyStartYear: number;
+  preciousMetals: number;
+  preciousMetalsTotal: number;
+  techMarkets: number;
+  techMarketsTotal: number;
+  failures: string[];
+  fetchedAt: string;
+}
+
+export interface FullHistorySyncResult {
+  message: string;
+  financialHistory: FinancialHistorySyncResult;
+  aiDailyArchive: AIDailySyncResult;
+}
+
 export type AnalysisWindow = '1d' | '7d' | '30d';
 
 export type AnalysisConfidence = 'low' | 'medium' | 'high';

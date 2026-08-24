@@ -292,7 +292,7 @@ Authorization: Bearer <token>
 
 ### `POST /api/v1/admin/sync/ai-dailies`
 
-受保护接口，需要 Bearer Token。用于手动触发一次 AI 日报同步，适合首次拉取、手动补数据、前端点击“立即同步”。
+管理员接口，需要 Bearer Token。用于在后台同步控制台手动触发一次 AI 日报同步，适合首次拉取、手动补数据和排查抓取链路。
 
 查询参数：
 
@@ -324,6 +324,46 @@ Authorization: Bearer <token>
 - 数据源是 `https://hex2077.dev/docs/`
 - 主要用于抓取最近一批日报索引并落库
 - 支持多轮同步，用于短时间内补齐新增内容或验证抓取链路
+
+### `POST /api/v1/admin/sync/full-history`
+
+管理员接口，需要 Bearer Token。用于一次性补齐金融历史数据，并按较高上限补拉 AI 日报归档。
+
+查询参数：
+
+- `ai_daily_max_entries`：AI 日报最大补拉篇数，默认 `10000`
+
+成功响应 `200`：
+
+```json
+{
+  "message": "full historical sync completed",
+  "financialHistory": {
+    "mode": "history",
+    "historyStartYear": 2018,
+    "preciousMetals": 1000,
+    "preciousMetalsTotal": 1000,
+    "techMarkets": 1000,
+    "techMarketsTotal": 1000,
+    "failures": [],
+    "fetchedAt": "2026-05-20T10:30:00+08:00"
+  },
+  "aiDailyArchive": {
+    "targetCount": 100,
+    "successCount": 100,
+    "failedSymbols": [],
+    "failedDetails": [],
+    "fetchedAt": "2026-05-20T10:30:00+08:00",
+    "partial": false
+  }
+}
+```
+
+说明：
+
+- 金融历史由 `data-fetch` 服务通过 AkShare 补齐。
+- AI 日报归档由 Go 后端同步器补拉。
+- 该操作可能持续较久，建议只在首次部署、重建数据库或明显缺数据时执行。
 
 ## 分析接口
 

@@ -20,6 +20,7 @@ type Server struct {
 	forumHandler    *handler.ForumHandler
 	analysisHandler *handler.AnalysisHandler
 	agentHandler    *handler.AgentHandler
+	adminHandler    *handler.AdminHandler
 	authGuard       gin.HandlerFunc
 	adminGuard      gin.HandlerFunc
 	optionalAuth    gin.HandlerFunc
@@ -44,6 +45,7 @@ func (s *Server) Init(db *gorm.DB, cfg *config.Config) error {
 	s.forumHandler = handler.NewForumHandler(forumService, metalSyncService, techSyncService, aiDailySyncService)
 	s.analysisHandler = handler.NewAnalysisHandler(service.NewAnalysisService(db))
 	s.agentHandler = handler.NewAgentHandler(authService)
+	s.adminHandler = handler.NewAdminHandler(aiDailySyncService)
 	s.router.Static("/public", cfg.Storage.PublicRoot())
 
 	s.registerRoutes()
@@ -91,6 +93,7 @@ func (s *Server) registerRoutes() {
 	adminSyncGroup.POST("/precious-metals", s.forumHandler.SyncPreciousMetalMarket)
 	adminSyncGroup.POST("/ai-tech", s.forumHandler.SyncTechMarket)
 	adminSyncGroup.POST("/ai-dailies", s.forumHandler.SyncAIDailies)
+	adminSyncGroup.POST("/full-history", s.adminHandler.SyncFullHistory)
 
 	agentGroup := api.Group("/agent")
 	agentGroup.Use(s.authGuard)

@@ -118,6 +118,17 @@ func (s *AIDailySyncService) SyncWithResult(ctx context.Context) (*MarketSyncSum
 	s.runMu.Lock()
 	defer s.runMu.Unlock()
 
+	return s.syncWithResult(ctx, s.config.MaxEntries)
+}
+
+func (s *AIDailySyncService) SyncArchiveWithResult(ctx context.Context, maxEntries int) (*MarketSyncSummary, error) {
+	s.runMu.Lock()
+	defer s.runMu.Unlock()
+
+	return s.syncWithResult(ctx, maxEntries)
+}
+
+func (s *AIDailySyncService) syncWithResult(ctx context.Context, maxEntries int) (*MarketSyncSummary, error) {
 	fetchedAt := time.Now()
 	entries, err := s.fetchDailyIndex(ctx)
 	if err != nil {
@@ -127,7 +138,7 @@ func (s *AIDailySyncService) SyncWithResult(ctx context.Context) (*MarketSyncSum
 		return nil, fmt.Errorf("no ai daily entries found")
 	}
 
-	limit := s.config.MaxEntries
+	limit := maxEntries
 	if limit <= 0 {
 		limit = 7
 	}

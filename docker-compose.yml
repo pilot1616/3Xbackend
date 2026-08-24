@@ -33,6 +33,7 @@ services:
       DATABASE_MYSQL_PORT: 3306
       DATABASE_MYSQL_SCHEMA: ${DATABASE_MYSQL_SCHEMA:-3X}
       AGENT_BASE_URL: ${AGENT_BASE_URL:-http://agent:8010}
+      DATA_FETCH_BASE_URL: ${DATA_FETCH_BASE_URL:-http://data-fetch:8020}
     ports:
       - "${SERVER_PORT:-3000}:3000"
     volumes:
@@ -80,7 +81,10 @@ services:
       DATABASE_MYSQL_PORT: 3306
       DATABASE_MYSQL_SCHEMA: ${DATABASE_MYSQL_SCHEMA:-3X}
       DATA_FETCH_INTERVAL_SECONDS: ${DATA_FETCH_INTERVAL_SECONDS:-3600}
-    command: ["python", "-m", "app.main", "loop"]
+      DATA_FETCH_HISTORY_START_YEAR: ${DATA_FETCH_HISTORY_START_YEAR:-2018}
+      DATA_FETCH_RUN_LOOP: ${DATA_FETCH_RUN_LOOP:-true}
+    ports:
+      - "${DATA_FETCH_PORT:-8020}:8020"
 
 volumes:
   mysql-data:

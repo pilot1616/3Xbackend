@@ -14,6 +14,7 @@ import type {
   DeleteQuestionResult,
   FileDeleteResult,
   FileUploadResult,
+  FullHistorySyncResult,
   LikeListPage,
   LikeResult,
   MyCommentListPage,
@@ -188,6 +189,12 @@ export function getAIDailies(limit = 20, keyword = '', offset = 0) {
 
 export function syncAIDailies(rounds = 1, intervalMs = 800) {
   return request<AIDailySyncResult>(`/api/v1/admin/sync/ai-dailies${toQueryString({ rounds, interval_ms: intervalMs })}`, {
+    method: 'POST',
+  });
+}
+
+export function syncFullHistory(aiDailyMaxEntries = 10000) {
+  return request<FullHistorySyncResult>(`/api/v1/admin/sync/full-history${toQueryString({ ai_daily_max_entries: aiDailyMaxEntries })}`, {
     method: 'POST',
   });
 }

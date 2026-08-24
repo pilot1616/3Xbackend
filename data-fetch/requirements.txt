@@ -1,6 +1,8 @@
 akshare>=1.17,<2
+fastapi>=0.115,<1
 pandas>=2.2,<3
+pydantic>=2.8,<3
 sqlalchemy>=2.0,<3
 pymysql>=1.1,<2
 python-dotenv>=1.0,<2
-
+uvicorn[standard]>=0.30,<1
