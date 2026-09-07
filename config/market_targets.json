@@ -1,0 +1,26 @@
+{
+  "precious_metals": [
+    { "symbol": "XAU", "name": "Gold", "source_symbol": "GC" },
+    { "symbol": "XAG", "name": "Silver", "source_symbol": "SI" },
+    { "symbol": "XPT", "name": "Platinum", "source_symbol": "XPT" },
+    { "symbol": "XPD", "name": "Palladium", "source_symbol": "XPD" },
+    { "symbol": "XCU", "name": "Copper", "source_symbol": "HG" },
+    { "symbol": "XNI", "name": "Nickel", "source_symbol": "NID" },
+    { "symbol": "XAL", "name": "Aluminum", "source_symbol": "AHD" },
+    { "symbol": "XZN", "name": "Zinc", "source_symbol": "ZSD" }
+  ],
+  "tech_markets": [
+    { "symbol": "NDX", "name": "Nasdaq 100", "source_symbol": ".NDX", "category": "index" },
+    { "symbol": "QQQ", "name": "Invesco QQQ Trust", "source_symbol": "QQQ", "category": "etf" },
+    { "symbol": "XLK", "name": "Technology Select Sector SPDR Fund", "source_symbol": "XLK", "category": "etf" },
+    { "symbol": "SMH", "name": "VanEck Semiconductor ETF", "source_symbol": "SMH", "category": "etf" },
+    { "symbol": "IGV", "name": "iShares Expanded Tech-Software Sector ETF", "source_symbol": "IGV", "category": "etf" },
+    { "symbol": "SOXX", "name": "iShares Semiconductor ETF", "source_symbol": "SOXX", "category": "etf" },
+    { "symbol": "AAPL", "name": "Apple", "source_symbol": "AAPL", "category": "stock" },
+    { "symbol": "MSFT", "name": "Microsoft", "source_symbol": "MSFT", "category": "stock" },
+    { "symbol": "NVDA", "name": "NVIDIA", "source_symbol": "NVDA", "category": "stock" },
+    { "symbol": "AMD", "name": "AMD", "source_symbol": "AMD", "category": "stock" },
+    { "symbol": "AVGO", "name": "Broadcom", "source_symbol": "AVGO", "category": "stock" },
+    { "symbol": "TSM", "name": "TSMC", "source_symbol": "TSM", "category": "stock" }
+  ]
+}

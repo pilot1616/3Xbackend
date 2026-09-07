@@ -26,7 +26,7 @@ type Server struct {
 	optionalAuth    gin.HandlerFunc
 }
 
-func (s *Server) Init(db *gorm.DB, cfg *config.Config) error {
+func (s *Server) Init(db *gorm.DB, cfg *config.Config, markets config.Markets) error {
 	s.router = gin.New()
 	s.router.Use(gin.Logger(), gin.Recovery(), middleware.CORS())
 
@@ -41,7 +41,7 @@ func (s *Server) Init(db *gorm.DB, cfg *config.Config) error {
 	}
 	aiDailySyncService := service.NewAIDailySyncService(db, cfg.Sync.AIDaily)
 	s.forumHandler = handler.NewForumHandler(forumService, aiDailySyncService)
-	s.analysisHandler = handler.NewAnalysisHandler(service.NewAnalysisService(db))
+	s.analysisHandler = handler.NewAnalysisHandler(service.NewAnalysisService(db, markets))
 	s.agentHandler = handler.NewAgentHandler(authService)
 	s.adminHandler = handler.NewAdminHandler(aiDailySyncService)
 	s.router.Static("/public", cfg.Storage.PublicRoot())

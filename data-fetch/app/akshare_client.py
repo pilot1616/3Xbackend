@@ -8,40 +8,8 @@ from typing import Any
 import akshare as ak
 import pandas as pd
 
-
-@dataclass(frozen=True)
-class MarketTarget:
-    symbol: str
-    name: str
-    source_symbol: str
-    category: str = ""
-
-
-PRECIOUS_METALS = [
-    MarketTarget(symbol="XAU", name="Gold", source_symbol="GC"),
-    MarketTarget(symbol="XAG", name="Silver", source_symbol="SI"),
-    MarketTarget(symbol="XPT", name="Platinum", source_symbol="XPT"),
-    MarketTarget(symbol="XPD", name="Palladium", source_symbol="XPD"),
-    MarketTarget(symbol="XCU", name="Copper", source_symbol="HG"),
-    MarketTarget(symbol="XNI", name="Nickel", source_symbol="NID"),
-    MarketTarget(symbol="XAL", name="Aluminum", source_symbol="AHD"),
-    MarketTarget(symbol="XZN", name="Zinc", source_symbol="ZSD"),
-]
-
-TECH_MARKETS = [
-    MarketTarget(symbol="NDX", name="Nasdaq 100", source_symbol=".NDX", category="index"),
-    MarketTarget(symbol="QQQ", name="Invesco QQQ Trust", source_symbol="QQQ", category="etf"),
-    MarketTarget(symbol="XLK", name="Technology Select Sector SPDR Fund", source_symbol="XLK", category="etf"),
-    MarketTarget(symbol="SMH", name="VanEck Semiconductor ETF", source_symbol="SMH", category="etf"),
-    MarketTarget(symbol="IGV", name="iShares Expanded Tech-Software Sector ETF", source_symbol="IGV", category="etf"),
-    MarketTarget(symbol="SOXX", name="iShares Semiconductor ETF", source_symbol="SOXX", category="etf"),
-    MarketTarget(symbol="AAPL", name="Apple", source_symbol="AAPL", category="stock"),
-    MarketTarget(symbol="MSFT", name="Microsoft", source_symbol="MSFT", category="stock"),
-    MarketTarget(symbol="NVDA", name="NVIDIA", source_symbol="NVDA", category="stock"),
-    MarketTarget(symbol="AMD", name="AMD", source_symbol="AMD", category="stock"),
-    MarketTarget(symbol="AVGO", name="Broadcom", source_symbol="AVGO", category="stock"),
-    MarketTarget(symbol="TSM", name="TSMC", source_symbol="TSM", category="stock"),
-]
+from .config import MarketTarget, load_market_targets
+PRECIOUS_METALS, TECH_MARKETS = load_market_targets()
 
 
 def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:

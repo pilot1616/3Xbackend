@@ -1,6 +1,7 @@
 package service
 
 import (
+	"3Xbackend/internal/config"
 	"3Xbackend/internal/database"
 	"encoding/json"
 	"errors"
@@ -46,10 +47,13 @@ const (
 )
 
 var (
-	analysisExpectedTechSymbols  = []string{"NDX", "QQQ", "XLK", "SMH", "IGV", "SOXX", "AAPL", "MSFT", "NVDA", "AMD", "AVGO", "TSM"}
-	analysisExpectedMetalSymbols = []string{"XAU", "XAG", "XPT", "XPD", "XCU", "XNI", "XAL", "XZN"}
-	analysisExpectedAllSymbols   = []string{"NDX", "QQQ", "XLK", "SMH", "IGV", "SOXX", "AAPL", "MSFT", "NVDA", "AMD", "AVGO", "TSM", "XAU", "XAG", "XPT", "XPD", "XCU", "XNI", "XAL", "XZN"}
-	aiThemeOrder                 = []string{"infra", "model-capability", "agent", "enterprise-app", "open-source", "regulation"}
+	defaultAnalysisExpectedTechSymbols  = []string{"NDX", "QQQ", "XLK", "SMH", "IGV", "SOXX", "AAPL", "MSFT", "NVDA", "AMD", "AVGO", "TSM"}
+	defaultAnalysisExpectedMetalSymbols = []string{"XAU", "XAG", "XPT", "XPD", "XCU", "XNI", "XAL", "XZN"}
+	defaultAnalysisExpectedAllSymbols   = []string{"NDX", "QQQ", "XLK", "SMH", "IGV", "SOXX", "AAPL", "MSFT", "NVDA", "AMD", "AVGO", "TSM", "XAU", "XAG", "XPT", "XPD", "XCU", "XNI", "XAL", "XZN"}
+	analysisExpectedTechSymbols         = defaultAnalysisExpectedTechSymbols
+	analysisExpectedMetalSymbols        = defaultAnalysisExpectedMetalSymbols
+	analysisExpectedAllSymbols          = defaultAnalysisExpectedAllSymbols
+	aiThemeOrder                        = []string{"infra", "model-capability", "agent", "enterprise-app", "open-source", "regulation"}
 	aiThemeKeywords              = map[string][]string{
 		"agent":            {"agent", "agents", "autonomous", "workflow", "multi-agent", "assistant"},
 		"model-capability": {"model", "reasoning", "benchmark", "multimodal", "inference", "inference-time", "capability"},
@@ -61,7 +65,10 @@ var (
 )
 
 type AnalysisService struct {
-	db *gorm.DB
+	db                    *gorm.DB
+	expectedTechSymbols    []string
+	expectedMetalSymbols   []string
+	expectedAllSymbols     []string
 }
 
 type AnalysisDataStatus struct {
@@ -255,8 +262,32 @@ type overviewLinkageResult struct {
 	Risks      []string
 }
 
-func NewAnalysisService(db *gorm.DB) *AnalysisService {
-	return &AnalysisService{db: db}
+func NewAnalysisService(db *gorm.DB, markets config.Markets) *AnalysisService {
+	techSymbols := marketSymbols(markets.TechMarkets)
+	metalSymbols := marketSymbols(markets.PreciousMetals)
+	if len(techSymbols) == 0 {
+		techSymbols = append([]string(nil), defaultAnalysisExpectedTechSymbols...)
+	}
+	if len(metalSymbols) == 0 {
+		metalSymbols = append([]string(nil), defaultAnalysisExpectedMetalSymbols...)
+	}
+	return &AnalysisService{
+		db:                  db,
+		expectedTechSymbols:  techSymbols,
+		expectedMetalSymbols: metalSymbols,
+		expectedAllSymbols:   append(append([]string(nil), techSymbols...), metalSymbols...),
+	}
+}
+
+func marketSymbols(targets []config.MarketTarget) []string {
+	symbols := make([]string, 0, len(targets))
+	for _, target := range targets {
+		if strings.TrimSpace(target.Symbol) == "" {
+			continue
+		}
+		symbols = append(symbols, strings.TrimSpace(target.Symbol))
+	}
+	return symbols
 }
 
 func parseAnalysisWindow(raw string) (AnalysisWindow, error) {
@@ -339,13 +370,13 @@ func (s *AnalysisService) AnalyzeMarketTrend(window AnalysisWindow) (*MarketTren
 		return nil, err
 	}
 
-	regime, err := computeMarketRegime(techSeries, metalSeries)
+	regime, err := s.computeMarketRegime(techSeries, metalSeries)
 	if err != nil {
 		return nil, err
 	}
 
 	noteParts := make([]string, 0, 3)
-	missingSymbols := diffStrings(analysisExpectedAllSymbols, regime.CoveredSymbols)
+	missingSymbols := diffStrings(s.expectedAllSymbols, regime.CoveredSymbols)
 	if regime.Note != "" {
 		noteParts = append(noteParts, regime.Note)
 	}
@@ -370,7 +401,7 @@ func (s *AnalysisService) AnalyzeMarketTrend(window AnalysisWindow) (*MarketTren
 			WindowStart:             windowStart(window, now).Format(time.RFC3339),
 			WindowEnd:               now.Format(time.RFC3339),
 			CoveredSymbols:          regime.CoveredSymbols,
-			ExpectedSymbols:         append([]string(nil), analysisExpectedAllSymbols...),
+			ExpectedSymbols:         append([]string(nil), s.expectedAllSymbols...),
 			TechCoveredSymbolCount:  regime.TechCovered,
 			MetalCoveredSymbolCount: regime.MetalCovered,
 			Note:                    strings.Join(noteParts, " "),
@@ -514,7 +545,7 @@ func (s *AnalysisService) listTechMarketInputs(window AnalysisWindow, now time.T
 	}
 	var snapshots []database.TechMarketSnapshot
 	start := windowStart(window, now)
-	if err := s.db.Where("symbol IN ? AND fetched_at >= ? AND fetched_at <= ?", analysisExpectedTechSymbols, start, now).Order("fetched_at ASC").Find(&snapshots).Error; err != nil {
+	if err := s.db.Where("symbol IN ? AND fetched_at >= ? AND fetched_at <= ?", s.expectedTechSymbols, start, now).Order("fetched_at ASC").Find(&snapshots).Error; err != nil {
 		return nil, 0, ErrAnalysisComputationFailed
 	}
 	return groupTechSeries(snapshots), countInvalidTechPrices(snapshots), nil
@@ -526,7 +557,7 @@ func (s *AnalysisService) listMetalMarketInputs(window AnalysisWindow, now time.
 	}
 	var snapshots []database.PreciousMetalSnapshot
 	start := windowStart(window, now)
-	if err := s.db.Where("symbol IN ? AND fetched_at >= ? AND fetched_at <= ?", analysisExpectedMetalSymbols, start, now).Order("fetched_at ASC").Find(&snapshots).Error; err != nil {
+	if err := s.db.Where("symbol IN ? AND fetched_at >= ? AND fetched_at <= ?", s.expectedMetalSymbols, start, now).Order("fetched_at ASC").Find(&snapshots).Error; err != nil {
 		return nil, 0, ErrAnalysisComputationFailed
 	}
 	return groupMetalSeries(snapshots), countInvalidMetalPrices(snapshots), nil
@@ -822,9 +853,9 @@ func buildAIDailyStatusNote(fallbackCount int) string {
 	return fmt.Sprintf("%d 条 AI 日报因 PublishedDate 缺失或不可解析，回退使用了 FetchedAt。", fallbackCount)
 }
 
-func computeMarketRegime(tech map[string][]marketSeriesPoint, metals map[string][]marketSeriesPoint) (marketRegimeResult, error) {
-	techSnapshots := summarizeMarketSeries(analysisExpectedTechSymbols, tech)
-	metalSnapshots := summarizeMarketSeries(analysisExpectedMetalSymbols, metals)
+func (s *AnalysisService) computeMarketRegime(tech map[string][]marketSeriesPoint, metals map[string][]marketSeriesPoint) (marketRegimeResult, error) {
+	techSnapshots := summarizeMarketSeries(s.expectedTechSymbols, tech)
+	metalSnapshots := summarizeMarketSeries(s.expectedMetalSymbols, metals)
 	if len(techSnapshots) < 3 {
 		return marketRegimeResult{}, ErrInsufficientMarketHistory
 	}
@@ -844,7 +875,7 @@ func computeMarketRegime(tech map[string][]marketSeriesPoint, metals map[string]
 	regime.Leaders = marketMovers(allSnapshots, true)
 	regime.Laggards = marketMovers(allSnapshots, false)
 	regime.Evidence = buildMarketEvidence(techSnapshots, metalSnapshots)
-	regime.TechLeaders = extractTopSymbols(regime.Leaders, analysisExpectedTechSymbols)
+	regime.TechLeaders = extractTopSymbols(regime.Leaders, s.expectedTechSymbols)
 	regime.MetalLeaders = extractPositivePriorityMetals(metalSnapshots)
 	regime.TechAverage = techMomentum.AverageChangePercent
 	regime.MetalAverage = metalMomentum.AverageChangePercent
@@ -881,6 +912,15 @@ func computeMarketRegime(tech map[string][]marketSeriesPoint, metals map[string]
 		regime.Confidence = confidenceLow
 	}
 	return regime, nil
+}
+
+func computeMarketRegime(tech map[string][]marketSeriesPoint, metals map[string][]marketSeriesPoint) (marketRegimeResult, error) {
+	helper := &AnalysisService{
+		expectedTechSymbols:  append([]string(nil), defaultAnalysisExpectedTechSymbols...),
+		expectedMetalSymbols: append([]string(nil), defaultAnalysisExpectedMetalSymbols...),
+		expectedAllSymbols:   append(append([]string(nil), defaultAnalysisExpectedTechSymbols...), defaultAnalysisExpectedMetalSymbols...),
+	}
+	return helper.computeMarketRegime(tech, metals)
 }
 
 func summarizeMarketSeries(expected []string, seriesBySymbol map[string][]marketSeriesPoint) []marketSeriesSnapshot {

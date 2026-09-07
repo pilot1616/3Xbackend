@@ -26,6 +26,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("load config failed: %v", err)
 	}
+	marketConfig, err := config.LoadMarketTargets(filepath.Join("config", "market_targets.json"))
+	if err != nil {
+		log.Fatalf("load market targets failed: %v", err)
+	}
 
 	db := database.MysqlDb{}
 	if err := db.Init(cfg.Database.Mysql); err != nil {
@@ -42,7 +46,7 @@ func main() {
 	aiDailySyncService.Start(appCtx)
 
 	svr := server.Server{}
-	if err := svr.Init(db.Connect, cfg); err != nil {
+	if err := svr.Init(db.Connect, cfg, marketConfig); err != nil {
 		log.Fatalf("init server failed: %v", err)
 	}
 	if err := svr.Run(cfg.Server.Address()); err != nil {

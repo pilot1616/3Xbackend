@@ -1,7 +1,9 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -16,6 +18,7 @@ type Config struct {
 	Storage  Storage  `mapstructure:"storage"`
 	Database Database `mapstructure:"database"`
 	Sync     Sync     `mapstructure:"sync"`
+	Markets  Markets  `mapstructure:"markets"`
 }
 
 type Server struct {
@@ -40,6 +43,30 @@ type Database struct {
 
 type Sync struct {
 	AIDaily AIDailySync `mapstructure:"ai_daily"`
+}
+
+type Markets struct {
+	PreciousMetals []MarketTarget `mapstructure:"precious_metals" json:"precious_metals"`
+	TechMarkets    []MarketTarget `mapstructure:"tech_markets" json:"tech_markets"`
+}
+
+type MarketTarget struct {
+	Symbol       string `mapstructure:"symbol"`
+	Name         string `mapstructure:"name"`
+	SourceSymbol string `mapstructure:"source_symbol"`
+	Category     string `mapstructure:"category"`
+}
+
+func LoadMarketTargets(path string) (Markets, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return Markets{}, fmt.Errorf("read market targets failed: %w", err)
+	}
+	var payload Markets
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return Markets{}, fmt.Errorf("unmarshal market targets failed: %w", err)
+	}
+	return payload, nil
 }
 
 type AIDailySync struct {
