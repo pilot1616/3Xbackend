@@ -5415,7 +5415,7 @@ video {
 }
 
 .market-symbol-panel,
-.market-spotlight-panel,
+.market-detail-panel,
 .market-chart-panel,
 .market-kpi-panel,
 .market-contract-panel {
@@ -5426,7 +5426,7 @@ video {
   transform: translateZ(18px) rotateX(1.8deg);
 }
 
-.market-spotlight-panel {
+.market-detail-panel {
   transform: translateZ(22px) rotateX(1.8deg);
 }
 
@@ -5675,7 +5675,80 @@ video {
   color: #d7ecff;
 }
 
-.market-grid {
+.market-detail-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.market-detail-pricebox {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 22px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(148, 213, 255, 0.12);
+}
+
+.market-detail-price {
+  color: #f7fcff;
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.market-detail-delta {
+  display: grid;
+  gap: 4px;
+}
+
+.market-detail-delta strong {
+  color: #a8f7cd;
+  font-size: 18px;
+}
+
+.market-detail-delta span {
+  color: rgba(205, 229, 255, 0.76);
+  line-height: 1.6;
+}
+
+.market-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.market-detail-meta-card,
+.market-detail-fact {
+  display: grid;
+  gap: 6px;
+  padding: 14px 15px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgba(12, 22, 38, 0.86) 0%, rgba(16, 30, 49, 0.8) 100%);
+  border: 1px solid rgba(148, 213, 255, 0.1);
+}
+
+.market-detail-meta-card span,
+.market-detail-fact span {
+  color: rgba(196, 222, 248, 0.74);
+  font-size: 12px;
+}
+
+.market-detail-meta-card strong,
+.market-detail-fact strong {
+  color: #f4fbff;
+  line-height: 1.5;
+}
+
+.market-detail-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.market-detail-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.95fr);
   gap: 24px;
@@ -5723,53 +5796,6 @@ video {
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
 }
 
-.market-spotlight-tags {
-  justify-content: flex-end;
-}
-
-.market-spotlight-grid {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.2fr);
-  gap: 18px;
-}
-
-.market-spotlight-pricebox,
-.market-spotlight-meta-card {
-  border-radius: 20px;
-  border: 1px solid rgba(148, 213, 255, 0.12);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
-  box-shadow: 0 18px 30px rgba(2, 8, 22, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.market-spotlight-pricebox {
-  display: grid;
-  align-content: center;
-  gap: 10px;
-  padding: 22px;
-  min-height: 190px;
-}
-
-.market-spotlight-pricebox strong {
-  color: #f7fcff;
-  font-size: clamp(34px, 4vw, 52px);
-  line-height: 1;
-  letter-spacing: -0.04em;
-}
-
-.market-spotlight-pricebox span {
-  color: #88f7c8;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.market-spotlight-pricebox em {
-  color: rgba(205, 229, 255, 0.74);
-  font-style: normal;
-  line-height: 1.7;
-}
-
 .market-range-meter {
   display: grid;
   gap: 10px;
@@ -5803,26 +5829,6 @@ video {
 
 .market-range-meter-meta small {
   font-size: 12px;
-}
-
-.market-spotlight-meta {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.market-spotlight-meta-card {
-  display: grid;
-  gap: 8px;
-  padding: 18px;
-}
-
-.market-spotlight-meta-card span {
-  color: rgba(196, 222, 248, 0.72);
-}
-
-.market-spotlight-meta-card strong {
-  color: #f4fbff;
 }
 
 .auth-legacy-page {
@@ -6943,8 +6949,8 @@ video {
   .market-stage,
   .market-overview-grid,
   .market-deck,
-  .market-spotlight-grid,
-  .market-grid {
+  .market-detail-hero,
+  .market-detail-grid {
     grid-template-columns: 1fr;
   }
 
@@ -6985,7 +6991,8 @@ video {
     grid-template-columns: 1fr;
   }
 
-  .market-spotlight-meta {
+  .market-detail-meta,
+  .market-detail-facts {
     grid-template-columns: 1fr;
   }
 
@@ -7513,7 +7520,7 @@ video {
   }
 
   .market-symbol-panel,
-  .market-spotlight-panel,
+  .market-detail-panel,
   .market-chart-panel,
   .market-kpi-panel,
   .market-contract-panel,
@@ -7525,6 +7532,15 @@ video {
   .market-chart-shell {
     min-height: 240px;
     padding: 14px;
+  }
+
+  .market-detail-hero,
+  .market-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .market-detail-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .market-panel-head,

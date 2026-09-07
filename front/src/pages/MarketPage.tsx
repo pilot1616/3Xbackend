@@ -301,6 +301,15 @@ export function MarketPage() {
           { label: '市盈率', value: activeRecord?.peRatio || '--' },
         ];
 
+  const detailFacts = activeRecord
+    ? [
+        { label: '标的代码', value: activeRecord.symbol },
+        { label: '数据来源', value: 'AkShare' },
+        { label: '历史点位', value: `${activeRecord.history.length} 条` },
+        { label: '抓取时间', value: formatUpdatedAt(activeRecord.fetchedAt) },
+      ]
+    : [];
+
   const marketOverview = useMemo(() => {
     if (visibleRecords.length === 0) {
       return [] as Array<{ label: string; primary: string; secondary: string; tone?: 'up' | 'down' | 'flat' }>;
@@ -466,22 +475,24 @@ export function MarketPage() {
             <div className="market-main">
               {activeRecord ? (
                 <>
-                  <div className="market-panel market-spotlight-panel">
+                  <div className="market-panel market-detail-panel">
                     <div className="market-panel-head">
                       <div>
-                        <h3>{activeRecord.name} 聚焦视图</h3>
-                        <p>把当前选中品种的主状态抽离出来，先看价格位置和同步状态，再往下看曲线与合约明细。</p>
+                        <h3>{activeRecord.name} 详情</h3>
+                        <p>先看核心价格和窗口变化，再查看这只标的的来源、分类和扩展指标。</p>
                       </div>
                       <div className="legacy-summary-strip market-spotlight-tags">
                         <span className="legacy-summary-chip">{activeRecord.symbol}</span>
                         <span className={`legacy-summary-chip market-trend-chip market-trend-chip-${trendSummary?.direction ?? 'flat'}`}>{activeRecord.changePercent || '--'}</span>
                       </div>
                     </div>
-                    <div className="market-spotlight-grid">
-                      <div className="market-spotlight-pricebox">
-                        <strong>{activeRecord.price || '--'}</strong>
-                        <span>{activeRecord.change || '--'}</span>
-                        <em>{trendCopy}</em>
+                    <div className="market-detail-hero">
+                      <div className="market-detail-pricebox">
+                        <div className="market-detail-price">{activeRecord.price || '--'}</div>
+                        <div className="market-detail-delta">
+                          <strong>{activeRecord.change || '--'}</strong>
+                          <span>{trendCopy}</span>
+                        </div>
                         {dayRange ? (
                           <div className="market-range-meter">
                             <div className="market-range-meter-track">
@@ -495,14 +506,22 @@ export function MarketPage() {
                           </div>
                         ) : null}
                       </div>
-                      <div className="market-spotlight-meta">
+                      <div className="market-detail-meta">
                         {spotlightMeta.map((item) => (
-                          <article className="market-spotlight-meta-card" key={item.label}>
+                          <article className="market-detail-meta-card" key={item.label}>
                             <span>{item.label}</span>
                             <strong>{item.value}</strong>
                           </article>
                         ))}
                       </div>
+                    </div>
+                    <div className="market-detail-facts">
+                      {detailFacts.map((item) => (
+                        <article className="market-detail-fact" key={item.label}>
+                          <span>{item.label}</span>
+                          <strong>{item.value}</strong>
+                        </article>
+                      ))}
                     </div>
                   </div>
 
@@ -602,7 +621,7 @@ export function MarketPage() {
                     </div>
                   </div>
 
-                  <div className="market-grid">
+                  <div className="market-detail-grid">
                     <section className="market-panel market-kpi-panel">
                       <div className="market-panel-head">
                         <h3>行情指标</h3>
