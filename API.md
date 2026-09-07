@@ -495,7 +495,7 @@ Authorization: Bearer <token>
     "windowStart": "2026-05-15T10:30:00+08:00",
     "windowEnd": "2026-05-21T10:30:00+08:00",
     "coveredSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
-    "expectedSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
+    "expectedSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "SOXX", "AAPL", "MSFT", "NVDA", "AMD", "AVGO", "TSM", "XAU", "XAG", "XPT", "XPD", "XCU", "XNI", "XAL", "XZN"],
     "note": ""
   },
   "summary": "科技风险资产整体偏强，而贵金属并未形成领涨，当前市场更接近风险偏好环境。",
@@ -607,7 +607,7 @@ Authorization: Bearer <token>
     "windowStart": "2026-05-15T10:30:00+08:00",
     "windowEnd": "2026-05-21T10:30:00+08:00",
     "coveredSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
-    "expectedSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"],
+    "expectedSymbols": ["NDX", "QQQ", "XLK", "SMH", "IGV", "SOXX", "AAPL", "MSFT", "NVDA", "AMD", "AVGO", "TSM", "XAU", "XAG", "XPT", "XPD", "XCU", "XNI", "XAL", "XZN"],
     "note": ""
   },
   "summary": "AI 信息面目前由基础设施主导，而市场也通过风险偏好状态对这一叙事做出了确认。",

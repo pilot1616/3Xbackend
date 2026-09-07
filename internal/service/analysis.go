@@ -46,9 +46,9 @@ const (
 )
 
 var (
-	analysisExpectedTechSymbols  = []string{"NDX", "QQQ", "XLK", "SMH", "IGV"}
-	analysisExpectedMetalSymbols = []string{"XAU", "XAG", "XPT", "XPD"}
-	analysisExpectedAllSymbols   = []string{"NDX", "QQQ", "XLK", "SMH", "IGV", "XAU", "XAG", "XPT", "XPD"}
+	analysisExpectedTechSymbols  = []string{"NDX", "QQQ", "XLK", "SMH", "IGV", "SOXX", "AAPL", "MSFT", "NVDA", "AMD", "AVGO", "TSM"}
+	analysisExpectedMetalSymbols = []string{"XAU", "XAG", "XPT", "XPD", "XCU", "XNI", "XAL", "XZN"}
+	analysisExpectedAllSymbols   = []string{"NDX", "QQQ", "XLK", "SMH", "IGV", "SOXX", "AAPL", "MSFT", "NVDA", "AMD", "AVGO", "TSM", "XAU", "XAG", "XPT", "XPD", "XCU", "XNI", "XAL", "XZN"}
 	aiThemeOrder                 = []string{"infra", "model-capability", "agent", "enterprise-app", "open-source", "regulation"}
 	aiThemeKeywords              = map[string][]string{
 		"agent":            {"agent", "agents", "autonomous", "workflow", "multi-agent", "assistant"},
