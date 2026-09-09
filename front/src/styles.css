@@ -5578,6 +5578,13 @@ video {
   width: 100%;
   height: auto;
   overflow: visible;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.market-chart:active {
+  cursor: grabbing;
 }
 
 .market-chart-grid line {
@@ -5630,6 +5637,15 @@ video {
   gap: 12px;
   margin-top: 14px;
   color: rgba(196, 222, 248, 0.68);
+}
+
+.market-chart-pan-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  color: rgba(196, 222, 248, 0.56);
+  font-size: 12px;
 }
 
 .market-chart-stats {

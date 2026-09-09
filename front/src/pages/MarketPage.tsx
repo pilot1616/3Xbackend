@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 
 import { getPreciousMetalMarket, getTechMarket } from '../api/forum';
 import type { PreciousMetalPoint, TechMarketPoint } from '../types/api';
@@ -193,6 +194,8 @@ export function MarketPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
+  const [chartWindowStart, setChartWindowStart] = useState(0);
+  const dragState = useRef<{ pointerId: number; startX: number; startWindow: number } | null>(null);
 
   useEffect(() => {
     void loadMarket();
@@ -219,15 +222,27 @@ export function MarketPage() {
     if (marketType !== 'ai-tech' || techCategoryFilter === 'all') {
       return records;
     }
-    return records.filter((record) => record.category === techCategoryFilter);
+    return records.filter((record) => {
+      const category = record.category === 'stock' ? 'equity' : record.category;
+      return category === techCategoryFilter;
+    });
   }, [marketType, records, techCategoryFilter]);
 
   const activeRecord = useMemo(() => visibleRecords.find((record) => record.symbol === activeSymbol) ?? visibleRecords[0] ?? null, [activeSymbol, visibleRecords]);
-  const chartModel = useMemo(() => (activeRecord ? buildCandles(activeRecord.history) : emptyChartModel), [activeRecord]);
+  const chartWindowSize = Math.min(48, activeRecord?.history.length ?? 0);
+  const maxChartWindowStart = Math.max(0, (activeRecord?.history.length ?? 0) - chartWindowSize);
+  const chartModel = useMemo(() => {
+    if (!activeRecord) {
+      return emptyChartModel;
+    }
+    const start = Math.max(0, Math.min(chartWindowStart, Math.max(0, activeRecord.history.length - chartWindowSize)));
+    return buildCandles(activeRecord.history.slice(start, start + chartWindowSize));
+  }, [activeRecord, chartWindowSize, chartWindowStart]);
 
   useEffect(() => {
     setHoveredPointIndex(null);
-  }, [activeSymbol, historyLimit, updatedAt]);
+    setChartWindowStart(Math.max(0, (activeRecord?.history.length ?? 0) - Math.min(48, activeRecord?.history.length ?? 0)));
+  }, [activeSymbol, historyLimit, updatedAt, activeRecord]);
 
   const trendSummary = useMemo(() => {
     if (!activeRecord) {
@@ -364,6 +379,33 @@ export function MarketPage() {
     const ratio = Math.max(0, Math.min(1, clientX / svgWidth));
     const index = Math.round(ratio * (chartModel.points.length - 1));
     setHoveredPointIndex(index);
+  }
+
+  function handleChartPointerDown(event: ReactPointerEvent<SVGSVGElement>) {
+    dragState.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startWindow: chartWindowStart,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setHoveredPointIndex(null);
+  }
+
+  function handleChartPointerDrag(event: ReactPointerEvent<SVGSVGElement>) {
+    const drag = dragState.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    const candleSpacing = 760 / Math.max(1, chartModel.points.length - 1);
+    const movedCandles = Math.round((drag.startX - event.clientX) / Math.max(8, candleSpacing));
+    setChartWindowStart(Math.max(0, Math.min(maxChartWindowStart, drag.startWindow + movedCandles)));
+  }
+
+  function handleChartPointerUp(event: ReactPointerEvent<SVGSVGElement>) {
+    if (dragState.current?.pointerId === event.pointerId) {
+      dragState.current = null;
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
   }
 
   return (
@@ -552,28 +594,26 @@ export function MarketPage() {
                         <span>低点 {chartModel.min?.toFixed(3) ?? '--'}</span>
                       </div>
                       {focusPoint ? (
-                        <div className="market-chart-tooltip" style={{ left: `${(focusPoint.x / 760) * 100}%`, top: `${(focusPoint.y / 280) * 100}%` }}>
-                        <strong>收 {focusPoint.close.toFixed(3)}</strong>
-                        <span>开 {focusPoint.open.toFixed(3)} · 高 {focusPoint.high.toFixed(3)} · 低 {focusPoint.low.toFixed(3)}</span>
-                        <span>{formatChartTime(focusPoint.fetchedAt)}</span>
+                        <div className="market-chart-tooltip" style={{ left: `${(focusPoint.x / 760) * 100}%`, top: '12%' }}>
+                          <strong>收 {focusPoint.close.toFixed(3)}</strong>
+                          <span>开 {focusPoint.open.toFixed(3)} · 高 {focusPoint.high.toFixed(3)} · 低 {focusPoint.low.toFixed(3)}</span>
+                          <span>{formatChartTime(focusPoint.fetchedAt)}</span>
                         </div>
                       ) : null}
                       {chartModel.points.length > 0 ? (
                         <svg
                           className="market-chart"
-                          onMouseLeave={() => setHoveredPointIndex(null)}
-                          onMouseMove={(event) => {
-                            const rect = event.currentTarget.getBoundingClientRect();
-                            handleChartPointerMove(event.clientX - rect.left, rect.width);
-                          }}
-                          onTouchMove={(event) => {
-                            const touch = event.touches[0];
-                            if (!touch) {
-                              return;
+                          onPointerDown={handleChartPointerDown}
+                          onPointerMove={(event) => {
+                            handleChartPointerDrag(event);
+                            if (!dragState.current) {
+                              const rect = event.currentTarget.getBoundingClientRect();
+                              handleChartPointerMove(event.clientX - rect.left, rect.width);
                             }
-                            const rect = event.currentTarget.getBoundingClientRect();
-                            handleChartPointerMove(touch.clientX - rect.left, rect.width);
                           }}
+                          onPointerUp={handleChartPointerUp}
+                          onPointerCancel={handleChartPointerUp}
+                          onMouseLeave={() => setHoveredPointIndex(null)}
                           role="img"
                           viewBox="0 0 760 280"
                         >
@@ -604,8 +644,12 @@ export function MarketPage() {
                       )}
                     </div>
                     <div className="market-chart-axis">
-                      <span>{activeRecord.history[0] ? formatChartTime(activeRecord.history[0].fetchedAt) : '--'}</span>
-                      <span>{activeRecord.history[activeRecord.history.length - 1] ? formatChartTime(activeRecord.history[activeRecord.history.length - 1].fetchedAt) : '--'}</span>
+                      <span>{chartModel.points[0] ? formatChartTime(chartModel.points[0].fetchedAt) : '--'}</span>
+                      <span>{chartModel.points[chartModel.points.length - 1] ? formatChartTime(chartModel.points[chartModel.points.length - 1].fetchedAt) : '--'}</span>
+                    </div>
+                    <div className="market-chart-pan-status">
+                      <span>{chartWindowStart === 0 ? '已到最早数据' : '向右拖动查看更早数据'}</span>
+                      <span>{chartWindowStart >= maxChartWindowStart ? '最新窗口' : '向左拖动回到最新数据'}</span>
                     </div>
                     <div className="legacy-summary-strip market-chart-stats">
                       <span className="legacy-summary-chip">最低：{chartModel.min?.toFixed(3) ?? '--'}</span>

@@ -112,6 +112,30 @@ def _fetch_us_spot() -> pd.DataFrame:
     return pd.DataFrame()
 
 
+def _spot_row_by_symbol(df: pd.DataFrame, target: MarketTarget) -> pd.Series | None:
+    if df.empty:
+        return None
+    normalized = _normalize_columns(df)
+    symbol_columns = ["代码", "symbol", "Symbol", "ticker", "Ticker"]
+    for column in symbol_columns:
+        if column not in normalized.columns:
+            continue
+        matches = normalized[normalized[column].astype(str).str.upper().str.strip() == target.source_symbol.upper()]
+        if not matches.empty:
+            return matches.iloc[0]
+    return None
+
+
+def _spot_value(row: pd.Series | None, *candidates: str) -> str:
+    if row is None:
+        return ""
+    return _row_value(row, *candidates)
+
+
+def _market_value(daily_row: pd.Series, spot_row: pd.Series | None, *candidates: str) -> str:
+    return _spot_value(spot_row, *candidates) or _row_value(daily_row, *candidates)
+
+
 def _latest_history_row(df: pd.DataFrame) -> tuple[pd.Series | None, pd.Series | None]:
     if df.empty:
         return None, None
@@ -171,6 +195,7 @@ def _tech_history(target: MarketTarget) -> tuple[pd.Series | None, pd.Series | N
 def fetch_tech_markets(fetched_at: datetime) -> tuple[list[dict[str, Any]], list[str]]:
     failures: list[str] = []
     records: list[dict[str, Any]] = []
+    spot_df = _fetch_us_spot()
 
     for target in TECH_MARKETS:
         try:
@@ -181,7 +206,10 @@ def fetch_tech_markets(fetched_at: datetime) -> tuple[list[dict[str, Any]], list
         if row is None:
             failures.append(f"{target.symbol}: history row not found for {target.source_symbol}")
             continue
+        spot_row = _spot_row_by_symbol(spot_df, target)
         overview = _overview(row)
+        if spot_row is not None:
+            overview.update({f"spot_{key}": value for key, value in _overview(spot_row).items()})
         change, change_percent = _history_change(row, previous)
         price = _row_value(row, "close", "最新价", "最新", "现价", "price", "last", "收盘")
         if not price:
@@ -205,12 +233,12 @@ def fetch_tech_markets(fetched_at: datetime) -> tuple[list[dict[str, Any]], list
                 "week52_range": "",
                 "volume": _row_value(row, "volume", "成交量"),
                 "avg_volume": "",
-                "market_cap": _row_value(row, "总市值", "市值", "market_cap"),
-                "pe_ratio": _row_value(row, "市盈率", "PE", "pe"),
-                "beta": "",
-                "eps": "",
-                "dividend": "",
-                "yield": "",
+                "market_cap": _market_value(row, spot_row, "总市值", "市值", "market_cap", "Market Cap", "MarketCap"),
+                "pe_ratio": _market_value(row, spot_row, "市盈率", "市盈率(动态)", "动态市盈率", "PE", "pe", "PE(TTM)", "PERatio"),
+                "beta": _market_value(row, spot_row, "Beta", "beta"),
+                "eps": _market_value(row, spot_row, "每股收益", "EPS", "eps"),
+                "dividend": _market_value(row, spot_row, "股息", "每股股息", "Dividend", "dividend"),
+                "yield": _market_value(row, spot_row, "股息率", "股息率(%)", "Yield", "yield"),
                 "last_update_text": _row_value(row, "date", "更新时间", "time", "时间"),
                 "overview_json": json.dumps(overview, ensure_ascii=False),
                 "fetched_at": _row_date(row, fetched_at),
