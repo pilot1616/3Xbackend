@@ -8,6 +8,41 @@ from .db import QueryResult
 from .llm import LLMClient
 
 
+MARKET_DATA_RULES = (
+    "市场数据规则：precious_metal_snapshots 和 tech_market_snapshots 均按交易日保存日线数据；"
+    "日 K 线字段使用 price（收盘价兼容字段）、open、high、low；历史记录按 symbol 分组并按 fetched_at 排序。"
+    "不要把每次抓取轮询误解成分钟线或实时行情。"
+    "tech_market_snapshots 的 market_cap、pe_ratio、beta、eps、dividend、yield 是科技标的的估值/扩展字段，"
+    "这些字段可能为空，查询最新估值时必须按 symbol 取 MAX(fetched_at) 对应的完整记录，不能把不同日期的字段拼在一起。"
+    "市场标的应同时返回 name（中文标的名）和 symbol（国际代码）；不要只返回代码。"
+)
+
+MARKET_TABLES = ("precious_metal_snapshots", "tech_market_snapshots")
+AI_TABLE = "ai_daily_snapshots"
+
+
+def select_tables_for_prompt(prompt: str, available_tables: list[str]) -> list[str]:
+    """Choose relevant tables without relying on database table ordering."""
+    available = set(available_tables)
+    text = prompt.lower()
+    has_ai = any(keyword in text for keyword in ("ai", "日报", "新闻", "资讯", "主题", "舆情"))
+    has_metal = any(keyword in text for keyword in ("金属", "贵金属", "黄金", "白银", "铂", "钯", "铜", "镍", "铝", "锌", "xau", "xag", "xpt", "xpd", "xcu", "xni", "xal", "xzn"))
+    has_tech = any(keyword in text for keyword in ("科技", "芯片", "半导体", "etf", "指数", "股票", "估值", "市盈率", "pe", "市值", "k线", "行情", "tech"))
+    selected: list[str] = []
+
+    if has_metal or (not has_ai and not has_tech and any(keyword in text for keyword in ("市场", "标的", "价格", "收盘", "开盘"))):
+        selected.append("precious_metal_snapshots")
+    if has_tech:
+        selected.append("tech_market_snapshots")
+    if has_ai:
+        selected.insert(0, AI_TABLE)
+
+    result = [table for table in selected if table in available]
+    if result:
+        return result
+    return [table for table in available_tables[:3]]
+
+
 class AgentState(TypedDict, total=False):
     prompt: str
     context: dict[str, Any]
@@ -44,12 +79,8 @@ def build_graph(db_engine) -> Any:
 
         prompt = state["prompt"].lower()
         context = state.get("context") or {}
-        if context.get("source") == "analysis-page":
-            analysis_tables = [
-                "ai_daily_snapshots",
-                "precious_metal_snapshots",
-                "tech_market_snapshots",
-            ]
+        if str(context.get("source") or "").startswith(("analysis-page", "ai-chat-page")):
+            analysis_tables = [AI_TABLE, *MARKET_TABLES]
             available = set(list_tables(db_engine))
             return {**state, "selected_tables": [table for table in analysis_tables if table in available]}
 
@@ -58,6 +89,10 @@ def build_graph(db_engine) -> Any:
             return {**state, "selected_tables": [explicit_scope]}
 
         tables = list_tables(db_engine)
+        market_tables = select_tables_for_prompt(state["prompt"], tables)
+        if market_tables:
+            return {**state, "selected_tables": market_tables}
+
         keywords = [word for word in prompt.replace("，", " ").replace(",", " ").split() if len(word) >= 2]
         matched: list[str] = []
         for table in tables:
@@ -85,6 +120,7 @@ def build_graph(db_engine) -> Any:
             "禁止 INSERT、UPDATE、DELETE、DROP、ALTER、CREATE、TRUNCATE。"
             "如果用户问题涉及 AI 与市场联动，必须同时查询 AI 日报表和金融行情表。"
             "如果用户问题无法精确回答，输出一个用于获取最相关事实的 SELECT 查询。"
+            + MARKET_DATA_RULES
         )
         user_prompt = (
             f"用户问题：{state['prompt']}\n\n"
@@ -110,6 +146,7 @@ def build_graph(db_engine) -> Any:
         system_prompt = (
             "你是企业内部数据分析助手。"
             "你会根据数据库查询结果和用户问题，给出简洁、可执行的分析结论。"
+            + MARKET_DATA_RULES
         )
         query_result = state.get("query_result")
         result_text = ""

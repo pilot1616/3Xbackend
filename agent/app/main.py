@@ -22,7 +22,7 @@ from .chat_store import (
     recent_messages,
 )
 from .db import build_engine, execute_readonly_sql, schema_summary
-from .graph import build_graph
+from .graph import MARKET_DATA_RULES, build_graph
 from .llm import LLMClient
 from .types import ChatRequest, ChatResponse, PromptRequest, PromptResponse
 
@@ -115,6 +115,7 @@ def chat(request: ChatRequest) -> ChatResponse:
             "你是企业内部数据分析 SQL 规划助手。"
             "只能输出一条 MySQL 只读 SELECT/WITH SQL，不要 Markdown。"
             "必须优先使用给定的 AI 日报、贵金属、科技市场表。"
+            + MARKET_DATA_RULES
         )
         sql_user = (
             f"用户问题：{request.message}\n\n"
@@ -134,7 +135,10 @@ def chat(request: ChatRequest) -> ChatResponse:
         visible_query_summary = f"columns={query_result.columns}\nrows={len(query_result.rows)}"
         sources = jsonable_encoder([{"sql": query_result.sql, "columns": query_result.columns, "rows": query_result.rows}])
 
-        answer_system = "你是企业内部 AI 金融分析助手。请根据查询结果和对话历史回答，给出结论、依据、风险和建议。"
+        answer_system = (
+            "你是企业内部 AI 金融分析助手。请根据查询结果和对话历史回答，给出结论、依据、风险和建议。"
+            + MARKET_DATA_RULES
+        )
         answer_user = (
             f"用户问题：{request.message}\n\n"
             f"最近对话：\n{history_text}\n\n"

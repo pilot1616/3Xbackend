@@ -63,6 +63,8 @@ type PreciousMetalSnapshot struct {
 	ChangePercent  string    `gorm:"size:64"`
 	PrevClose      string    `gorm:"size:64"`
 	Open           string    `gorm:"size:64"`
+	High           string    `gorm:"size:64"`
+	Low            string    `gorm:"size:64"`
 	Bid            string    `gorm:"size:64"`
 	Ask            string    `gorm:"size:64"`
 	DayRange       string    `gorm:"size:128"`
@@ -93,6 +95,8 @@ type TechMarketSnapshot struct {
 	ChangePercent  string    `gorm:"size:64"`
 	PrevClose      string    `gorm:"size:64"`
 	Open           string    `gorm:"size:64"`
+	High           string    `gorm:"size:64"`
+	Low            string    `gorm:"size:64"`
 	Bid            string    `gorm:"size:64"`
 	Ask            string    `gorm:"size:64"`
 	DayRange       string    `gorm:"size:128"`
