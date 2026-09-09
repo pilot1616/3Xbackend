@@ -63,9 +63,6 @@ def _load_json_settings(path: str) -> dict[str, object]:
 
 def load_market_targets() -> tuple[list[MarketTarget], list[MarketTarget]]:
     data = _load_json_settings(settings.config_path)
-    markets = data.get("markets", {})
-    if not isinstance(markets, dict):
-        markets = {}
 
     def build_targets(raw_items: object) -> list[MarketTarget]:
         if not isinstance(raw_items, list):
@@ -83,7 +80,7 @@ def load_market_targets() -> tuple[list[MarketTarget], list[MarketTarget]]:
             targets.append(MarketTarget(symbol=symbol, name=name, source_symbol=source_symbol, category=category))
         return targets
 
-    return build_targets(markets.get("precious_metals")), build_targets(markets.get("tech_markets"))
+    return build_targets(data.get("precious_metals")), build_targets(data.get("tech_markets"))
 
 
 settings = Settings()

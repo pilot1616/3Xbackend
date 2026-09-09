@@ -158,6 +158,10 @@ type MySummaryResult struct {
 }
 
 type PreciousMetalPoint struct {
+	Open      string    `json:"open"`
+	High      string    `json:"high"`
+	Low       string    `json:"low"`
+	Close     string    `json:"close"`
 	Price     string    `json:"price"`
 	FetchedAt time.Time `json:"fetchedAt"`
 }
@@ -194,6 +198,10 @@ type PreciousMetalMarketResponse struct {
 }
 
 type TechMarketPoint struct {
+	Open      string    `json:"open"`
+	High      string    `json:"high"`
+	Low       string    `json:"low"`
+	Close     string    `json:"close"`
 	Price     string    `json:"price"`
 	FetchedAt time.Time `json:"fetchedAt"`
 }
@@ -228,6 +236,14 @@ type TechMarketRecord struct {
 type TechMarketResponse struct {
 	UpdatedAt time.Time          `json:"updatedAt"`
 	Records   []TechMarketRecord `json:"records"`
+}
+
+func marketRangeValue(value string, index int) string {
+	parts := strings.Split(value, " - ")
+	if len(parts) != 2 || index < 0 || index > 1 {
+		return ""
+	}
+	return strings.TrimSpace(parts[index])
 }
 
 type AIDailySectionPayload struct {
@@ -687,6 +703,10 @@ func (s *ForumService) ListPreciousMetalMarket(limit int) (*PreciousMetalMarketR
 			continue
 		}
 		historyBySymbol[snapshot.Symbol] = append(points, PreciousMetalPoint{
+			Open:      snapshot.Open,
+			High:      marketRangeValue(snapshot.DayRange, 1),
+			Low:       marketRangeValue(snapshot.DayRange, 0),
+			Close:     snapshot.Price,
 			Price:     snapshot.Price,
 			FetchedAt: snapshot.FetchedAt,
 		})
@@ -776,6 +796,10 @@ func (s *ForumService) ListTechMarket(limit int) (*TechMarketResponse, error) {
 			continue
 		}
 		historyBySymbol[snapshot.Symbol] = append(points, TechMarketPoint{
+			Open:      snapshot.Open,
+			High:      marketRangeValue(snapshot.DayRange, 1),
+			Low:       marketRangeValue(snapshot.DayRange, 0),
+			Close:     snapshot.Price,
 			Price:     snapshot.Price,
 			FetchedAt: snapshot.FetchedAt,
 		})

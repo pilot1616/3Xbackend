@@ -44,30 +44,26 @@ type UnifiedMarketRecord = {
 
 type ChartPoint = {
   x: number;
-  y: number;
-  price: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
   fetchedAt: string;
 };
 
 type ChartModel = {
-  path: string;
-  areaPath: string;
   min: number | null;
   max: number | null;
   first: number | null;
   latest: number | null;
-  markers: ChartPoint[];
   points: ChartPoint[];
 };
 
 const emptyChartModel: ChartModel = {
-  path: '',
-  areaPath: '',
   min: null,
   max: null,
   first: null,
   latest: null,
-  markers: [],
   points: [],
 };
 
@@ -149,10 +145,19 @@ function parseRange(value: string) {
   return { min, max, span: max - min };
 }
 
-function buildLinePath(history: Array<PreciousMetalPoint | TechMarketPoint>): ChartModel {
+function buildCandles(history: Array<PreciousMetalPoint | TechMarketPoint>): ChartModel {
   const numericHistory = history
-    .map((point) => ({ ...point, numericPrice: toNumericPrice(point.price) }))
-    .filter((point): point is PreciousMetalPoint & { numericPrice: number } => point.numericPrice !== null);
+    .map((point) => {
+      const close = toNumericPrice(point.close || point.price);
+      const open = toNumericPrice(point.open || point.price);
+      const high = toNumericPrice(point.high || point.price);
+      const low = toNumericPrice(point.low || point.price);
+      if (close === null || open === null || high === null || low === null) {
+        return null;
+      }
+      return { open, high: Math.max(high, open, close), low: Math.min(low, open, close), close, fetchedAt: point.fetchedAt };
+    })
+    .filter((point): point is Omit<ChartPoint, 'x'> => point !== null);
 
   if (numericHistory.length < 2) {
     return emptyChartModel;
@@ -160,28 +165,20 @@ function buildLinePath(history: Array<PreciousMetalPoint | TechMarketPoint>): Ch
 
   const width = 760;
   const height = 280;
-  const min = Math.min(...numericHistory.map((point) => point.numericPrice));
-  const max = Math.max(...numericHistory.map((point) => point.numericPrice));
+  const min = Math.min(...numericHistory.map((point) => point.low));
+  const max = Math.max(...numericHistory.map((point) => point.high));
   const diff = Math.max(1e-6, max - min);
 
   const points = numericHistory.map((point, index) => {
     const x = (index / Math.max(1, numericHistory.length - 1)) * width;
-    const y = height - ((point.numericPrice - min) / diff) * height;
-    return { x, y, price: point.numericPrice, fetchedAt: point.fetchedAt };
+    return { ...point, x };
   });
 
-  const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ');
-  const areaPath = `${path} L ${width} ${height} L 0 ${height} Z`;
-  const markerIndexes = Array.from(new Set([0, Math.floor((points.length - 1) / 2), points.length - 1]));
-
   return {
-    path,
-    areaPath,
     min,
     max,
-    first: numericHistory[0]?.numericPrice ?? null,
-    latest: numericHistory[numericHistory.length - 1]?.numericPrice ?? null,
-    markers: markerIndexes.map((index) => points[index]),
+    first: numericHistory[0]?.close ?? null,
+    latest: numericHistory[numericHistory.length - 1]?.close ?? null,
     points,
   };
 }
@@ -226,7 +223,7 @@ export function MarketPage() {
   }, [marketType, records, techCategoryFilter]);
 
   const activeRecord = useMemo(() => visibleRecords.find((record) => record.symbol === activeSymbol) ?? visibleRecords[0] ?? null, [activeSymbol, visibleRecords]);
-  const chartModel = useMemo(() => (activeRecord ? buildLinePath(activeRecord.history) : emptyChartModel), [activeRecord]);
+  const chartModel = useMemo(() => (activeRecord ? buildCandles(activeRecord.history) : emptyChartModel), [activeRecord]);
 
   useEffect(() => {
     setHoveredPointIndex(null);
@@ -528,8 +525,8 @@ export function MarketPage() {
                   <div className="market-panel market-chart-panel">
                     <div className="market-panel-head">
                       <div>
-                        <h3>{activeRecord.name} 价格走势</h3>
-                        <p>{trendCopy}</p>
+                        <h3>{activeRecord.name} 日 K 线</h3>
+                        <p>{trendCopy} 每根蜡烛代表一个交易日。</p>
                       </div>
                       <div className="market-panel-tools">
                         <div className="legacy-summary-strip market-range-strip">
@@ -556,11 +553,12 @@ export function MarketPage() {
                       </div>
                       {focusPoint ? (
                         <div className="market-chart-tooltip" style={{ left: `${(focusPoint.x / 760) * 100}%`, top: `${(focusPoint.y / 280) * 100}%` }}>
-                          <strong>{focusPoint.price.toFixed(3)}</strong>
-                          <span>{formatChartTime(focusPoint.fetchedAt)}</span>
+                        <strong>收 {focusPoint.close.toFixed(3)}</strong>
+                        <span>开 {focusPoint.open.toFixed(3)} · 高 {focusPoint.high.toFixed(3)} · 低 {focusPoint.low.toFixed(3)}</span>
+                        <span>{formatChartTime(focusPoint.fetchedAt)}</span>
                         </div>
                       ) : null}
-                      {chartModel.path ? (
+                      {chartModel.points.length > 0 ? (
                         <svg
                           className="market-chart"
                           onMouseLeave={() => setHoveredPointIndex(null)}
@@ -579,27 +577,25 @@ export function MarketPage() {
                           role="img"
                           viewBox="0 0 760 280"
                         >
-                          <defs>
-                            <linearGradient id="market-area-gradient" x1="0" x2="0" y1="0" y2="1">
-                              <stop offset="0%" stopColor="rgba(88, 233, 255, 0.58)" />
-                              <stop offset="100%" stopColor="rgba(88, 233, 255, 0.02)" />
-                            </linearGradient>
-                          </defs>
                           <g className="market-chart-grid">
                             {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
                               <line key={ratio} x1="0" x2="760" y1={(280 * ratio).toFixed(2)} y2={(280 * ratio).toFixed(2)} />
                             ))}
                           </g>
-                          <path className="market-chart-area" d={chartModel.areaPath} />
-                          <path className="market-chart-line" d={chartModel.path} />
                           {focusPoint ? <line className="market-chart-focus-line" x1={focusPoint.x} x2={focusPoint.x} y1="0" y2="280" /> : null}
-                          <g className="market-chart-markers">
-                            {chartModel.markers.map((marker) => (
-                              <g key={`${marker.fetchedAt}-${marker.x.toFixed(0)}`}>
-                                <circle cx={marker.x} cy={marker.y} r="5" />
-                              </g>
-                            ))}
-                            {focusPoint ? <circle className="market-chart-focus-dot" cx={focusPoint.x} cy={focusPoint.y} r="7" /> : null}
+                          <g className="market-chart-candles">
+                            {chartModel.points.map((candle) => {
+                              const y = (value: number) => 280 - ((value - chartModel.min!) / Math.max(1e-6, chartModel.max! - chartModel.min!)) * 280;
+                              const bodyTop = Math.min(y(candle.open), y(candle.close));
+                              const bodyHeight = Math.max(3, Math.abs(y(candle.open) - y(candle.close)));
+                              const isUp = candle.close >= candle.open;
+                              return (
+                                <g className={isUp ? 'is-up' : 'is-down'} key={`${candle.fetchedAt}-${candle.x.toFixed(0)}`}>
+                                  <line x1={candle.x} x2={candle.x} y1={y(candle.high)} y2={y(candle.low)} />
+                                  <rect height={bodyHeight} width="10" x={candle.x - 5} y={bodyTop} />
+                                </g>
+                              );
+                            })}
                           </g>
                           <rect className="market-chart-hitbox" height="280" width="760" x="0" y="0" />
                         </svg>

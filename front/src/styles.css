@@ -5586,37 +5586,30 @@ video {
   stroke-dasharray: 8 12;
 }
 
-.market-chart-area {
-  fill: url(#market-area-gradient);
-}
-
-.market-chart-line {
-  fill: none;
-  stroke: #69f1ff;
-  stroke-width: 4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 0 18px rgba(90, 236, 255, 0.32));
-}
-
 .market-chart-focus-line {
   stroke: rgba(117, 238, 255, 0.32);
   stroke-width: 2;
   stroke-dasharray: 10 10;
 }
 
-.market-chart-markers circle {
-  fill: #9ff8ff;
-  stroke: rgba(6, 16, 28, 0.88);
-  stroke-width: 3;
-  filter: drop-shadow(0 0 10px rgba(111, 241, 255, 0.36));
+.market-chart-candles line {
+  stroke: rgba(224, 244, 255, 0.9);
+  stroke-width: 2;
 }
 
-.market-chart-focus-dot {
-  fill: rgba(255, 255, 255, 0.98);
-  stroke: #69f1ff;
-  stroke-width: 4;
-  filter: drop-shadow(0 0 16px rgba(111, 241, 255, 0.48));
+.market-chart-candles rect {
+  stroke-width: 1.5;
+  rx: 1;
+}
+
+.market-chart-candles .is-up rect {
+  fill: rgba(143, 246, 202, 0.82);
+  stroke: #8ff6ca;
+}
+
+.market-chart-candles .is-down rect {
+  fill: rgba(255, 180, 192, 0.82);
+  stroke: #ffb4c0;
 }
 
 .market-chart-hitbox {

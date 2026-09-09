@@ -23,16 +23,20 @@ def sync_once_result() -> dict[str, object]:
     metal_records, metal_failures = fetch_precious_metals(fetched_at)
     tech_records, tech_failures = fetch_tech_markets(fetched_at)
 
-    for record in metal_records:
-        insert_record(engine, "precious_metal_snapshots", record)
-    for record in tech_records:
-        insert_record(engine, "tech_market_snapshots", record)
+    inserted_metals = sum(
+        insert_record_if_absent(engine, "precious_metal_snapshots", record, ["source", "symbol", "fetched_at"])
+        for record in metal_records
+    )
+    inserted_tech = sum(
+        insert_record_if_absent(engine, "tech_market_snapshots", record, ["source", "symbol", "fetched_at"])
+        for record in tech_records
+    )
 
     failures = [*metal_failures, *tech_failures]
     return {
         "mode": "latest",
-        "preciousMetals": len(metal_records),
-        "techMarkets": len(tech_records),
+        "preciousMetals": inserted_metals,
+        "techMarkets": inserted_tech,
         "failures": failures,
         "fetchedAt": fetched_at.isoformat(),
     }

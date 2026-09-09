@@ -150,6 +150,10 @@ export interface MySummaryResult {
 }
 
 export interface PreciousMetalPoint {
+  open: string;
+  high: string;
+  low: string;
+  close: string;
   price: string;
   fetchedAt: string;
 }
@@ -196,6 +200,10 @@ export interface PreciousMetalSyncResult {
 }
 
 export interface TechMarketPoint {
+  open: string;
+  high: string;
+  low: string;
+  close: string;
   price: string;
   fetchedAt: string;
 }

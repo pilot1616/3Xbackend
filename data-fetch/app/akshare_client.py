@@ -53,37 +53,38 @@ def fetch_precious_metals(fetched_at: datetime) -> tuple[list[dict[str, Any]], l
     records: list[dict[str, Any]] = []
     for target in PRECIOUS_METALS:
         try:
-            futures_df = _normalize_columns(ak.futures_foreign_commodity_realtime(symbol=target.source_symbol))
+            futures_df = _normalize_columns(ak.futures_foreign_hist(symbol=target.source_symbol))
         except Exception as exc:
-            failures.append(f"{target.symbol}: realtime failed: {exc}")
+            failures.append(f"{target.symbol}: daily history failed: {exc}")
             continue
-        row = futures_df.iloc[0] if not futures_df.empty else None
+        row, previous = _latest_history_row(futures_df)
         if row is None:
             failures.append(f"{target.symbol}: row not found for {target.source_symbol}")
             continue
         overview = _overview(row)
-        price = _row_value(row, "最新价", "最新", "price", "last", "现价")
+        price = _row_value(row, "close", "收盘", "最新价", "最新", "price", "last", "现价")
         if not price:
             failures.append(f"{target.symbol}: price not found")
             continue
+        change, change_percent = _history_change(row, previous)
         records.append(
             {
                 "source": "akshare",
                 "symbol": target.symbol,
                 "name": target.name,
-                "source_url": "akshare:futures_foreign_commodity_realtime",
+                "source_url": "akshare:futures_foreign_hist",
                 "price": price,
-                "change": _row_value(row, "涨跌", "change"),
-                "change_percent": _row_value(row, "涨跌幅", "涨跌幅%", "change_percent"),
-                "prev_close": _row_value(row, "昨日结算价", "昨收", "前收盘", "Prev Close"),
-                "open": _row_value(row, "开盘价", "开盘", "今开", "Open"),
-                "bid": _row_value(row, "买价", "Bid"),
-                "ask": _row_value(row, "卖价", "Ask"),
-                "day_range": " - ".join(value for value in [_row_value(row, "最低价"), _row_value(row, "最高价")] if value),
+                "change": change,
+                "change_percent": change_percent,
+                "prev_close": _row_value(previous, "close") if previous is not None else "",
+                "open": _row_value(row, "open", "开盘"),
+                "bid": "",
+                "ask": "",
+                "day_range": " - ".join(value for value in [_row_value(row, "low", "最低"), _row_value(row, "high", "最高")] if value),
                 "week52_range": "",
                 "volume": _row_value(row, "成交量", "volume"),
                 "avg_volume": "",
-                "last_update_text": _row_value(row, "更新时间", "time", "时间"),
+                "last_update_text": _row_value(row, "date", "日期"),
                 "contract_month": _row_value(row, "合约月份", "月份"),
                 "settlement_date": "",
                 "tick_size": "",
@@ -91,7 +92,7 @@ def fetch_precious_metals(fetched_at: datetime) -> tuple[list[dict[str, Any]], l
                 "tick_value": "",
                 "base_unit": "",
                 "overview_json": json.dumps(overview, ensure_ascii=False),
-                "fetched_at": fetched_at,
+                "fetched_at": _row_date(row, fetched_at),
             }
         )
     return records, failures
@@ -212,7 +213,7 @@ def fetch_tech_markets(fetched_at: datetime) -> tuple[list[dict[str, Any]], list
                 "yield": "",
                 "last_update_text": _row_value(row, "date", "更新时间", "time", "时间"),
                 "overview_json": json.dumps(overview, ensure_ascii=False),
-                "fetched_at": fetched_at,
+                "fetched_at": _row_date(row, fetched_at),
             }
         )
     return records, failures

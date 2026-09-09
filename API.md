@@ -50,7 +50,7 @@ Authorization: Bearer <token>
 
 ### `GET /api/v1/market/precious-metals`
 
-公开接口，返回后端已同步入库的贵金属快照和短期价格历史。
+公开接口，返回后端已同步入库的贵金属日线行情和短期日线历史。
 
 查询参数：
 
@@ -87,10 +87,18 @@ Authorization: Bearer <token>
       "fetchedAt": "2026-05-11T10:30:00+08:00",
       "history": [
         {
+          "open": "3337.20",
+          "high": "3342.80",
+          "low": "3335.10",
+          "close": "3339.10",
           "price": "3339.10",
           "fetchedAt": "2026-05-11T09:30:00+08:00"
         },
         {
+          "open": "3340.10",
+          "high": "3354.20",
+          "low": "3338.90",
+          "close": "3348.25",
           "price": "3348.25",
           "fetchedAt": "2026-05-11T10:30:00+08:00"
         }
@@ -103,8 +111,8 @@ Authorization: Bearer <token>
 说明：
 
 - 当前默认同步 `Gold / Silver / Platinum / Palladium`
-- `history` 按时间升序返回，前端可直接用于折线图
-- 数据由 `data-fetch` 通过 AkShare 同步入库，不是实时第三方行情 API
+- `history` 按时间升序返回，每个点包含 `open / high / low / close`，前端用于日 K 线图
+- 数据由 `data-fetch` 通过 AkShare 的日线接口同步入库，不是实时第三方行情 API
 
 ### `POST /api/v1/admin/sync/precious-metals`
 
@@ -144,7 +152,7 @@ Authorization: Bearer <token>
 
 ### `GET /api/v1/market/ai-tech`
 
-公开接口，返回后端已同步入库的 AI / 科技相关指数、ETF、热门科技标的快照和短期价格历史。
+公开接口，返回后端已同步入库的 AI / 科技相关指数、ETF、热门科技标的日线行情和短期日线历史。
 
 查询参数：
 
@@ -182,10 +190,18 @@ Authorization: Bearer <token>
       "fetchedAt": "2026-05-13T15:30:00+08:00",
       "history": [
         {
+          "open": "706.10",
+          "high": "710.20",
+          "low": "704.80",
+          "close": "708.20",
           "price": "708.20",
           "fetchedAt": "2026-05-13T13:30:00+08:00"
         },
         {
+          "open": "709.35",
+          "high": "715.11",
+          "low": "709.25",
+          "close": "714.71",
           "price": "714.71",
           "fetchedAt": "2026-05-13T15:30:00+08:00"
         }
