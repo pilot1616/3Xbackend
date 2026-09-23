@@ -395,7 +395,9 @@ func (s *ForumService) ListQuestionsPaged(input QuestionListInput) (*QuestionLis
 	}
 
 	var questions []database.Question
-	if err := query.Preload("Files").Preload("Comments").Order(sortClause).Offset((page - 1) * pageSize).Limit(pageSize).Find(&questions).Error; err != nil {
+	// 列表页不加载评论全文：评论数用 CommentsNum 冗余字段，评论内容通过
+	// ListCommentsPaged 分页接口按需加载，避免每页帖子拖出全部历史评论。
+	if err := query.Preload("Files").Order(sortClause).Offset((page - 1) * pageSize).Limit(pageSize).Find(&questions).Error; err != nil {
 		return nil, fmt.Errorf("query questions failed: %w", err)
 	}
 
