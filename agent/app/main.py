@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import secrets
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -38,6 +40,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def verify_internal_token(request: Request, call_next):
+    token = settings.internal_token
+    if token and request.url.path != "/health":
+        provided = request.headers.get("x-agent-token", "")
+        if not secrets.compare_digest(provided, token):
+            return JSONResponse(status_code=401, content={"detail": "invalid agent token"})
+    return await call_next(request)
 
 
 @app.get("/health")

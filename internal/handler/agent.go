@@ -17,9 +17,10 @@ import (
 )
 
 type AgentHandler struct {
-	authService *service.AuthService
-	baseURL     string
-	client      *http.Client
+	authService   *service.AuthService
+	baseURL       string
+	internalToken string
+	client        *http.Client
 }
 
 type agentChatRequest struct {
@@ -52,9 +53,10 @@ func NewAgentHandler(authService *service.AuthService) *AgentHandler {
 		baseURL = "http://127.0.0.1:8010"
 	}
 	return &AgentHandler{
-		authService: authService,
-		baseURL:     baseURL,
-		client:      &http.Client{Timeout: 90 * time.Second},
+		authService:   authService,
+		baseURL:       baseURL,
+		internalToken: strings.TrimSpace(os.Getenv("AGENT_INTERNAL_TOKEN")),
+		client:        &http.Client{Timeout: 90 * time.Second},
 	}
 }
 
@@ -175,6 +177,9 @@ func (h *AgentHandler) proxy(c *gin.Context, method string, path string, body []
 	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
+	}
+	if h.internalToken != "" {
+		req.Header.Set("X-Agent-Token", h.internalToken)
 	}
 
 	resp, err := h.client.Do(req)

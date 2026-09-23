@@ -30,6 +30,7 @@ class Settings:
     llm_timeout_seconds: int = _env_int("LLM_TIMEOUT_SECONDS", 60)
     allowed_tables: str = _env("AGENT_ALLOWED_TABLES", "")
     sample_row_limit: int = _env_int("AGENT_SAMPLE_ROW_LIMIT", 5)
+    internal_token: str = _env("AGENT_INTERNAL_TOKEN", "")
 
     @property
     def allowed_table_set(self) -> set[str]:
