@@ -6,8 +6,14 @@ import (
 	"3Xbackend/internal/server"
 	"3Xbackend/internal/service"
 	"context"
+	"errors"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
+	"time"
 )
 
 var configFile string
@@ -49,7 +55,30 @@ func main() {
 	if err := svr.Init(db.Connect, cfg, marketConfig); err != nil {
 		log.Fatalf("init server failed: %v", err)
 	}
-	if err := svr.Run(cfg.Server.Address()); err != nil {
+
+	serverErr := make(chan error, 1)
+	go func() {
+		if err := svr.Run(cfg.Server.Address()); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serverErr <- err
+		}
+	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	select {
+	case err := <-serverErr:
 		log.Fatalf("start server failed: %v", err)
+	case sig := <-stop:
+		log.Printf("received %s, shutting down...", sig)
+	}
+
+	// 先停后台同步任务，再给 HTTP 一个排水窗口处理完进行中的请求。
+	cancel()
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+	if err := svr.Shutdown(shutdownCtx); err != nil {
+		log.Printf("server shutdown failed: %v", err)
 	}
 }

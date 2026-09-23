@@ -5,6 +5,7 @@ import (
 	"3Xbackend/internal/handler"
 	"3Xbackend/internal/middleware"
 	"3Xbackend/internal/service"
+	"context"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 
 type Server struct {
 	router          *gin.Engine
+	httpServer      *http.Server
 	authHandler     *handler.AuthHandler
 	forumHandler    *handler.ForumHandler
 	analysisHandler *handler.AnalysisHandler
@@ -55,7 +57,16 @@ func (s *Server) Run(addr string) error {
 	if s.router == nil {
 		return http.ErrServerClosed
 	}
-	return s.router.Run(addr)
+	s.httpServer = &http.Server{Addr: addr, Handler: s.router}
+	return s.httpServer.ListenAndServe()
+}
+
+// Shutdown gracefully drains in-flight requests; Run must have been called.
+func (s *Server) Shutdown(ctx context.Context) error {
+	if s.httpServer == nil {
+		return nil
+	}
+	return s.httpServer.Shutdown(ctx)
 }
 
 func (s *Server) registerRoutes() {
