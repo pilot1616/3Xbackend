@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -11,6 +12,11 @@ import (
 )
 
 const defaultServerPort = "8080"
+
+// DefaultSigningSecret is the well-known secret used by historical dev
+// configurations. Tokens signed with it are forgeable, so production must
+// never fall back to it; AUTH_ALLOW_DEFAULT_SECRET=1 keeps local dev usable.
+const DefaultSigningSecret = "3Xbackend-dev-secret"
 
 type Config struct {
 	Server   Server   `mapstructure:"server"`
@@ -103,6 +109,15 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("unmarshal config failed: %v", err)
 	}
 
+	if allowDefaultSecret, _ := strconv.ParseBool(os.Getenv("AUTH_ALLOW_DEFAULT_SECRET")); !allowDefaultSecret {
+		secret := strings.TrimSpace(cfg.Auth.Secret)
+		if secret == "" || secret == DefaultSigningSecret {
+			return nil, fmt.Errorf(
+				"auth.secret is empty or set to the well-known default; generate a unique secret (e.g. `openssl rand -hex 32`) and set auth.secret or AUTH_SECRET. Set AUTH_ALLOW_DEFAULT_SECRET=1 to bypass this check for local development",
+			)
+		}
+	}
+
 	return &cfg, nil
 }
 
@@ -147,11 +162,7 @@ func (s Server) Address() string {
 }
 
 func (a Auth) SigningKey() []byte {
-	secret := strings.TrimSpace(a.Secret)
-	if secret == "" {
-		secret = "3Xbackend-dev-secret"
-	}
-	return []byte(secret)
+	return []byte(strings.TrimSpace(a.Secret))
 }
 
 func (a Auth) TokenTTL() time.Duration {

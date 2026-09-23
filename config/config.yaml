@@ -2,7 +2,9 @@ server:
   port: 3000
 
 auth:
-  secret: 3Xbackend-dev-secret
+  # 签发登录 token 的密钥。生产环境必须设置唯一的强随机值（如 `openssl rand -hex 32`），
+  # 留空或使用已知默认值会导致启动失败；本地开发可用 AUTH_ALLOW_DEFAULT_SECRET=1 跳过校验。
+  secret: ""
   token_expire_hours: 24
   admin_usernames: ""
 

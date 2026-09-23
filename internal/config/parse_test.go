@@ -29,6 +29,41 @@ func TestAuthIsAdminUsername(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsDefaultSigningSecret(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	payload := "server:\n  port: 3000\nauth:\n  secret: " + DefaultSigningSecret + "\n"
+	if err := os.WriteFile(path, []byte(payload), 0o600); err != nil {
+		t.Fatalf("write temp config: %v", err)
+	}
+
+	if _, err := Load(path); err == nil {
+		t.Fatal("expected Load to reject the well-known default signing secret")
+	}
+
+	t.Setenv("AUTH_ALLOW_DEFAULT_SECRET", "1")
+	if _, err := Load(path); err != nil {
+		t.Fatalf("expected Load to allow default secret with override, got %v", err)
+	}
+}
+
+func TestLoadAcceptsUniqueSecret(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	payload := "auth:\n  secret: some-unique-local-secret\n"
+	if err := os.WriteFile(path, []byte(payload), 0o600); err != nil {
+		t.Fatalf("write temp config: %v", err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	if cfg.Auth.Secret != "some-unique-local-secret" {
+		t.Fatalf("unexpected secret: %q", cfg.Auth.Secret)
+	}
+}
+
 func TestLoadMarketTargets(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "market_targets.json")
