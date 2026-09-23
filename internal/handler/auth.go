@@ -77,6 +77,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	result, err := h.authService.Login(req.Username, req.Password)
 	if err != nil {
 		switch {
+		case errors.Is(err, service.ErrAccountLocked):
+			c.JSON(http.StatusLocked, gin.H{"message": err.Error()})
 		case errors.Is(err, service.ErrInvalidCredentials):
 			c.JSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
 		case errors.Is(err, service.ErrInvalidUsername), errors.Is(err, service.ErrInvalidPassword):
@@ -100,6 +102,8 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	result, err := h.authService.ResetPassword(req.Username, req.Password, req.SecurityAnswer)
 	if err != nil {
 		switch {
+		case errors.Is(err, service.ErrAccountLocked):
+			c.JSON(http.StatusLocked, gin.H{"message": err.Error()})
 		case errors.Is(err, service.ErrInvalidCredentials), errors.Is(err, service.ErrInvalidSecurity):
 			c.JSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
 		case errors.Is(err, service.ErrInvalidUsername), errors.Is(err, service.ErrInvalidPassword), errors.Is(err, service.ErrInvalidSecurityField):
@@ -118,6 +122,8 @@ func (h *AuthHandler) SecurityQuestion(c *gin.Context) {
 	result, err := h.authService.GetSecurityQuestion(username)
 	if err != nil {
 		switch {
+		case errors.Is(err, service.ErrAccountLocked):
+			c.JSON(http.StatusLocked, gin.H{"message": err.Error()})
 		case errors.Is(err, service.ErrInvalidCredentials):
 			c.JSON(http.StatusNotFound, gin.H{"message": err.Error()})
 		case errors.Is(err, service.ErrInvalidUsername):

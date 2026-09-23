@@ -26,7 +26,15 @@ var (
 	ErrInvalidPassword      = errors.New("password must contain letters and numbers and be at least 6 characters")
 	ErrInvalidSecurityField = errors.New("security question and answer are required")
 	ErrInvalidAge           = errors.New("age must be between 0 and 120")
+	ErrAccountLocked        = errors.New("account locked")
 )
+
+// lockedError carries the wait hint for an account in lockout.
+type lockedError struct{ message string }
+
+func (e lockedError) Error() string { return e.message }
+
+func (lockedError) Is(target error) bool { return target == ErrAccountLocked }
 
 var passwordLetterPattern = regexp.MustCompile(`[A-Za-z]`)
 var passwordDigitPattern = regexp.MustCompile(`[0-9]`)
@@ -147,7 +155,7 @@ func (s *AuthService) Login(username, password string) (*AuthResult, error) {
 
 	if user.LockoutUntil != nil && time.Now().Before(*user.LockoutUntil) {
 		remaining := int(time.Until(*user.LockoutUntil).Minutes()) + 1
-		return nil, fmt.Errorf("account locked, try again in %d minute(s)", remaining)
+		return nil, lockedError{fmt.Sprintf("account locked, try again in %d minute(s)", remaining)}
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
@@ -160,7 +168,7 @@ func (s *AuthService) Login(username, password string) (*AuthResult, error) {
 		}
 		_ = s.db.Model(&user).Updates(updates).Error
 		if lockout, ok := updates["lockout_until"]; ok && lockout != nil {
-			return nil, fmt.Errorf("account locked, try again in 5 minute(s)")
+			return nil, lockedError{"account locked, try again in 5 minute(s)"}
 		}
 		remaining := 3 - user.FailedLoginCount
 		if remaining < 0 {
@@ -202,7 +210,7 @@ func (s *AuthService) ResetPassword(username, password, securityAnswer string) (
 
 	if user.LockoutUntil != nil && time.Now().Before(*user.LockoutUntil) {
 		remaining := int(time.Until(*user.LockoutUntil).Minutes()) + 1
-		return nil, fmt.Errorf("account locked, try again in %d minute(s)", remaining)
+		return nil, lockedError{fmt.Sprintf("account locked, try again in %d minute(s)", remaining)}
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.SecurityAnswerHash), []byte(securityAnswer)); err != nil {
@@ -215,7 +223,7 @@ func (s *AuthService) ResetPassword(username, password, securityAnswer string) (
 		}
 		_ = s.db.Model(&user).Updates(updates).Error
 		if _, locked := updates["lockout_until"]; locked {
-			return nil, fmt.Errorf("account locked, try again in 5 minute(s)")
+			return nil, lockedError{"account locked, try again in 5 minute(s)"}
 		}
 		remaining := maxFailedLoginAttempts - user.FailedLoginCount
 		if remaining < 0 {
@@ -256,7 +264,7 @@ func (s *AuthService) GetSecurityQuestion(username string) (*SecurityQuestionRes
 
 	if user.LockoutUntil != nil && time.Now().Before(*user.LockoutUntil) {
 		remaining := int(time.Until(*user.LockoutUntil).Minutes()) + 1
-		return nil, fmt.Errorf("account locked, try again in %d minute(s)", remaining)
+		return nil, lockedError{fmt.Sprintf("account locked, try again in %d minute(s)", remaining)}
 	}
 
 	return &SecurityQuestionResult{

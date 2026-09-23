@@ -6,7 +6,7 @@ Base URL: `http://localhost:3000`
 
 - 默认服务端口是 `3000`
 - 默认返回格式是 `application/json`
-- 已开启 CORS，前后端可跨域联调
+- CORS 默认允许任意来源（本地开发）；生产环境通过 `CORS_ALLOWED_ORIGINS` 配置白名单，仅白名单内的来源会收到跨域响应头
 - 静态资源通过 `/public/*` 暴露
 - 头像目录：`/public/images`
 - 帖子附件目录：`/public/uploads`
@@ -24,6 +24,7 @@ Authorization: Bearer <token>
 - `/api/v1/users/*` 全部需要登录
 - `POST/PATCH/DELETE /api/v1/questions/*` 需要登录，并带作者/所有权校验
 - `POST /api/v1/admin/sync/*` 需要管理员权限
+- `POST /api/v1/agent/prompt`、`/api/v1/agent/*` 需要登录
 - `GET /api/v1/questions` 和 `GET /api/v1/questions/:qid` 支持可选登录态
 
 公开帖子接口在带有效 token 时会额外返回：
@@ -795,9 +796,17 @@ Authorization: Bearer <token>
 }
 ```
 
+防爆破策略（与登录共享同一锁定状态）：
+
+- 密保答案连续错误 3 次锁定 5 分钟
+- 锁定期间 `GET /api/v1/auth/security-question` 也不会返回密保问题
+- 重置成功后清除失败计数和锁定状态
+
 ### `GET /api/v1/auth/security-question?username=13800138000`
 
 用于找回密码前查询密保问题。
+
+账号因密保答案错误被锁定期间，该接口返回 `423` 风格的锁定错误信息，不泄露密保问题。
 
 成功响应 `200`：
 
