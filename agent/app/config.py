@@ -31,12 +31,19 @@ class Settings:
     allowed_tables: str = _env("AGENT_ALLOWED_TABLES", "")
     sample_row_limit: int = _env_int("AGENT_SAMPLE_ROW_LIMIT", 5)
     internal_token: str = _env("AGENT_INTERNAL_TOKEN", "")
+    cors_allowed_origins: str = _env("CORS_ALLOWED_ORIGINS", "")
 
     @property
     def allowed_table_set(self) -> set[str]:
         if not self.allowed_tables:
             return set()
         return {item.strip() for item in self.allowed_tables.split(",") if item.strip()}
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        if not self.cors_allowed_origins:
+            return []
+        return [item.strip() for item in self.cors_allowed_origins.split(",") if item.strip()]
 
     @property
     def db_url(self) -> str:

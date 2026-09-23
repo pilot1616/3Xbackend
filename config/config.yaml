@@ -8,6 +8,10 @@ auth:
   token_expire_hours: 24
   admin_usernames: ""
 
+cors:
+  # 浏览器跨域白名单（逗号分隔）。留空表示允许任意来源，仅限本地开发使用。
+  allowed_origins: ""
+
 storage:
   public_dir: public
   image_dir: public/images

@@ -25,6 +25,28 @@ type Config struct {
 	Database Database `mapstructure:"database"`
 	Sync     Sync     `mapstructure:"sync"`
 	Markets  Markets  `mapstructure:"markets"`
+	CORS     CORS     `mapstructure:"cors"`
+}
+
+type CORS struct {
+	AllowedOrigins string `mapstructure:"allowed_origins"`
+}
+
+// OriginWhitelist splits the comma-separated whitelist. An empty list means
+// "allow any origin" which is only appropriate for local development.
+func (c CORS) OriginWhitelist() []string {
+	raw := strings.TrimSpace(c.AllowedOrigins)
+	if raw == "" {
+		return nil
+	}
+	values := strings.Split(raw, ",")
+	origins := make([]string, 0, len(values))
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			origins = append(origins, trimmed)
+		}
+	}
+	return origins
 }
 
 type Server struct {
@@ -127,6 +149,7 @@ func bindEnv(v *viper.Viper) {
 		"auth.secret",
 		"auth.token_expire_hours",
 		"auth.admin_usernames",
+		"cors.allowed_origins",
 		"storage.public_dir",
 		"storage.image_dir",
 		"storage.upload_dir",

@@ -28,7 +28,7 @@ type Server struct {
 
 func (s *Server) Init(db *gorm.DB, cfg *config.Config, markets config.Markets) error {
 	s.router = gin.New()
-	s.router.Use(gin.Logger(), gin.Recovery(), middleware.CORS())
+	s.router.Use(gin.Logger(), gin.Recovery(), middleware.CORS(cfg.CORS.OriginWhitelist()))
 
 	authService := service.NewAuthService(db, cfg.Auth)
 	s.authHandler = handler.NewAuthHandler(authService)
