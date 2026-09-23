@@ -55,9 +55,16 @@ vi .env
 
 - `MYSQL_ROOT_PASSWORD`
 - `DATABASE_MYSQL_PASSWORD`
-- `AUTH_SECRET`
+- `AUTH_SECRET`：强随机值（如 `openssl rand -hex 32`）；留空或使用已知默认值会导致后端启动失败
 - `AUTH_ADMIN_USERNAMES`
+- `AGENT_INTERNAL_TOKEN`：Go 后端与 agent 服务之间的内部令牌，两边使用同一个值（如 `openssl rand -hex 32`）；未设置时 Compose 会拒绝启动
+- `CORS_ALLOWED_ORIGINS`：浏览器跨域白名单（如 `https://example.com`，多个用逗号分隔）；未设置时 Compose 会拒绝启动
 - `LLM_API_KEY`
+
+安全机制说明：
+
+- agent 服务只接受携带匹配 `X-Agent-Token` 头的请求（由 Go 后端代理自动附加），不要把 8010 端口直接暴露给公网
+- Go 后端与 agent 的 CORS 均按 `CORS_ALLOWED_ORIGINS` 白名单回显
 
 ## 4. 启动
 

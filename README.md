@@ -218,6 +218,13 @@ vi .env
 - `GET /conversations/{conversation_id}/messages`
 - `POST /chat`
 
+浏览器不直连 agent，统一走 Go 后端的 `/api/v1/agent/*` 代理接口。
+
+安全约定：
+
+- 设置 `AGENT_INTERNAL_TOKEN` 后，agent 只接受携带匹配 `X-Agent-Token` 头的请求（`/health` 除外）；Go 代理会自动携带该令牌
+- 生产环境必须设置该令牌（prod Compose 已强制），本地开发留空则不校验
+
 本地启动：
 
 ```bash
@@ -388,6 +395,8 @@ task test:all
 - Playwright 首次运行前需要安装浏览器：`cd front && npx playwright install chromium`。
 - `task test:frontend` 已为本地 Vite 地址设置 `NO_PROXY/no_proxy`，避免本地代理影响 `127.0.0.1:5173`。
 
+此外仓库配有 GitHub Actions（`.github/workflows/ci.yml`）：推送 / PR 时并行运行 Go 构建 + 测试、前端类型检查 + Vite 构建、data-fetch 与 Agent 的 pytest。
+
 ## 假数据注入
 
 项目提供了独立的种子脚本入口：
@@ -470,7 +479,9 @@ brew install go-task/tap/go-task
 常用环境变量：
 
 - `SERVER_PORT`
-- `AUTH_SECRET`
+- `AUTH_SECRET`（留空或使用已知默认值时启动失败；本地开发可设 `AUTH_ALLOW_DEFAULT_SECRET=1` 跳过）
+- `AUTH_ALLOW_DEFAULT_SECRET`
+- `CORS_ALLOWED_ORIGINS`（逗号分隔的跨域白名单；留空表示允许任意来源，仅限本地开发）
 - `AUTH_TOKEN_EXPIRE_HOURS`
 - `STORAGE_PUBLIC_DIR`
 - `STORAGE_IMAGE_DIR`
@@ -480,8 +491,18 @@ brew install go-task/tap/go-task
 - `DATABASE_MYSQL_ADDRESS`
 - `DATABASE_MYSQL_PORT`
 - `DATABASE_MYSQL_SCHEMA`
+- `DB_MAX_OPEN_CONNS`（默认 25）
+- `DB_MAX_IDLE_CONNS`（默认 10）
+- `DB_CONN_MAX_LIFETIME_MINUTES`（默认 30）
 - `VITE_API_BASE_URL`
 - `VITE_ASSET_BASE_URL`
+
+Agent 相关环境变量：
+
+- `AGENT_INTERNAL_TOKEN`（agent 与 Go 后端需配置相同值；生产必填）
+- `AGENT_BASE_URL`（Go 后端访问 agent 的地址，默认 `http://127.0.0.1:8010`）
+- `AGENT_ALLOWED_TABLES`
+- `AGENT_SAMPLE_ROW_LIMIT`
 
 同步相关配置项：
 

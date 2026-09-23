@@ -30,11 +30,17 @@
 不再基于以下旧兼容接口继续扩展：
 
 - `/question_request/`
+
+以下旧接口已从后端移除（无鉴权风险，详见 [API.md](../API.md)）：
+
 - `/question_upload/`
+- `/question_file_upload/`
 - `/comment_upload/`
 - `/like_upload/`
 - `/control_upload/`
 - `/delete_upload/`
+- `/file_upload/`
+- `/image_info/:filename`
 
 ## 当前已落地的基础能力
 

@@ -773,7 +773,7 @@ Authorization: Bearer <token>
 
 登录策略：
 
-- 连续失败 3 次锁定 5 分钟
+- 连续失败 3 次锁定 5 分钟，锁定期间返回 `423` 与等待提示
 - 失败提示会返回剩余尝试次数或锁定提示
 
 ### `POST /api/v1/auth/reset-password`
@@ -798,15 +798,15 @@ Authorization: Bearer <token>
 
 防爆破策略（与登录共享同一锁定状态）：
 
-- 密保答案连续错误 3 次锁定 5 分钟
-- 锁定期间 `GET /api/v1/auth/security-question` 也不会返回密保问题
+- 密保答案连续错误 3 次锁定 5 分钟，期间返回 `423` 与等待提示
+- 锁定期间 `GET /api/v1/auth/security-question` 同样返回 `423`，不泄露密保问题
 - 重置成功后清除失败计数和锁定状态
 
 ### `GET /api/v1/auth/security-question?username=13800138000`
 
 用于找回密码前查询密保问题。
 
-账号因密保答案错误被锁定期间，该接口返回 `423` 风格的锁定错误信息，不泄露密保问题。
+账号因密保答案错误被锁定期间返回 `423`。
 
 成功响应 `200`：
 
@@ -1424,6 +1424,86 @@ Authorization: Bearer <token>
 
 - 用于取消当前用户对该帖子的点赞
 - 如果当前用户原本未点赞，也会返回当前点赞状态，不报错
+
+## Agent 接口
+
+Agent（LangGraph + LLM 分析服务）独立运行在 `8010` 端口，由 Go 后端代理转发。新前端一律通过下方 `/api/v1/agent/*` 代理接口访问，不直连 agent 服务。
+
+代理层的鉴权：
+
+- 浏览器调用 `/api/v1/agent/*` 使用与其它接口相同的 Bearer Token
+- Go 后端转发时自动附加 `X-Agent-Token` 内部令牌（`AGENT_INTERNAL_TOKEN`）；agent 服务只接受携带匹配令牌的请求，`GET /health` 除外
+
+### `POST /api/v1/agent/prompt`
+
+需要登录。触发一次完整分析：生成 SQL → 只读执行 → LLM 归纳。
+
+请求体：
+
+```json
+{
+  "prompt": "分析近 7 天黄金走势和 AI 主题热度的联动",
+  "context": {
+    "window": "7d",
+    "source": "analysis-page"
+  },
+  "db_scope": "auto"
+}
+```
+
+成功响应 `200`：
+
+```json
+{
+  "answer": "……",
+  "query_summary": "columns=[...]\nrows=5",
+  "sources": [
+    {
+      "sql": "SELECT ...",
+      "columns": ["symbol", "price"],
+      "rows": [["XAU", "2700"]]
+    }
+  ],
+  "error": ""
+}
+```
+
+### `POST /api/v1/agent/chat`
+
+需要登录。带对话历史的分析聊天，返回值结构与 `/prompt` 类似，另含会话标识：
+
+```json
+{
+  "conversation_id": "conv_xxx",
+  "message_id": "msg_xxx",
+  "reply": "……",
+  "query_summary": "columns=[...]\nrows=5",
+  "sources": [],
+  "run_id": "run_xxx"
+}
+```
+
+### `GET /api/v1/agent/conversations`
+
+需要登录。返回当前用户的会话列表：
+
+```json
+{
+  "records": [
+    {
+      "conversation_id": "conv_xxx",
+      "source": "analysis-page-chat",
+      "title": "黄金走势",
+      "created_at": "2026-09-23T10:00:00+08:00",
+      "updated_at": "2026-09-23T10:05:00+08:00"
+    }
+  ]
+}
+```
+
+### `GET /api/v1/agent/conversations/:conversationID/messages`
+
+需要登录。返回指定会话的消息列表；会话不属于当前用户时返回 `404`。
 
 ## 已移除的旧前端接口
 
