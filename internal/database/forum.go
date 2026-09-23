@@ -55,7 +55,7 @@ type QuestionLike struct {
 type PreciousMetalSnapshot struct {
 	ID             uint      `gorm:"primaryKey"`
 	Source         string    `gorm:"size:64;index;not null"`
-	Symbol         string    `gorm:"size:32;index;not null"`
+	Symbol         string    `gorm:"size:32;uniqueIndex:idx_pm_symbol_fetched_at,priority:1;not null"`
 	Name           string    `gorm:"size:64;not null"`
 	SourceURL      string    `gorm:"size:255;not null"`
 	Price          string    `gorm:"size:64"`
@@ -79,7 +79,7 @@ type PreciousMetalSnapshot struct {
 	TickValue      string    `gorm:"size:64"`
 	BaseUnit       string    `gorm:"size:64"`
 	OverviewJSON   string    `gorm:"type:longtext"`
-	FetchedAt      time.Time `gorm:"index;not null"`
+	FetchedAt      time.Time `gorm:"uniqueIndex:idx_pm_symbol_fetched_at,priority:2;not null"`
 	CreatedAt      time.Time `gorm:"autoCreateTime"`
 }
 
@@ -87,7 +87,7 @@ type TechMarketSnapshot struct {
 	ID             uint      `gorm:"primaryKey"`
 	Source         string    `gorm:"size:64;index;not null"`
 	Category       string    `gorm:"size:32;index;not null"`
-	Symbol         string    `gorm:"size:32;index;not null"`
+	Symbol         string    `gorm:"size:32;uniqueIndex:idx_tech_symbol_fetched_at,priority:1;not null"`
 	Name           string    `gorm:"size:96;not null"`
 	SourceURL      string    `gorm:"size:255;not null"`
 	Price          string    `gorm:"size:64"`
@@ -111,7 +111,7 @@ type TechMarketSnapshot struct {
 	Yield          string    `gorm:"size:64"`
 	LastUpdateText string    `gorm:"size:255"`
 	OverviewJSON   string    `gorm:"type:longtext"`
-	FetchedAt      time.Time `gorm:"index;not null"`
+	FetchedAt      time.Time `gorm:"uniqueIndex:idx_tech_symbol_fetched_at,priority:2;not null"`
 	CreatedAt      time.Time `gorm:"autoCreateTime"`
 }
 

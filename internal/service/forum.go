@@ -686,7 +686,16 @@ func (s *ForumService) ListPreciousMetalMarket(limit int) (*PreciousMetalMarketR
 	}
 
 	var historySnapshots []database.PreciousMetalSnapshot
-	if err := s.db.Where("symbol IN ?", symbols).Order("symbol asc, fetched_at desc, id desc").Find(&historySnapshots).Error; err != nil {
+	historyQuery := `
+		SELECT * FROM (
+			SELECT p.*, ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY fetched_at DESC, id DESC) AS rn
+			FROM precious_metal_snapshots p
+			WHERE symbol IN ?
+		) ranked
+		WHERE rn <= ?
+		ORDER BY symbol asc, fetched_at desc, id desc
+	`
+	if err := s.db.Raw(historyQuery, symbols, limit).Scan(&historySnapshots).Error; err != nil {
 		return nil, fmt.Errorf("query precious metal snapshot history failed: %w", err)
 	}
 
@@ -779,7 +788,16 @@ func (s *ForumService) ListTechMarket(limit int) (*TechMarketResponse, error) {
 	}
 
 	var historySnapshots []database.TechMarketSnapshot
-	if err := s.db.Where("symbol IN ?", symbols).Order("symbol asc, fetched_at desc, id desc").Find(&historySnapshots).Error; err != nil {
+	historyQuery := `
+		SELECT * FROM (
+			SELECT t.*, ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY fetched_at DESC, id DESC) AS rn
+			FROM tech_market_snapshots t
+			WHERE symbol IN ?
+		) ranked
+		WHERE rn <= ?
+		ORDER BY symbol asc, fetched_at desc, id desc
+	`
+	if err := s.db.Raw(historyQuery, symbols, limit).Scan(&historySnapshots).Error; err != nil {
 		return nil, fmt.Errorf("query tech market snapshot history failed: %w", err)
 	}
 
