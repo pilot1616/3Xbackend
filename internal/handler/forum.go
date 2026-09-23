@@ -18,32 +18,8 @@ type ForumHandler struct {
 	aiDailySyncService *service.AIDailySyncService
 }
 
-type QuestionUploadRequest struct {
-	QID      int64    `json:"qid"`
-	IsUpload bool     `json:"isUpload"`
-	User     string   `json:"user"`
-	NickName string   `json:"nickName"`
-	Text     string   `json:"text"`
-	Files    []string `json:"files"`
-	ImgName  []string `json:"imgName"`
-}
-
-type CommentUploadRequest struct {
-	QID      int64  `json:"qid"`
-	User     string `json:"user"`
-	NickName string `json:"nickName"`
-	Text     string `json:"text"`
-}
-
-type LikeUploadRequest struct {
-	QID      int64  `json:"qid"`
-	User     string `json:"user"`
-	NickName string `json:"nickName"`
-}
-
-type ControlUploadRequest struct {
-	QID  int64  `json:"qid"`
-	User string `json:"user"`
+type CreateCommentRequest struct {
+	Text string `json:"text" binding:"required"`
 }
 
 type UpdateQuestionRequest struct {
@@ -52,10 +28,6 @@ type UpdateQuestionRequest struct {
 	IsUpload *bool    `json:"isUpload,omitempty"`
 	Files    []string `json:"files,omitempty"`
 	ImgName  []string `json:"imgName,omitempty"`
-}
-
-type CreateCommentRequest struct {
-	Text string `json:"text" binding:"required"`
 }
 
 type UpdateCommentRequest struct {
@@ -385,148 +357,6 @@ func (h *ForumHandler) GetQuestion(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func (h *ForumHandler) QuestionUpload(c *gin.Context) {
-	var req QuestionUploadRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
-		return
-	}
-
-	result, err := h.forumService.CreateQuestion(service.QuestionCreateInput{
-		QID:      req.QID,
-		Username: req.User,
-		Nickname: req.NickName,
-		Text:     req.Text,
-		IsUpload: req.IsUpload,
-		Files:    req.Files,
-		ImgName:  req.ImgName,
-	})
-	if err != nil {
-		h.handleForumError(c, err, "create question failed")
-		return
-	}
-
-	c.JSON(http.StatusOK, result)
-}
-
-func (h *ForumHandler) CommentUpload(c *gin.Context) {
-	var req CommentUploadRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
-		return
-	}
-
-	result, err := h.forumService.AddComment(service.CommentCreateInput{
-		QID:      req.QID,
-		Username: req.User,
-		Nickname: req.NickName,
-		Text:     req.Text,
-	})
-	if err != nil {
-		h.handleForumError(c, err, "create comment failed")
-		return
-	}
-
-	c.JSON(http.StatusOK, result)
-}
-
-func (h *ForumHandler) LikeUpload(c *gin.Context) {
-	var req LikeUploadRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
-		return
-	}
-
-	result, err := h.forumService.AddLike(service.LikeCreateInput{
-		QID:      req.QID,
-		Username: req.User,
-		Nickname: req.NickName,
-	})
-	if err != nil {
-		h.handleForumError(c, err, "create like failed")
-		return
-	}
-
-	c.JSON(http.StatusOK, result)
-}
-
-func (h *ForumHandler) ControlUpload(c *gin.Context) {
-	var req ControlUploadRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
-		return
-	}
-
-	result, err := h.forumService.ToggleQuestionUpload(req.QID)
-	if strings.TrimSpace(req.User) != "" {
-		result, err = h.forumService.ToggleQuestionUploadOwned(req.QID, 0, req.User)
-	}
-	if err != nil {
-		h.handleForumError(c, err, "toggle upload failed")
-		return
-	}
-
-	c.JSON(http.StatusOK, result)
-}
-
-func (h *ForumHandler) DeleteUpload(c *gin.Context) {
-	var req ControlUploadRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
-		return
-	}
-
-	result, err := h.forumService.DeleteQuestion(req.QID)
-	if strings.TrimSpace(req.User) != "" {
-		result, err = h.forumService.DeleteQuestionOwned(req.QID, 0, req.User)
-	}
-	if err != nil {
-		h.handleForumError(c, err, "delete question failed")
-		return
-	}
-
-	c.JSON(http.StatusOK, result)
-}
-
-func (h *ForumHandler) QuestionFileUpload(c *gin.Context) {
-	qid, err := strconv.ParseInt(c.PostForm("qid"), 10, 64)
-	if err != nil || qid == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid qid"})
-		return
-	}
-
-	form, err := c.MultipartForm()
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid multipart form"})
-		return
-	}
-
-	files := form.File["file"]
-	result, err := h.forumService.SaveQuestionFiles(qid, files)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "save question files failed"})
-		return
-	}
-
-	c.JSON(http.StatusOK, result)
-}
-
-func (h *ForumHandler) FileUpload(c *gin.Context) {
-	file, err := c.FormFile("image")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "image file is required"})
-		return
-	}
-
-	result, err := h.forumService.SaveProfileImage(file, c.PostForm("username"))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "save image failed"})
-		return
-	}
-
-	c.JSON(http.StatusOK, result)
-}
-
 func (h *ForumHandler) UploadMyAvatar(c *gin.Context) {
 	userID, _, ok := h.getCurrentUser(c)
 	if !ok {
@@ -546,19 +376,6 @@ func (h *ForumHandler) UploadMyAvatar(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, result)
-}
-
-func (h *ForumHandler) ImageInfo(c *gin.Context) {
-	result := h.forumService.GetImageInfo(c.Param("filename"))
-	if c.Query("callback") != "" {
-		c.JSONP(http.StatusOK, result)
-		return
-	}
-	status := http.StatusOK
-	if result.Status == 404 {
-		status = http.StatusNotFound
-	}
-	c.JSON(status, result)
 }
 
 func (h *ForumHandler) CreateQuestionAuthenticated(c *gin.Context) {

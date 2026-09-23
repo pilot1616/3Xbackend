@@ -124,14 +124,6 @@ func (s *Server) registerRoutes() {
 	questionGroup.DELETE("/:qid/like", s.forumHandler.UnlikeQuestionAuthenticated)
 
 	s.router.GET("/question_request/", s.forumHandler.QuestionRequest)
-	s.router.POST("/question_upload/", s.forumHandler.QuestionUpload)
-	s.router.POST("/question_file_upload/", s.forumHandler.QuestionFileUpload)
-	s.router.POST("/comment_upload/", s.forumHandler.CommentUpload)
-	s.router.POST("/like_upload/", s.forumHandler.LikeUpload)
-	s.router.POST("/control_upload/", s.forumHandler.ControlUpload)
-	s.router.POST("/delete_upload/", s.forumHandler.DeleteUpload)
-	s.router.POST("/file_upload/", s.forumHandler.FileUpload)
-	s.router.GET("/image_info/:filename", s.forumHandler.ImageInfo)
 }
 
 func (s *Server) registerFrontendRoutes(frontDist string) {
@@ -167,14 +159,6 @@ func isBackendPath(path string) bool {
 		"/api/",
 		"/public/",
 		"/question_request/",
-		"/question_upload/",
-		"/question_file_upload/",
-		"/comment_upload/",
-		"/like_upload/",
-		"/control_upload/",
-		"/delete_upload/",
-		"/file_upload/",
-		"/image_info/",
 	}
 
 	for _, prefix := range prefixes {

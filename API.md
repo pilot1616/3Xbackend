@@ -1416,52 +1416,17 @@ Authorization: Bearer <token>
 - 用于取消当前用户对该帖子的点赞
 - 如果当前用户原本未点赞，也会返回当前点赞状态，不报错
 
-## 兼容旧前端接口
+## 已移除的旧前端接口
 
-这组接口用于兼容 `example/` 目录下的旧前端调用方式，不建议新功能继续基于它们扩展。
+以下旧接口曾用于兼容 `example/` 目录下的旧前端，因为不校验身份（请求体自报用户名即可冒充任意用户删帖、发帖），存在安全风险，已全部移除：
 
-### `GET /question_request/`
+- `POST /question_upload/`、`POST /question_file_upload/`
+- `POST /comment_upload/`、`POST /like_upload/`
+- `POST /control_upload/`、`POST /delete_upload/`
+- `POST /file_upload/`
+- `GET /image_info/:filename`
 
-返回帖子列表。
-
-### `POST /question_upload/`
-
-创建帖子元数据。
-
-### `POST /question_file_upload/`
-
-上传帖子附件。
-
-请求格式：`multipart/form-data`
-
-字段：
-
-- `qid`：帖子 ID
-- `file`：可重复多个
-
-### `POST /comment_upload/`
-
-为帖子追加评论。
-
-### `POST /like_upload/`
-
-为帖子点赞。
-
-### `POST /control_upload/`
-
-切换帖子发布状态。
-
-### `POST /delete_upload/`
-
-删除帖子及关联评论、点赞、附件记录。
-
-### `POST /file_upload/`
-
-兼容旧头像/图片上传流程使用的文件上传接口。
-
-### `GET /image_info/:filename`
-
-读取旧前端图片信息。
+新前端一律使用上方 `/api/v1/*` 正式接口；`GET /question_request/` 为只读接口暂时保留。
 
 ## 开发约定
 
