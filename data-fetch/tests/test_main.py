@@ -13,7 +13,7 @@ def test_health() -> None:
 
 
 def test_sync_latest_uses_fetchers_and_db(monkeypatch) -> None:
-    inserted: list[tuple[str, dict[str, object]]] = []
+    inserted: list[tuple[str, list[dict[str, object]]]] = []
 
     monkeypatch.setattr(main, "build_engine", lambda: object())
     monkeypatch.setattr(
@@ -26,11 +26,12 @@ def test_sync_latest_uses_fetchers_and_db(monkeypatch) -> None:
         "fetch_tech_markets",
         lambda fetched_at: ([{"symbol": "NDX", "price": "200", "fetched_at": fetched_at}], ["QQQ: failed"]),
     )
-    def insert_if_absent(engine, table, record, unique_keys):
-        inserted.append((table, record))
-        return True
 
-    monkeypatch.setattr(main, "insert_record_if_absent", insert_if_absent)
+    def insert_if_absent(engine, table, records, unique_keys):
+        inserted.append((table, list(records)))
+        return len(records)
+
+    monkeypatch.setattr(main, "insert_records_if_absent", insert_if_absent)
 
     result = main.sync_once_result()
 
@@ -56,15 +57,17 @@ def test_sync_history_is_idempotent(monkeypatch) -> None:
         lambda start_year: ([{"source": "akshare", "symbol": "NDX", "fetched_at": "2026-08-24"}], []),
     )
 
-    def insert_if_absent(engine, table, record, unique_keys):
+    def insert_if_absent(engine, table, records, unique_keys):
         calls.append(table)
-        return table == "precious_metal_snapshots"
+        return len(records) if table == "precious_metal_snapshots" else 0
 
-    monkeypatch.setattr(main, "insert_record_if_absent", insert_if_absent)
+    monkeypatch.setattr(main, "insert_records_if_absent", insert_if_absent)
 
     result = main.sync_history_result()
 
     assert result["mode"] == "history"
     assert result["preciousMetals"] == 1
+    assert result["preciousMetalsTotal"] == 1
     assert result["techMarkets"] == 0
+    assert result["techMarketsTotal"] == 1
     assert calls == ["precious_metal_snapshots", "tech_market_snapshots"]

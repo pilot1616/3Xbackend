@@ -9,7 +9,7 @@ from fastapi import FastAPI
 
 from .akshare_client import fetch_precious_metal_history, fetch_precious_metals, fetch_tech_market_history, fetch_tech_markets
 from .config import settings
-from .db import build_engine, insert_record, insert_record_if_absent
+from .db import build_engine, insert_record, insert_records_if_absent
 
 
 sync_lock = threading.Lock()
@@ -23,14 +23,8 @@ def sync_once_result() -> dict[str, object]:
     metal_records, metal_failures = fetch_precious_metals(fetched_at)
     tech_records, tech_failures = fetch_tech_markets(fetched_at)
 
-    inserted_metals = sum(
-        insert_record_if_absent(engine, "precious_metal_snapshots", record, ["source", "symbol", "fetched_at"])
-        for record in metal_records
-    )
-    inserted_tech = sum(
-        insert_record_if_absent(engine, "tech_market_snapshots", record, ["source", "symbol", "fetched_at"])
-        for record in tech_records
-    )
+    inserted_metals = insert_records_if_absent(engine, "precious_metal_snapshots", metal_records, ["source", "symbol", "fetched_at"])
+    inserted_tech = insert_records_if_absent(engine, "tech_market_snapshots", tech_records, ["source", "symbol", "fetched_at"])
 
     failures = [*metal_failures, *tech_failures]
     return {
@@ -61,14 +55,8 @@ def sync_history_result() -> dict[str, object]:
     metal_records, metal_failures = fetch_precious_metal_history(settings.history_start_year)
     tech_records, tech_failures = fetch_tech_market_history(settings.history_start_year)
 
-    inserted_metals = 0
-    inserted_tech = 0
-    for record in metal_records:
-        if insert_record_if_absent(engine, "precious_metal_snapshots", record, ["source", "symbol", "fetched_at"]):
-            inserted_metals += 1
-    for record in tech_records:
-        if insert_record_if_absent(engine, "tech_market_snapshots", record, ["source", "symbol", "fetched_at"]):
-            inserted_tech += 1
+    inserted_metals = insert_records_if_absent(engine, "precious_metal_snapshots", metal_records, ["source", "symbol", "fetched_at"])
+    inserted_tech = insert_records_if_absent(engine, "tech_market_snapshots", tech_records, ["source", "symbol", "fetched_at"])
 
     failures = [*metal_failures, *tech_failures]
     return {
