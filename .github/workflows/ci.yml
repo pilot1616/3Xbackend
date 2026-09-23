@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  backend:
+    name: Go 后端测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: go build
+        run: go build ./...
+      - name: go test
+        run: go test ./...
+
+  frontend:
+    name: 前端类型检查与构建
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: front/package-lock.json
+      - name: npm install
+        working-directory: front
+        run: npm ci
+      - name: typecheck
+        working-directory: front
+        run: npm run typecheck
+      - name: build
+        working-directory: front
+        run: npx vite build
+
+  data-fetch:
+    name: data-fetch 测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: install dependencies
+        working-directory: data-fetch
+        run: pip install -r requirements.txt
+      - name: pytest
+        working-directory: data-fetch
+        run: python -m pytest
+
+  agent:
+    name: Agent 测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: install dependencies
+        working-directory: agent
+        run: pip install -r requirements.txt
+      - name: pytest
+        working-directory: agent
+        run: python -m pytest
