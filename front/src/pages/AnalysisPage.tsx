@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { askAgentAnalysis, getAITrend, getMarketTrend, getOverview } from '../api/forum';
 import { ApiError } from '../api/client';
+import { useSession } from '../lib/session';
 import type {
   AgentPromptResponse,
   AITrendAnalysisResponse,
@@ -242,6 +243,7 @@ function buildAgentPrompt(window: AnalysisWindow) {
 
 export function AnalysisPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const session = useSession();
   const initialWindow = (() => {
     const value = searchParams.get('window');
     return value === '1d' || value === '7d' || value === '30d' ? value : '7d';
@@ -320,16 +322,18 @@ export function AnalysisPage() {
     }
 
     try {
-      const agentRequest = cachedAgentAnalysis
-        ? Promise.resolve(cachedAgentAnalysis.value)
-        : askAgentAnalysis({
-          prompt: buildAgentPrompt(nextWindow),
-          context: {
-            window: nextWindow,
-            source: 'analysis-page',
-          },
-          db_scope: 'auto',
-        });
+      const agentRequest = !session
+        ? Promise.reject(new ApiError(401, '请先登录后查看 Agent 分析'))
+        : cachedAgentAnalysis
+          ? Promise.resolve(cachedAgentAnalysis.value)
+          : askAgentAnalysis({
+            prompt: buildAgentPrompt(nextWindow),
+            context: {
+              window: nextWindow,
+              source: 'analysis-page',
+            },
+            db_scope: 'auto',
+          });
       const [overviewResult, aiTrendResult, marketTrendResult, agentResult] = await Promise.allSettled([
         getOverview(nextWindow),
         getAITrend(nextWindow),
@@ -392,6 +396,10 @@ export function AnalysisPage() {
 
   async function handleRefreshAgentAnalysis() {
     if (agentRefreshing) {
+      return;
+    }
+    if (!session) {
+      setAgentError(buildModuleError(new ApiError(401, '请先登录后刷新 Agent 分析'), 'Agent 分析暂不可用', 'Agent 分析刷新失败。'));
       return;
     }
     removeAgentAnalysisCache(selectedWindow);
