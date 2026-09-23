@@ -32,6 +32,11 @@ var passwordLetterPattern = regexp.MustCompile(`[A-Za-z]`)
 var passwordDigitPattern = regexp.MustCompile(`[0-9]`)
 var phonePattern = regexp.MustCompile(`^\d{11}$`)
 
+const (
+	maxFailedLoginAttempts = 3
+	loginLockoutDuration   = 5 * time.Minute
+)
+
 type AuthService struct {
 	db  *gorm.DB
 	cfg config.Auth
@@ -148,8 +153,8 @@ func (s *AuthService) Login(username, password string) (*AuthResult, error) {
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
 		user.FailedLoginCount++
 		updates := map[string]any{"failed_login_count": user.FailedLoginCount}
-		if user.FailedLoginCount >= 3 {
-			lockoutUntil := time.Now().Add(5 * time.Minute)
+		if user.FailedLoginCount >= maxFailedLoginAttempts {
+			lockoutUntil := time.Now().Add(loginLockoutDuration)
 			updates["lockout_until"] = &lockoutUntil
 			updates["failed_login_count"] = 0
 		}
@@ -195,8 +200,28 @@ func (s *AuthService) ResetPassword(username, password, securityAnswer string) (
 		return nil, fmt.Errorf("query user failed: %w", err)
 	}
 
+	if user.LockoutUntil != nil && time.Now().Before(*user.LockoutUntil) {
+		remaining := int(time.Until(*user.LockoutUntil).Minutes()) + 1
+		return nil, fmt.Errorf("account locked, try again in %d minute(s)", remaining)
+	}
+
 	if err := bcrypt.CompareHashAndPassword([]byte(user.SecurityAnswerHash), []byte(securityAnswer)); err != nil {
-		return nil, ErrInvalidSecurity
+		user.FailedLoginCount++
+		updates := map[string]any{"failed_login_count": user.FailedLoginCount}
+		if user.FailedLoginCount >= maxFailedLoginAttempts {
+			lockoutUntil := time.Now().Add(loginLockoutDuration)
+			updates["lockout_until"] = &lockoutUntil
+			updates["failed_login_count"] = 0
+		}
+		_ = s.db.Model(&user).Updates(updates).Error
+		if _, locked := updates["lockout_until"]; locked {
+			return nil, fmt.Errorf("account locked, try again in 5 minute(s)")
+		}
+		remaining := maxFailedLoginAttempts - user.FailedLoginCount
+		if remaining < 0 {
+			remaining = 0
+		}
+		return nil, fmt.Errorf("invalid security answer, %d attempt(s) remaining", remaining)
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -227,6 +252,11 @@ func (s *AuthService) GetSecurityQuestion(username string) (*SecurityQuestionRes
 			return nil, ErrInvalidCredentials
 		}
 		return nil, fmt.Errorf("query user failed: %w", err)
+	}
+
+	if user.LockoutUntil != nil && time.Now().Before(*user.LockoutUntil) {
+		remaining := int(time.Until(*user.LockoutUntil).Minutes()) + 1
+		return nil, fmt.Errorf("account locked, try again in %d minute(s)", remaining)
 	}
 
 	return &SecurityQuestionResult{
