@@ -3,6 +3,11 @@ package database
 import (
 	"3Xbackend/internal/config"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -28,13 +33,39 @@ func (db *MysqlDb) Init(cfg config.Mysql) error {
 
 func (db *MysqlDb) GetConnect() error {
 	gormDb, err := gorm.Open(mysql.Open(db.GetConnectString()), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
+		// Warn 级别会记录慢查询和错误，同时保持普通查询静默。
+		Logger: logger.Default.LogMode(logger.Warn),
 	})
 	if err != nil {
 		return fmt.Errorf("connect db failed: %v\nconnect path: %v", err, db.GetConnectString())
 	}
+	applyConnectionPool(gormDb)
 	db.Connect = gormDb
 	return nil
+}
+
+// applyConnectionPool caps idle connections and recycles them so long-running
+// servers and MySQL's wait_timeout do not accumulate stale connections.
+func applyConnectionPool(gormDb *gorm.DB) {
+	sqlDB, err := gormDb.DB()
+	if err != nil {
+		return
+	}
+	sqlDB.SetMaxOpenConns(envInt("DB_MAX_OPEN_CONNS", 25))
+	sqlDB.SetMaxIdleConns(envInt("DB_MAX_IDLE_CONNS", 10))
+	sqlDB.SetConnMaxLifetime(time.Duration(envInt("DB_CONN_MAX_LIFETIME_MINUTES", 30)) * time.Minute)
+}
+
+func envInt(name string, fallback int) int {
+	raw := strings.TrimSpace(os.Getenv(name))
+	if raw == "" {
+		return fallback
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil || value <= 0 {
+		return fallback
+	}
+	return value
 }
 
 func (db *MysqlDb) GetConnectString() string {
