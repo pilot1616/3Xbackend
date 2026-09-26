@@ -129,6 +129,11 @@ def has_unquoted_semicolon(sql: str) -> bool:
     return False
 
 
+def cte_aliases(sql: str) -> set[str]:
+    """Collect WITH-clause aliases so table validation can exempt them."""
+    return set(re.findall(r"(?:\bWITH|,)\s+`?([a-zA-Z_][a-zA-Z0-9_]*)`?\s+AS\s*\(", sql, flags=re.IGNORECASE))
+
+
 def validate_readonly_sql(sql: str, allowed_tables: set[str]) -> None:
     normalized = clean_sql(sql)
     lowered = normalized.lower()
@@ -144,7 +149,9 @@ def validate_readonly_sql(sql: str, allowed_tables: set[str]) -> None:
         raise ValueError(f"Blocked SQL token: {', '.join(blocked)}")
 
     if allowed_tables:
+        aliases = cte_aliases(normalized)
         referenced_tables = set(re.findall(r"(?:from|join)\s+`?([a-zA-Z0-9_]+)`?", normalized, flags=re.IGNORECASE))
+        referenced_tables -= aliases
         forbidden = sorted(table for table in referenced_tables if table not in allowed_tables)
         if forbidden:
             raise ValueError(f"SQL references forbidden tables: {', '.join(forbidden)}")

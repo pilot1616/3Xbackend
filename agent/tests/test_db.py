@@ -37,3 +37,26 @@ def test_execute_readonly_sql_wraps_select_with_limit() -> None:
 
     assert result.columns == ["id", "title"]
     assert [row["title"] for row in result.rows] == ["a", "b"]
+
+
+def test_validate_readonly_sql_allows_cte_aliases() -> None:
+    tables = {"precious_metal_snapshots", "tech_market_snapshots", "ai_daily_snapshots"}
+
+    validate_readonly_sql(
+        "WITH latest AS (SELECT * FROM precious_metal_snapshots) SELECT * FROM latest",
+        tables,
+    )
+
+
+def test_validate_readonly_sql_rejects_forbidden_table_inside_cte() -> None:
+    tables = {"precious_metal_snapshots", "tech_market_snapshots", "ai_daily_snapshots"}
+
+    with pytest.raises(ValueError, match="forbidden tables"):
+        validate_readonly_sql("WITH latest AS (SELECT * FROM users) SELECT * FROM latest", tables)
+
+
+def test_validate_readonly_sql_rejects_into_outfile() -> None:
+    tables = {"precious_metal_snapshots"}
+
+    with pytest.raises(ValueError, match="Blocked SQL token"):
+        validate_readonly_sql("SELECT * FROM precious_metal_snapshots INTO OUTFILE '/tmp/x'", tables)
