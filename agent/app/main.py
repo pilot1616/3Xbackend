@@ -103,11 +103,18 @@ def prompt(request: PromptRequest) -> PromptResponse:
         except RateLimitError:
             raise HTTPException(status_code=429, detail="请求过于频繁，请稍后再试")
 
-    ensure_chat_tables(engine)
-    # /prompt 不属于任何会话；run 记录用空 conversation_id，仅用于审计与排障。
-    run_id = create_run(engine, "", "", request.prompt[:200])
+    # 审计记录失败不应拖垮分析本身：DB 不可用时降级为无 run 记录继续执行。
+    run_id = ""
+    try:
+        ensure_chat_tables(engine)
+        # /prompt 不属于任何会话；run 记录用空 conversation_id，仅用于审计与排障。
+        run_id = create_run(engine, "", "", request.prompt[:200])
+    except Exception:
+        run_id = ""
 
     def log_graph_llm(stage: str, model: str, llm_request: dict, llm_response: dict | None, latency_ms: int, error: str) -> None:
+        if not run_id:
+            return
         log_llm(engine, run_id, stage, model, llm_request, llm_response, error=error, latency_ms=latency_ms)
 
     try:
@@ -120,7 +127,11 @@ def prompt(request: PromptRequest) -> PromptResponse:
         )
     except Exception as exc:
         # 异常原文可能带出 SQL/表结构细节，只入 run 记录不返回给客户端。
-        finish_run(engine, run_id, "failed", error=str(exc))
+        if run_id:
+            try:
+                finish_run(engine, run_id, "failed", error=str(exc))
+            except Exception:
+                pass
         return PromptResponse(answer="", query_summary="", sources=[], error=GENERIC_AGENT_ERROR)
 
     sources = []
@@ -136,15 +147,19 @@ def prompt(request: PromptRequest) -> PromptResponse:
     query_summary = result.get("query_summary", "")
     answer = result.get("answer", "")
     error = result.get("error", "")
-    finish_run(
-        engine,
-        run_id,
-        "success" if not error else "failed",
-        generated_sql=query_result.sql if query_result else "",
-        query_summary=query_summary,
-        sources_json=json.dumps(sources, ensure_ascii=False, default=str),
-        error=error,
-    )
+    try:
+        if run_id:
+            finish_run(
+                engine,
+                run_id,
+                "success" if not error else "failed",
+                generated_sql=query_result.sql if query_result else "",
+                query_summary=query_summary,
+                sources_json=json.dumps(sources, ensure_ascii=False, default=str),
+                error=error,
+            )
+    except Exception:
+        pass
     return PromptResponse(answer=answer, query_summary=query_summary, sources=sources, error=error)
 
 
