@@ -167,6 +167,8 @@ def execute_readonly_sql(engine: Engine, raw_sql: str, limit: int = 50) -> Query
     else:
         run_sql = sql
     with engine.connect() as conn:
+        # LLM 生成的 SQL 可能意外全表扫描；5 秒兜底保证总时延在 Go 代理超时内。
+        conn = conn.execution_options(timeout=5)
         result = conn.execute(text(run_sql))
         rows = [dict(row._mapping) for row in result.fetchall()]
         columns = list(result.keys())

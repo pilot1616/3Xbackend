@@ -31,7 +31,7 @@ class Settings:
     llm_base_url: str = _env("LLM_BASE_URL", "https://ai-api-gateway.app.baizhi.cloud/api/openai")
     llm_api_key: str = _env("LLM_API_KEY", "")
     llm_model: str = _env("LLM_MODEL", "dev/gpt-5.5")
-    llm_timeout_seconds: int = _env_int("LLM_TIMEOUT_SECONDS", 60)
+    llm_timeout_seconds: int = _env_int("LLM_TIMEOUT_SECONDS", 35)
     allowed_tables: str = _env("AGENT_ALLOWED_TABLES", "")
     sample_row_limit: int = _env_int("AGENT_SAMPLE_ROW_LIMIT", 5)
     internal_token: str = _env("AGENT_INTERNAL_TOKEN", "")
