@@ -28,6 +28,8 @@ from .graph import MARKET_DATA_RULES, build_graph
 from .llm import LLMClient
 from .types import ChatRequest, ChatResponse, PromptRequest, PromptResponse
 
+GENERIC_AGENT_ERROR = "分析服务暂时不可用，请稍后重试"
+
 
 engine = build_engine()
 workflow = build_graph(engine)
@@ -80,7 +82,9 @@ def prompt(request: PromptRequest) -> PromptResponse:
             }
         )
     except Exception as exc:
-        return PromptResponse(answer="", query_summary="", sources=[], error=str(exc))
+        # 异常原文可能带出 SQL/表结构细节，只入日志不返回给客户端。
+        print(f"prompt failed: {exc}")
+        return PromptResponse(answer="", query_summary="", sources=[], error=GENERIC_AGENT_ERROR)
 
     sources = []
     query_result = result.get("query_result")
@@ -187,7 +191,7 @@ def chat(request: ChatRequest) -> ChatResponse:
         return ChatResponse(conversation_id=conversation_id, message_id=assistant_message_id, reply=answer_call.content, query_summary=visible_query_summary, sources=sources, run_id=run_id)
     except Exception as exc:
         finish_run(engine, run_id, "failed", error=str(exc))
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail=GENERIC_AGENT_ERROR) from exc
 
 
 if __name__ == "__main__":
