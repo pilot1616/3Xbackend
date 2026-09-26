@@ -8,12 +8,21 @@ from app.config import settings
 from app.llm import LLMClient
 
 
-def test_default_allowed_tables_are_market_data_only() -> None:
+def test_default_allowed_tables_are_data_and_public_forum() -> None:
     assert settings.allowed_table_set == {
         "ai_daily_snapshots",
         "precious_metal_snapshots",
         "tech_market_snapshots",
+        "questions",
+        "comments",
+        "question_files",
+        "question_likes",
     }
+
+
+def test_default_allowed_tables_exclude_private_tables() -> None:
+    # 用户表带密码/密保哈希，任何默认配置下都不得暴露给 LLM 查询。
+    assert "users" not in settings.allowed_table_set
 
 
 def test_rate_limit_rejects_after_budget(monkeypatch) -> None:

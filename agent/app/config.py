@@ -2,8 +2,17 @@ from dataclasses import dataclass
 import os
 
 
-# 分析与聊天默认只需要这三张数据表；需要扩表时显式配置 AGENT_ALLOWED_TABLES。
-DEFAULT_ALLOWED_TABLES = ("ai_daily_snapshots", "precious_metal_snapshots", "tech_market_snapshots")
+# 分析与聊天默认可查的数据表：三张市场/AI 数据表 + 论坛公开内容（帖子、评论、附件、点赞）。
+# 绝不包含 users（密码哈希、密保哈希）；需要收窄时用 AGENT_ALLOWED_TABLES 显式覆盖。
+DEFAULT_ALLOWED_TABLES = (
+    "ai_daily_snapshots",
+    "precious_metal_snapshots",
+    "tech_market_snapshots",
+    "questions",
+    "comments",
+    "question_files",
+    "question_likes",
+)
 
 
 def _env(name: str, default: str = "") -> str:
