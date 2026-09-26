@@ -21,3 +21,12 @@ def test_ai_market_prompt_selects_both_data_domains() -> None:
         "precious_metal_snapshots",
         "tech_market_snapshots",
     ]
+
+
+def test_keyword_matching_uses_word_boundaries() -> None:
+    tables = ["ai_daily_snapshots", "precious_metal_snapshots", "tech_market_snapshots"]
+
+    # "email" 含子串 "ai"，但不应触发 AI 日报表。
+    selected = select_tables_for_prompt("分析 email 营销对市场的价值", tables)
+
+    assert selected == ["precious_metal_snapshots"]

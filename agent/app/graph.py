@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any, TypedDict
 
 from langgraph.graph import END, StateGraph
@@ -31,12 +32,16 @@ def select_tables_for_prompt(prompt: str, available_tables: list[str]) -> list[s
     """Choose relevant tables without relying on database table ordering."""
     available = set(available_tables)
     text = prompt.lower()
-    has_ai = any(keyword in text for keyword in ("ai", "日报", "新闻", "资讯", "主题", "舆情"))
-    has_metal = any(keyword in text for keyword in ("金属", "贵金属", "黄金", "白银", "铂", "钯", "铜", "镍", "铝", "锌", "xau", "xag", "xpt", "xpd", "xcu", "xni", "xal", "xzn"))
-    has_tech = any(keyword in text for keyword in ("科技", "芯片", "半导体", "etf", "指数", "股票", "估值", "市盈率", "pe", "市值", "k线", "行情", "tech"))
+    # 全词匹配，避免 "email" 里的 "ai"、"speed" 里的 "pe" 之类子串误触发。
+    def has(keyword: str) -> bool:
+        return re.search(rf"(?<![a-z0-9]){re.escape(keyword)}(?![a-z0-9])", text) is not None
+
+    has_ai = any(has(keyword) for keyword in ("ai", "日报", "新闻", "资讯", "主题", "舆情"))
+    has_metal = any(has(keyword) for keyword in ("金属", "贵金属", "黄金", "白银", "铂", "钯", "铜", "镍", "铝", "锌", "xau", "xag", "xpt", "xpd", "xcu", "xni", "xal", "xzn"))
+    has_tech = any(has(keyword) for keyword in ("科技", "芯片", "半导体", "etf", "指数", "股票", "估值", "市盈率", "pe", "市值", "k线", "行情", "tech"))
     selected: list[str] = []
 
-    if has_metal or (not has_ai and not has_tech and any(keyword in text for keyword in ("市场", "标的", "价格", "收盘", "开盘"))):
+    if has_metal or (not has_ai and not has_tech and any(has(keyword) for keyword in ("市场", "标的", "价格", "收盘", "开盘"))):
         selected.append("precious_metal_snapshots")
     if has_tech:
         selected.append("tech_market_snapshots")
