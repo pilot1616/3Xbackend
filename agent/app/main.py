@@ -17,14 +17,26 @@ load_dotenv()
 from .config import settings
 from .chat_store import (
     add_message,
+    count_messages,
     create_or_touch_conversation,
     create_run,
     ensure_chat_tables,
     finish_run,
     list_conversations,
     list_messages,
+    list_summaries,
     log_llm,
     recent_messages,
+    summarized_message_count,
+    upsert_summary,
+)
+from .context import (
+    MAX_SUMMARY_SEGMENTS,
+    RECENT_MESSAGE_LIMIT,
+    build_history_block,
+    parse_reply_payload,
+    plan_segmenting,
+    summarize_instruction,
 )
 from .db import build_engine, execute_readonly_sql, schema_summary
 from .graph import MARKET_DATA_RULES, build_graph
@@ -192,13 +204,28 @@ def chat(request: ChatRequest) -> ChatResponse:
     user = request.user.model_dump()
     source = str(request.context.get("source") or "analysis-page")
     conversation_id = create_or_touch_conversation(engine, request.conversation_id, user, source, request.message[:60])
+
+    # 取历史时本轮 user 消息尚未落库，这里拿到的尾部原文不含当前消息。
+    total_count = count_messages(engine, conversation_id, user["id"])
+    summarized_count = summarized_message_count(engine, conversation_id)
+    plan = plan_segmenting(total_count, summarized_count)
+    summaries = list_summaries(engine, conversation_id, MAX_SUMMARY_SEGMENTS)
+    recent = recent_messages(
+        engine,
+        conversation_id,
+        user["id"],
+        RECENT_MESSAGE_LIMIT + 2,  # 多取 2 条留给摘要重叠指代
+    )
+    recent = recent[-RECENT_MESSAGE_LIMIT:]
+    history_text = build_history_block(summaries, recent)
+    if plan.should_summarize:
+        history_text += "\n\n" + summarize_instruction()
+
     user_message_id = add_message(engine, conversation_id, user, "user", request.message)
     run_id = create_run(engine, conversation_id, user_message_id, request.message)
 
     try:
-        history = recent_messages(engine, conversation_id, user["id"], 6)
         schema = schema_summary(engine, ["ai_daily_snapshots", "precious_metal_snapshots", "tech_market_snapshots"])
-        history_text = "\n".join([f"{item['role']}: {item['content']}" for item in history])
 
         sql_system = (
             "你是企业内部数据分析 SQL 规划助手。"
@@ -208,10 +235,11 @@ def chat(request: ChatRequest) -> ChatResponse:
         )
         sql_user = (
             f"用户问题：{request.message}\n\n"
-            f"最近对话：\n{history_text}\n\n"
+            f"{history_text}\n\n"
             f"上下文：{request.context}\n\n"
             f"可用 schema：\n{schema}\n\n"
             "请生成一条能回答用户问题的 MySQL 查询，最多 50 行。"
+            + (f"\n{summarize_instruction()}" if plan.should_summarize else "")
         )
         try:
             sql_call = llm.chat(sql_system, sql_user)
@@ -230,7 +258,7 @@ def chat(request: ChatRequest) -> ChatResponse:
         )
         answer_user = (
             f"用户问题：{request.message}\n\n"
-            f"最近对话：\n{history_text}\n\n"
+            f"{history_text}\n\n"
             f"查询摘要：\n{visible_query_summary}\n\n"
             f"查询结果：\n{sources[0]['rows']}"
         )
@@ -238,9 +266,22 @@ def chat(request: ChatRequest) -> ChatResponse:
             answer_call = llm.chat(answer_system, answer_user)
             log_llm(engine, run_id, "analyze_data", settings.llm_model, answer_call.request, answer_call.response, latency_ms=answer_call.latency_ms)
         except Exception as exc:
-            log_llm(engine, run_id, "analyze_data", settings.llm_model, {"system": answer_system, "user": answer_user}, None, error=str(exc))
+            log_llm(engine, run_id, "analyze_data", settings.llm_model, {"system": answer_system, "answer_user": answer_user}, None, error=str(exc))
             raise
-        assistant_message_id = add_message(engine, conversation_id, user, "assistant", answer_call.content)
+
+        reply_text, segment_summary = parse_reply_payload(answer_call.content)
+        assistant_message_id = add_message(engine, conversation_id, user, "assistant", reply_text)
+        if plan.should_summarize and segment_summary:
+            try:
+                upsert_summary(
+                    engine,
+                    conversation_id,
+                    plan.pending_index,
+                    plan.pending_end - plan.pending_start,
+                    segment_summary,
+                )
+            except Exception:
+                pass  # 摘要落库失败不影响主回答；该段下轮补
         finish_run(
             engine,
             run_id,
@@ -251,7 +292,7 @@ def chat(request: ChatRequest) -> ChatResponse:
             sources_json=json.dumps(sources, ensure_ascii=False),
             latency_ms=sql_call.latency_ms + answer_call.latency_ms,
         )
-        return ChatResponse(conversation_id=conversation_id, message_id=assistant_message_id, reply=answer_call.content, query_summary=visible_query_summary, sources=sources, run_id=run_id)
+        return ChatResponse(conversation_id=conversation_id, message_id=assistant_message_id, reply=reply_text, query_summary=visible_query_summary, sources=sources, run_id=run_id)
     except Exception as exc:
         finish_run(engine, run_id, "failed", error=str(exc))
         raise HTTPException(status_code=500, detail=GENERIC_AGENT_ERROR) from exc

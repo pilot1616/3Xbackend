@@ -80,6 +80,17 @@ def ensure_chat_tables(engine: Engine) -> None:
           INDEX idx_agent_llm_logs_run (run_id)
         )
         """,
+        """
+        CREATE TABLE IF NOT EXISTS agent_conversation_summaries (
+          id BIGINT PRIMARY KEY AUTO_INCREMENT,
+          conversation_id VARCHAR(64) NOT NULL,
+          segment_index INT NOT NULL,
+          message_count INT NOT NULL,
+          summary TEXT NOT NULL,
+          created_at DATETIME NOT NULL,
+          UNIQUE KEY uq_agent_summary_segment (conversation_id, segment_index)
+        )
+        """,
     ]
     with engine.begin() as conn:
         for statement in statements:
@@ -245,6 +256,65 @@ def log_llm(engine: Engine, run_id: str, stage: str, model: str, request_json: d
                 "response_json": json.dumps(response_json, ensure_ascii=False) if response_json is not None else "",
                 "error": error,
                 "latency_ms": latency_ms,
+                "created_at": datetime.now(),
+            },
+        )
+
+
+def count_messages(engine: Engine, conversation_id: str, user_id: int) -> int:
+    with engine.connect() as conn:
+        return int(
+            conn.execute(
+                text("SELECT COUNT(*) FROM agent_messages WHERE conversation_id=:conversation_id AND user_id=:user_id"),
+                {"conversation_id": conversation_id, "user_id": user_id},
+            ).scalar_one()
+        )
+
+
+def summarized_message_count(engine: Engine, conversation_id: str) -> int:
+    """已封段的消息总数（各段 message_count 之和）。"""
+    with engine.connect() as conn:
+        total = conn.execute(
+            text("SELECT COALESCE(SUM(message_count), 0) FROM agent_conversation_summaries WHERE conversation_id=:conversation_id"),
+            {"conversation_id": conversation_id},
+        ).scalar_one()
+    return int(total)
+
+
+def list_summaries(engine: Engine, conversation_id: str, limit: int = 12) -> list[dict[str, Any]]:
+    """按段号升序取摘要，默认只取最近 limit 段。"""
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                """
+                SELECT segment_index, message_count, summary
+                FROM agent_conversation_summaries
+                WHERE conversation_id=:conversation_id
+                ORDER BY segment_index DESC
+                LIMIT :limit
+                """
+            ),
+            {"conversation_id": conversation_id, "limit": limit},
+        ).mappings().all()
+    return [dict(row) for row in reversed(rows)]
+
+
+def upsert_summary(engine: Engine, conversation_id: str, segment_index: int, message_count: int, summary: str) -> None:
+    """同段重复写入幂等（保留先写下的那份，避免并发轮次互相覆盖）。"""
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                """
+                INSERT INTO agent_conversation_summaries (conversation_id, segment_index, message_count, summary, created_at)
+                VALUES (:conversation_id, :segment_index, :message_count, :summary, :created_at)
+                ON DUPLICATE KEY UPDATE message_count = message_count
+                """
+            ),
+            {
+                "conversation_id": conversation_id,
+                "segment_index": segment_index,
+                "message_count": message_count,
+                "summary": summary,
                 "created_at": datetime.now(),
             },
         )
