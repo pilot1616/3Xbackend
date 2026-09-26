@@ -6,7 +6,7 @@ from typing import Any, TypedDict
 from langgraph.graph import END, StateGraph
 
 from .db import QueryResult
-from .llm import LLMClient
+from .llm import LLMClient, LLMLogger
 
 
 MARKET_DATA_RULES = (
@@ -69,8 +69,8 @@ class AgentState(TypedDict, total=False):
     error: str
 
 
-def build_graph(db_engine) -> Any:
-    llm = LLMClient()
+def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
+    llm = LLMClient(logger=llm_logger)
 
     def parse_prompt(state: AgentState) -> AgentState:
         prompt = state["prompt"].strip()

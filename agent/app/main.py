@@ -57,7 +57,6 @@ def check_rate_limit(user_id: int) -> None:
 
 
 engine = build_engine()
-workflow = build_graph(engine)
 
 app = FastAPI(title="3X Agent", version="0.1.0")
 if settings.cors_origin_list:
@@ -103,8 +102,16 @@ def prompt(request: PromptRequest) -> PromptResponse:
             check_rate_limit(request.user.id)
         except RateLimitError:
             raise HTTPException(status_code=429, detail="请求过于频繁，请稍后再试")
+
+    ensure_chat_tables(engine)
+    # /prompt 不属于任何会话；run 记录用空 conversation_id，仅用于审计与排障。
+    run_id = create_run(engine, "", "", request.prompt[:200])
+
+    def log_graph_llm(stage: str, model: str, llm_request: dict, llm_response: dict | None, latency_ms: int, error: str) -> None:
+        log_llm(engine, run_id, stage, model, llm_request, llm_response, error=error, latency_ms=latency_ms)
+
     try:
-        result = workflow.invoke(
+        result = build_graph(engine, llm_logger=log_graph_llm).invoke(
             {
                 "prompt": request.prompt,
                 "context": request.context,
@@ -112,8 +119,8 @@ def prompt(request: PromptRequest) -> PromptResponse:
             }
         )
     except Exception as exc:
-        # 异常原文可能带出 SQL/表结构细节，只入日志不返回给客户端。
-        print(f"prompt failed: {exc}")
+        # 异常原文可能带出 SQL/表结构细节，只入 run 记录不返回给客户端。
+        finish_run(engine, run_id, "failed", error=str(exc))
         return PromptResponse(answer="", query_summary="", sources=[], error=GENERIC_AGENT_ERROR)
 
     sources = []
@@ -126,12 +133,19 @@ def prompt(request: PromptRequest) -> PromptResponse:
                 "rows": query_result.rows,
             }
         )
-    return PromptResponse(
-        answer=result.get("answer", ""),
-        query_summary=result.get("query_summary", ""),
-        sources=sources,
-        error=result.get("error", ""),
+    query_summary = result.get("query_summary", "")
+    answer = result.get("answer", "")
+    error = result.get("error", "")
+    finish_run(
+        engine,
+        run_id,
+        "success" if not error else "failed",
+        generated_sql=query_result.sql if query_result else "",
+        query_summary=query_summary,
+        sources_json=json.dumps(sources, ensure_ascii=False, default=str),
+        error=error,
     )
+    return PromptResponse(answer=answer, query_summary=query_summary, sources=sources, error=error)
 
 
 @app.get("/conversations")
