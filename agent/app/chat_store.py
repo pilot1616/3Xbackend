@@ -9,7 +9,15 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 
+_chat_tables_ready = False
+
+
 def ensure_chat_tables(engine: Engine) -> None:
+    # DDL 是幂等的，但每个请求执行 4 条 CREATE TABLE IF NOT EXISTS 纯属浪费；
+    # 进程内跑过一次后直接跳过。
+    global _chat_tables_ready
+    if _chat_tables_ready:
+        return
     statements = [
         """
         CREATE TABLE IF NOT EXISTS agent_conversations (
@@ -76,6 +84,7 @@ def ensure_chat_tables(engine: Engine) -> None:
     with engine.begin() as conn:
         for statement in statements:
             conn.execute(text(statement))
+    _chat_tables_ready = True
 
 
 def new_id(prefix: str) -> str:

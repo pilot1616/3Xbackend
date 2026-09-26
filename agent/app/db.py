@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import threading
+import time
 import re
 from typing import Any
 
@@ -22,6 +24,29 @@ class QueryResult:
     sql: str
     columns: list[str]
     rows: list[dict[str, Any]]
+
+
+# 表结构基本不变，进程内缓存 introspect 结果，省掉每请求 2-6 次 metadata 查询。
+_schema_cache_lock = threading.Lock()
+_schema_cache: dict[str, Any] = {}
+_SCHEMA_CACHE_TTL_SECONDS = 300.0
+
+
+def _cached(key: str, compute):
+    now = time.monotonic()
+    with _schema_cache_lock:
+        entry = _schema_cache.get(key)
+        if entry and now - entry[0] < _SCHEMA_CACHE_TTL_SECONDS:
+            return entry[1]
+    value = compute()
+    with _schema_cache_lock:
+        _schema_cache[key] = (now, value)
+    return value
+
+
+def invalidate_schema_cache() -> None:
+    with _schema_cache_lock:
+        _schema_cache.clear()
 
 
 blocked_sql_tokens = {
@@ -46,27 +71,36 @@ def build_engine() -> Engine:
 
 
 def list_tables(engine: Engine) -> list[str]:
-    inspector = inspect(engine)
-    tables = inspector.get_table_names()
-    if settings.allowed_table_set:
-        tables = [name for name in tables if name in settings.allowed_table_set]
-    return sorted(tables)
+    def compute() -> list[str]:
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+        if settings.allowed_table_set:
+            tables = [name for name in tables if name in settings.allowed_table_set]
+        return sorted(tables)
+
+    return _cached(f"tables:{id(engine.url) if hasattr(engine, 'url') else 'engine'}", compute)
 
 
 def table_fingerprint(engine: Engine, table_name: str) -> str:
-    inspector = inspect(engine)
-    columns = inspector.get_columns(table_name)
+    columns = _table_columns(engine, table_name)
     column_names = [col["name"] for col in columns]
     return f"{table_name} " + " ".join(column_names)
+
+
+def _table_columns(engine: Engine, table_name: str) -> list[dict[str, Any]]:
+    def compute() -> list[dict[str, Any]]:
+        inspector = inspect(engine)
+        return inspector.get_columns(table_name)
+
+    return _cached(f"columns:{table_name}", compute)
 
 
 def schema_summary(engine: Engine, tables: list[str] | None = None) -> str:
     selected = tables or list_tables(engine)
     lines: list[str] = []
-    inspector = inspect(engine)
     for table in selected[:8]:
         try:
-            columns = inspector.get_columns(table)
+            columns = _table_columns(engine, table)
         except Exception:
             continue
         column_parts = [f"{col['name']}:{col.get('type')}" for col in columns]
@@ -75,8 +109,7 @@ def schema_summary(engine: Engine, tables: list[str] | None = None) -> str:
 
 
 def describe_table(engine: Engine, table_name: str) -> tuple[list[str], list[dict[str, Any]]]:
-    inspector = inspect(engine)
-    columns = [col["name"] for col in inspector.get_columns(table_name)]
+    columns = [col["name"] for col in _table_columns(engine, table_name)]
     return columns, sample_table_rows(engine, table_name, settings.sample_row_limit)
 
 
