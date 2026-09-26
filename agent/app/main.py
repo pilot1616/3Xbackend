@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import collections
 import json
 import secrets
+import threading
+import time
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
@@ -29,6 +32,28 @@ from .llm import LLMClient
 from .types import ChatRequest, ChatResponse, PromptRequest, PromptResponse
 
 GENERIC_AGENT_ERROR = "分析服务暂时不可用，请稍后重试"
+
+RATE_LIMIT_MAX_REQUESTS = 10
+RATE_LIMIT_WINDOW_SECONDS = 60.0
+
+_rate_limit_lock = threading.Lock()
+_rate_limit_windows: dict[int, deque[float]] = {}
+
+
+class RateLimitError(Exception):
+    """Raised when a user exceeds the per-user request budget."""
+
+
+def check_rate_limit(user_id: int) -> None:
+    """Sliding-window per-user budget shared by /prompt and /chat."""
+    now = time.monotonic()
+    with _rate_limit_lock:
+        window = _rate_limit_windows.setdefault(user_id, collections.deque())
+        while window and now - window[0] > RATE_LIMIT_WINDOW_SECONDS:
+            window.popleft()
+        if len(window) >= RATE_LIMIT_MAX_REQUESTS:
+            raise RateLimitError("too many requests")
+        window.append(now)
 
 
 engine = build_engine()
@@ -73,6 +98,11 @@ def health() -> dict[str, str]:
 def prompt(request: PromptRequest) -> PromptResponse:
     if not settings.llm_api_key:
         raise HTTPException(status_code=500, detail="LLM_API_KEY is not configured")
+    if request.user is not None:
+        try:
+            check_rate_limit(request.user.id)
+        except RateLimitError:
+            raise HTTPException(status_code=429, detail="请求过于频繁，请稍后再试")
     try:
         result = workflow.invoke(
             {
@@ -123,6 +153,10 @@ def conversation_messages(conversation_id: str, user_id: int) -> dict[str, objec
 def chat(request: ChatRequest) -> ChatResponse:
     if not settings.llm_api_key:
         raise HTTPException(status_code=500, detail="LLM_API_KEY is not configured")
+    try:
+        check_rate_limit(request.user.id)
+    except RateLimitError:
+        raise HTTPException(status_code=429, detail="请求过于频繁，请稍后再试")
 
     ensure_chat_tables(engine)
     llm = LLMClient()

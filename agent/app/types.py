@@ -2,10 +2,17 @@ from pydantic import BaseModel, Field
 from typing import Any
 
 
+class AgentUser(BaseModel):
+    id: int
+    username: str
+
+
 class PromptRequest(BaseModel):
     prompt: str = Field(min_length=1)
     context: dict[str, Any] = Field(default_factory=dict)
     db_scope: str | None = None
+    # Go 代理转发时附带请求用户；旧客户端不传也不影响请求本身。
+    user: AgentUser | None = None
 
 
 class PromptResponse(BaseModel):
@@ -13,11 +20,6 @@ class PromptResponse(BaseModel):
     query_summary: str
     sources: list[dict[str, Any]] = Field(default_factory=list)
     error: str = ""
-
-
-class AgentUser(BaseModel):
-    id: int
-    username: str
 
 
 class ChatRequest(BaseModel):

@@ -29,10 +29,11 @@ type agentChatRequest struct {
 	Context        map[string]any `json:"context,omitempty"`
 }
 
-type agentPromptRequest struct {
-	Prompt  string         `json:"prompt" binding:"required,max=4000"`
-	Context map[string]any `json:"context,omitempty"`
+type agentPromptProxyRequest struct {
+	Prompt  string         `json:"prompt"`
+	Context map[string]any `json:"context"`
 	DBScope string         `json:"db_scope,omitempty"`
+	User    agentUser      `json:"user"`
 }
 
 type agentUser struct {
@@ -121,7 +122,12 @@ func (h *AgentHandler) Chat(c *gin.Context) {
 }
 
 func (h *AgentHandler) Prompt(c *gin.Context) {
-	var req agentPromptRequest
+	user, ok := h.currentUser(c)
+	if !ok {
+		return
+	}
+
+	var req agentPromptProxyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
@@ -136,6 +142,10 @@ func (h *AgentHandler) Prompt(c *gin.Context) {
 	}
 	if _, exists := req.Context["source"]; !exists {
 		req.Context["source"] = "analysis-page"
+	}
+	req.User = agentUser{
+		ID:       user.ID,
+		Username: user.Username,
 	}
 
 	body, err := json.Marshal(req)
