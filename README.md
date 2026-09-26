@@ -501,7 +501,7 @@ Agent 相关环境变量：
 
 - `AGENT_INTERNAL_TOKEN`（agent 与 Go 后端需配置相同值；生产必填）
 - `AGENT_BASE_URL`（Go 后端访问 agent 的地址，默认 `http://127.0.0.1:8010`）
-- `AGENT_ALLOWED_TABLES`
+- `AGENT_ALLOWED_TABLES`（留空时默认只放开三张市场/AI 数据表）
 - `AGENT_SAMPLE_ROW_LIMIT`
 
 同步相关配置项：
