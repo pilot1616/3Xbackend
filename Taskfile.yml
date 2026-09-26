@@ -93,6 +93,7 @@ tasks:
           go run ./cmd ) & \
         ( cd agent && \
           [ -f .env ] && set -a && . ./.env && set +a || true; \
+          unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY all_proxy; \
           PYTHON_BIN="./.venv/bin/python"; \
           [ -x "$PYTHON_BIN" ] || PYTHON_BIN="python3"; \
           "$PYTHON_BIN" -m uvicorn app.main:app --host "${AGENT_HOST:-0.0.0.0}" --port "${AGENT_PORT:-8010}" ) & \
