@@ -2,6 +2,10 @@ from dataclasses import dataclass
 import os
 
 
+# 分析与聊天默认只需要这三张数据表；需要扩表时显式配置 AGENT_ALLOWED_TABLES。
+DEFAULT_ALLOWED_TABLES = ("ai_daily_snapshots", "precious_metal_snapshots", "tech_market_snapshots")
+
+
 def _env(name: str, default: str = "") -> str:
     value = os.getenv(name, default)
     return value.strip()
@@ -35,8 +39,10 @@ class Settings:
 
     @property
     def allowed_table_set(self) -> set[str]:
+        # 空配置不是"允许所有表"，而是回落到分析业务实际需要的三张数据表，
+        # 防止忘配 AGENT_ALLOWED_TABLES 时把 users 等业务表暴露给 LLM 生成查询。
         if not self.allowed_tables:
-            return set()
+            return set(DEFAULT_ALLOWED_TABLES)
         return {item.strip() for item in self.allowed_tables.split(",") if item.strip()}
 
     @property
