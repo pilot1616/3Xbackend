@@ -225,19 +225,25 @@ def chat(request: ChatRequest) -> ChatResponse:
     run_id = create_run(engine, conversation_id, user_message_id, request.message)
 
     try:
-        # 两个 stage 共用同一份稳定前缀（角色+数据规则+schema+格式约定），
-        # 逐字节一致的部分放前面才可能命中网关的 prompt cache。
+        # 前缀缓存要求"同一 stage 的多次请求"开头逐字节一致：
+        # 共享 system（角色+规则+schema），stage 差异放在各自的 instruction 里，
+        # 动态内容（问题/历史/查询结果）全部集中在最后一条 user。
         schema = schema_summary(engine, ["ai_daily_snapshots", "precious_metal_snapshots", "tech_market_snapshots"])
         stable_system = (
-            "你是企业内部 AI 金融分析助手的第一个环节：根据用户问题和历史对话，"
-            "生成一条 MySQL 只读查询。只能输出一条 SELECT/WITH SQL，不要解释，不要 Markdown。"
+            "你是企业内部 AI 金融分析助手，负责分析贵金属、科技市场行情和 AI 日报数据。"
             + MARKET_DATA_RULES
             + "\n可用数据表 schema（只能使用这些表和字段）：\n"
             + schema
         )
-        stable_instruction = (
-            "输出约定：只输出 SQL 本身；查询结果行数控制在 50 行以内；"
+        sql_instruction = (
+            "当前任务：根据用户问题和历史对话生成一条 MySQL 只读查询。"
+            "只输出一条 SELECT/WITH SQL 本身，不要解释，不要 Markdown；行数控制在 50 行以内；"
             "涉及联动分析时优先关联 AI 日报与行情表。"
+        )
+        answer_instruction = (
+            "当前任务：根据下方查询结果和对话历史，用自然语言回答用户。"
+            "必须输出人能直接看懂的中文结论，绝对不要输出 SQL 或代码；"
+            "结构为：结论、依据（引用具体数字）、风险、建议。"
         )
 
         dynamic_for_sql = (
@@ -247,7 +253,7 @@ def chat(request: ChatRequest) -> ChatResponse:
             "请生成一条能回答用户问题的 MySQL 查询。"
             + (f"\n{summarize_instruction()}" if plan.should_summarize else "")
         )
-        sql_messages = build_stable_messages(stable_system, stable_instruction, dynamic_for_sql)
+        sql_messages = build_stable_messages(stable_system, sql_instruction, dynamic_for_sql)
         try:
             sql_call = llm.chat(sql_messages, "")
             log_llm(engine, run_id, "generate_sql", settings.llm_model, sql_call.request, sql_call.response, latency_ms=sql_call.latency_ms)
@@ -264,10 +270,9 @@ def chat(request: ChatRequest) -> ChatResponse:
             f"{history_text}\n\n"
             f"查询摘要：\n{visible_query_summary}\n\n"
             f"查询结果：\n{sources[0]['rows']}\n\n"
-            "请给出：结论、依据、风险和建议。"
+            "请给出自然语言回答。"
         )
-        # 复用同一份 system（含 schema），保持两 stage 前缀一致以命中缓存。
-        answer_messages = build_stable_messages(stable_system, stable_instruction, dynamic_for_answer)
+        answer_messages = build_stable_messages(stable_system, answer_instruction, dynamic_for_answer)
         try:
             answer_call = llm.chat(answer_messages, "")
             log_llm(engine, run_id, "analyze_data", settings.llm_model, answer_call.request, answer_call.response, latency_ms=answer_call.latency_ms)

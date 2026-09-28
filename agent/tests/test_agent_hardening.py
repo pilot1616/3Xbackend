@@ -119,3 +119,16 @@ def test_prompt_returns_generic_error_without_leaking_details(monkeypatch) -> No
     assert response.status_code == 200
     assert body["error"] == main.GENERIC_AGENT_ERROR
     assert "secret_table" not in body["error"]
+
+
+def test_chat_answer_stage_never_carries_sql_only_instruction(monkeypatch) -> None:
+    """防回归：回答阶段若复用 SQL 角色 prompt，聊天会直接吐 SQL 给用户。"""
+    import re
+
+    source = open("app/main.py", encoding="utf-8").read()
+    # 提取 /chat 内构造 answer_messages 之前的 answer_instruction 定义
+    match = re.search(r'answer_instruction = \((.*?)\)\n\s*dynamic_for_answer', source, re.DOTALL)
+    assert match, "answer_instruction block not found"
+    instruction = match.group(1)
+    assert "SQL" not in instruction or "不要输出 SQL" in instruction
+    assert "中文结论" in instruction
