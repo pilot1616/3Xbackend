@@ -237,7 +237,8 @@ def chat(request: ChatRequest) -> ChatResponse:
         )
         sql_instruction = (
             "当前任务：根据用户问题和历史对话生成一条 MySQL 只读查询。"
-            "只输出一条 SELECT/WITH SQL 本身，不要解释，不要 Markdown；行数控制在 50 行以内；"
+            "优先写简单直接的查询，避免多层嵌套 CTE 和子查询（网关响应慢，查询越简单返回越快）。"
+            "只输出一条 SELECT/WITH SQL 本身，不要解释，不要 Markdown；行数控制在 20 行以内；"
             "涉及联动分析时优先关联 AI 日报与行情表。"
         )
         answer_instruction = (
@@ -261,7 +262,26 @@ def chat(request: ChatRequest) -> ChatResponse:
             log_llm(engine, run_id, "generate_sql", settings.llm_model, {"messages": sql_messages}, None, error=str(exc))
             raise
 
-        query_result = execute_readonly_sql(engine, sql_call.content)
+        # 20 行足够分析用：结果行是 prompt 输入大头，直接决定第二轮耗时。
+        try:
+            query_result = execute_readonly_sql(engine, sql_call.content, limit=20)
+        except Exception as sql_exc:
+            # 模型偶尔生成坏 SQL；带错误反馈自修复一次，比直接失败或干等超时都快。
+            repair_dynamic = (
+                f"用户问题：{request.message}\n\n"
+                f"{history_text}\n\n"
+                f"你上一条 SQL 执行失败：\nSQL: {sql_call.content[:500]}\n错误: {str(sql_exc)[:300]}\n\n"
+                f"上下文：{request.context}\n\n"
+                "请重新生成一条能回答用户问题的、更简单可靠的 MySQL 查询。"
+            )
+            repair_messages = build_stable_messages(stable_system, sql_instruction, repair_dynamic)
+            try:
+                sql_call = llm.chat(repair_messages, "")
+                log_llm(engine, run_id, "generate_sql_repair", settings.llm_model, sql_call.request, sql_call.response, latency_ms=sql_call.latency_ms)
+            except Exception as exc:
+                log_llm(engine, run_id, "generate_sql_repair", settings.llm_model, {"messages": repair_messages}, None, error=str(exc))
+                raise
+            query_result = execute_readonly_sql(engine, sql_call.content, limit=20)
         visible_query_summary = f"columns={query_result.columns}\nrows={len(query_result.rows)}"
         sources = jsonable_encoder([{"sql": query_result.sql, "columns": query_result.columns, "rows": query_result.rows}])
 
