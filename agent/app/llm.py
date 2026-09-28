@@ -15,11 +15,29 @@ class LLMCallResult:
     request: dict[str, Any]
     response: dict[str, Any]
     latency_ms: int
+    usage: dict[str, Any] | None = None
 
 
 # 可选审计钩子：签名 (stage, model, request, response, latency_ms, error)。
 # /prompt 的 LangGraph 管线靠它把每次 LLM 调用写入 agent_llm_logs。
 LLMLogger = Callable[[str, str, dict[str, Any], dict[str, Any] | None, int, str], None]
+
+
+def build_stable_messages(
+    stable_system: str,
+    stable_instruction: str,
+    dynamic_user: str,
+) -> list[dict[str, str]]:
+    """构造利于 prompt cache 命中的 messages。
+
+    前缀必须逐字节稳定：system（角色+规则+schema）和固定的输出格式说明
+    放在最前，所有会变化的内容（问题、历史、查询结果）集中在最后一条。
+    """
+    return [
+        {"role": "system", "content": stable_system},
+        {"role": "user", "content": stable_instruction},
+        {"role": "user", "content": dynamic_user},
+    ]
 
 
 class LLMClient:
@@ -42,21 +60,30 @@ class LLMClient:
         return self.chat(system_prompt, user_prompt).content
 
     def chat(self, system_prompt: str, user_prompt: str) -> LLMCallResult:
-        payload = {
-            "model": settings.llm_model,
-            "messages": [
+        # 兼容旧签名：system_prompt 传 list 时直接作为完整 messages 使用（稳定前缀模式）。
+        messages = (
+            list(system_prompt)
+            if isinstance(system_prompt, list)
+            else [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
-            ],
+            ]
+        )
+        payload = {
+            "model": settings.llm_model,
+            "messages": messages,
             "stream": False,
         }
         started = time.monotonic()
         error = ""
+        data: dict[str, Any] = {}
+        usage: dict[str, Any] | None = None
         try:
             try:
                 response = self._request_with_retry(payload)
                 response.raise_for_status()
                 data = response.json()
+                usage = data.get("usage")
             except httpx.HTTPError as exc:
                 error = str(exc)
                 raise
@@ -65,9 +92,15 @@ class LLMClient:
             self._emit_log(payload, data if error == "" else None, latency_ms, error)
         choices = data.get("choices") or []
         if not choices:
-            return LLMCallResult(content="", request=payload, response=data, latency_ms=latency_ms)
+            return LLMCallResult(content="", request=payload, response=data, latency_ms=latency_ms, usage=usage)
         message = choices[0].get("message") or {}
-        return LLMCallResult(content=message.get("content", "") or "", request=payload, response=data, latency_ms=latency_ms)
+        return LLMCallResult(
+            content=message.get("content", "") or "",
+            request=payload,
+            response=data,
+            latency_ms=latency_ms,
+            usage=usage,
+        )
 
     def _emit_log(self, request: dict[str, Any], response: dict[str, Any] | None, latency_ms: int, error: str) -> None:
         if self._logger is None:

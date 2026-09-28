@@ -122,9 +122,11 @@ def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
 
     def generate_sql(state: AgentState) -> AgentState:
         from .db import schema_summary
+        from .llm import build_stable_messages
 
         schema = schema_summary(db_engine, state.get("selected_tables") or None)
-        system_prompt = (
+        # system 含角色+规则+schema，逐字节稳定；动态内容全部集中在最后一条 user。
+        stable_system = (
             "你是企业内部数据分析 SQL 规划助手。"
             "你只能输出一条 MySQL 只读 SQL，不要解释，不要 Markdown。"
             "只能使用给定 schema 中存在的表和字段。"
@@ -132,14 +134,16 @@ def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
             "如果用户问题涉及 AI 与市场联动，必须同时查询 AI 日报表和金融行情表。"
             "如果用户问题无法精确回答，输出一个用于获取最相关事实的 SELECT 查询。"
             + MARKET_DATA_RULES
+            + "\n可用数据表 schema（只能使用这些表和字段）：\n"
+            + schema
         )
-        user_prompt = (
+        stable_instruction = "输出约定：只输出 SQL 本身；结果行数尽量控制在 50 行以内。"
+        dynamic_user = (
             f"用户问题：{state['prompt']}\n\n"
             f"上下文：{state.get('context', {})}\n\n"
-            f"可用 schema：\n{schema}\n\n"
-            "请生成一条 MySQL 查询。结果行数请尽量控制在 50 行以内。"
+            "请生成一条 MySQL 查询。"
         )
-        sql = llm.analyze(system_prompt, user_prompt)
+        sql = llm.analyze(build_stable_messages(stable_system, stable_instruction, dynamic_user), "")
         return {**state, "schema": schema, "sql": sql.strip()}
 
     def run_db_query(state: AgentState) -> AgentState:
@@ -154,22 +158,28 @@ def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
         return {**state, "query_result": query_result, "query_summary": query_summary}
 
     def analyze_data(state: AgentState) -> AgentState:
-        system_prompt = (
+        from .llm import build_stable_messages
+
+        # 与 generate_sql 共用同一份 system 前缀（角色措辞不同会破坏前缀一致性，
+        # 因此角色描述合并为通用版），只有最后一条 user 消息是动态内容。
+        stable_system = (
             "你是企业内部数据分析助手。"
-            "你会根据数据库查询结果和用户问题，给出简洁、可执行的分析结论。"
+            "你根据数据库查询结果和用户问题，给出简洁、可执行的分析结论；"
+            "若任务要求生成 SQL，则只输出一条 MySQL 只读 SELECT/WITH SQL，不要解释，不要 Markdown。"
             + MARKET_DATA_RULES
         )
-        query_result = state.get("query_result")
+        stable_instruction = "输出约定：分析类任务输出结论、依据、异常点、建议。"
         result_text = ""
+        query_result = state.get("query_result")
         if query_result:
             result_text = f"SQL: {query_result.sql}\nCOLUMNS: {query_result.columns}\nROWS: {query_result.rows}"
-        user_prompt = (
+        dynamic_user = (
             f"用户问题：{state['prompt']}\n\n"
             f"查询摘要：\n{state.get('query_summary', '')}\n\n"
             f"查询结果：\n{result_text}\n\n"
             "请输出：结论、依据、异常点、建议。"
         )
-        analysis = llm.analyze(system_prompt, user_prompt)
+        analysis = llm.analyze(build_stable_messages(stable_system, stable_instruction, dynamic_user), "")
         return {**state, "analysis": analysis, "answer": analysis or "LLM returned empty response"}
 
     def format_response(state: AgentState) -> AgentState:

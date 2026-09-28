@@ -40,7 +40,7 @@ from .context import (
 )
 from .db import build_engine, execute_readonly_sql, schema_summary
 from .graph import MARKET_DATA_RULES, build_graph
-from .llm import LLMClient
+from .llm import LLMClient, build_stable_messages
 from .types import ChatRequest, ChatResponse, PromptRequest, PromptResponse
 
 GENERIC_AGENT_ERROR = "分析服务暂时不可用，请稍后重试"
@@ -225,48 +225,54 @@ def chat(request: ChatRequest) -> ChatResponse:
     run_id = create_run(engine, conversation_id, user_message_id, request.message)
 
     try:
+        # 两个 stage 共用同一份稳定前缀（角色+数据规则+schema+格式约定），
+        # 逐字节一致的部分放前面才可能命中网关的 prompt cache。
         schema = schema_summary(engine, ["ai_daily_snapshots", "precious_metal_snapshots", "tech_market_snapshots"])
-
-        sql_system = (
-            "你是企业内部数据分析 SQL 规划助手。"
-            "只能输出一条 MySQL 只读 SELECT/WITH SQL，不要 Markdown。"
-            "必须优先使用给定的 AI 日报、贵金属、科技市场表。"
+        stable_system = (
+            "你是企业内部 AI 金融分析助手的第一个环节：根据用户问题和历史对话，"
+            "生成一条 MySQL 只读查询。只能输出一条 SELECT/WITH SQL，不要解释，不要 Markdown。"
             + MARKET_DATA_RULES
+            + "\n可用数据表 schema（只能使用这些表和字段）：\n"
+            + schema
         )
-        sql_user = (
+        stable_instruction = (
+            "输出约定：只输出 SQL 本身；查询结果行数控制在 50 行以内；"
+            "涉及联动分析时优先关联 AI 日报与行情表。"
+        )
+
+        dynamic_for_sql = (
             f"用户问题：{request.message}\n\n"
             f"{history_text}\n\n"
             f"上下文：{request.context}\n\n"
-            f"可用 schema：\n{schema}\n\n"
-            "请生成一条能回答用户问题的 MySQL 查询，最多 50 行。"
+            "请生成一条能回答用户问题的 MySQL 查询。"
             + (f"\n{summarize_instruction()}" if plan.should_summarize else "")
         )
+        sql_messages = build_stable_messages(stable_system, stable_instruction, dynamic_for_sql)
         try:
-            sql_call = llm.chat(sql_system, sql_user)
+            sql_call = llm.chat(sql_messages, "")
             log_llm(engine, run_id, "generate_sql", settings.llm_model, sql_call.request, sql_call.response, latency_ms=sql_call.latency_ms)
         except Exception as exc:
-            log_llm(engine, run_id, "generate_sql", settings.llm_model, {"system": sql_system, "user": sql_user}, None, error=str(exc))
+            log_llm(engine, run_id, "generate_sql", settings.llm_model, {"messages": sql_messages}, None, error=str(exc))
             raise
 
         query_result = execute_readonly_sql(engine, sql_call.content)
         visible_query_summary = f"columns={query_result.columns}\nrows={len(query_result.rows)}"
         sources = jsonable_encoder([{"sql": query_result.sql, "columns": query_result.columns, "rows": query_result.rows}])
 
-        answer_system = (
-            "你是企业内部 AI 金融分析助手。请根据查询结果和对话历史回答，给出结论、依据、风险和建议。"
-            + MARKET_DATA_RULES
-        )
-        answer_user = (
+        dynamic_for_answer = (
             f"用户问题：{request.message}\n\n"
             f"{history_text}\n\n"
             f"查询摘要：\n{visible_query_summary}\n\n"
-            f"查询结果：\n{sources[0]['rows']}"
+            f"查询结果：\n{sources[0]['rows']}\n\n"
+            "请给出：结论、依据、风险和建议。"
         )
+        # 复用同一份 system（含 schema），保持两 stage 前缀一致以命中缓存。
+        answer_messages = build_stable_messages(stable_system, stable_instruction, dynamic_for_answer)
         try:
-            answer_call = llm.chat(answer_system, answer_user)
+            answer_call = llm.chat(answer_messages, "")
             log_llm(engine, run_id, "analyze_data", settings.llm_model, answer_call.request, answer_call.response, latency_ms=answer_call.latency_ms)
         except Exception as exc:
-            log_llm(engine, run_id, "analyze_data", settings.llm_model, {"system": answer_system, "answer_user": answer_user}, None, error=str(exc))
+            log_llm(engine, run_id, "analyze_data", settings.llm_model, {"messages": answer_messages}, None, error=str(exc))
             raise
 
         reply_text, segment_summary = parse_reply_payload(answer_call.content)
