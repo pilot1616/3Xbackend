@@ -30,6 +30,44 @@ def _skip_duplicate_clause(dialect_name: str) -> str:
     raise ValueError(f"unsupported dialect for batch insert: {dialect_name}")
 
 
+def _upsert_clause(dialect_name: str, update_columns: Sequence[str]) -> str:
+    """冲突时覆盖更新指定列（MySQL 用 VALUES() 引用新值，PG/SQLite 用 excluded）。"""
+    if dialect_name == "mysql":
+        assignments = ", ".join(f"`{col}` = VALUES(`{col}`)" for col in update_columns)
+        return f"ON DUPLICATE KEY UPDATE {assignments}"
+    if dialect_name in {"sqlite", "postgresql"}:
+        assignments = ", ".join(f"`{col}` = excluded.`{col}`" for col in update_columns)
+        return f"ON CONFLICT DO UPDATE SET {assignments}"
+    raise ValueError(f"unsupported dialect for upsert: {dialect_name}")
+
+
+def upsert_records(
+    engine: Engine,
+    table: str,
+    records: Sequence[Mapping[str, Any]],
+    update_columns: Sequence[str],
+    batch_size: int = 100,
+) -> int:
+    """冲突时覆盖更新（对齐 Go 端 ai_daily_snapshots 的 source+slug upsert 语义）。"""
+    if not records:
+        return 0
+    keys = list(records[0].keys())
+    columns = ", ".join(f"`{key}`" for key in keys)
+    placeholders = ", ".join(f":{key}" for key in keys)
+    dialect = engine.dialect.name
+    sql = text(
+        f"INSERT INTO `{table}` ({columns}) VALUES ({placeholders}) "
+        f"{_upsert_clause(dialect, update_columns)}"
+    )
+    affected = 0
+    for start in range(0, len(records), batch_size):
+        batch = [dict(record) for record in records[start : start + batch_size]]
+        with engine.begin() as conn:
+            result = conn.execute(sql, batch)
+            affected += int(result.rowcount or 0)
+    return affected
+
+
 def insert_records_if_absent(
     engine: Engine,
     table: str,

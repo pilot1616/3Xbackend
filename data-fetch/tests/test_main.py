@@ -26,6 +26,7 @@ def test_sync_latest_uses_fetchers_and_db(monkeypatch) -> None:
         "fetch_tech_markets",
         lambda fetched_at: ([{"symbol": "NDX", "price": "200", "fetched_at": fetched_at}], ["QQQ: failed"]),
     )
+    monkeypatch.setattr(main, "_sync_ai_daily", lambda engine: {"inserted": 0, "failures": []})
 
     def insert_if_absent(engine, table, records, unique_keys):
         inserted.append((table, list(records)))
