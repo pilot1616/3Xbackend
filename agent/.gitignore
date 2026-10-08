@@ -5,3 +5,4 @@ __pycache__/
 .env
 *.pyc
 
+.akshare_docs_cache/

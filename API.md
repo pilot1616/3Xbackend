@@ -1505,6 +1505,16 @@ Agent（LangGraph + LLM 分析服务）独立运行在 `8010` 端口，由 Go �
 
 需要登录。返回指定会话的消息列表；会话不属于当前用户时返回 `404`。
 
+### Agent 外部行情节点（AKShare）
+
+`/api/v1/agent/prompt` 与 `/api/v1/agent/chat` 的分析管线在 SQL 查询前新增 `fetch_market_data` 节点：
+
+- 仅当用户问题命中外部行情意图（上金所/现货金银/美股港股/期货/分时/复权/CPI/LPR/ETF 等关键词）时才激活，普通分析请求不增加任何延迟
+- 激活后先用 RAG（BM25 检索 AKShare 官方文档）选出 3 个候选接口，再由 LLM 选定接口并生成参数，最后调用白名单内的 AKShare 接口远程取数
+- 取到的数据以紧凑 JSON 文本注入后续 LLM 归纳步骤，回答会引用外部行情的具体数字；`sources` 仍只包含库内 SQL 查询结果
+- 取数失败或 LLM 决策无效时静默降级为无外部数据，不影响主管线
+- 直接调用接口（调试用）：`GET /api/v1/agent/akshare/tools` 列出 20 个白名单接口；`POST /api/v1/agent/akshare/call`（`{"interface": "spot_hist_sge", "arguments": {"symbol": "Au99.99"}}`）执行调用，目录外接口返回 `400`
+
 ## 已移除的旧前端接口
 
 以下旧接口曾用于兼容 `example/` 目录下的旧前端，因为不校验身份（请求体自报用户名即可冒充任意用户删帖、发帖），存在安全风险，已全部移除：

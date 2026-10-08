@@ -49,6 +49,12 @@ tasks:
     cmds:
       - docker compose down
 
+  agent:rag:build:
+    desc: 重建 AKShare 文档 RAG 索引（爬官方文档并切块，升级 akshare 版本后执行）
+    dir: agent
+    cmds:
+      - ./.venv/bin/python scripts/build_akshare_rag.py
+
   backend:
     desc: 直接本地运行后端（go run）
     deps: [init]

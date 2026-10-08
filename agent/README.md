@@ -13,6 +13,24 @@ cp .env.example .env
 uvicorn app.main:app --host 0.0.0.0 --port 8010
 ```
 
+## AKShare 文档 RAG 索引（构建期）
+
+`/prompt` 管线的 `fetch_market_data` 节点用 RAG 检索 AKShare 官方文档来挑选行情接口。
+检索索引是 `app/akshare_docs_data/chunks.jsonl`，随仓库提交，**运行服务不需要联网爬文档**。
+
+文档随 AKShare 版本演进，升级 `requirements.txt` 里的 `akshare` 后重建索引：
+
+```bash
+task agent:rag:build          # 等价于：cd agent && ./.venv/bin/python scripts/build_akshare_rag.py
+# 脚本选项：
+#   --parse-only   只重新切块（复用上次的 HTML 缓存）
+#   --docs-dir X   自定义 HTML 缓存目录（默认 agent/.akshare_docs_cache，构建后自动清理）
+#   --keep-html    保留 HTML 缓存
+```
+
+流程：爬 `akshare.akfamily.xyz`（52 页，限速抓取）→ 按 `<section>` 切块（一个接口一块，约 1500 块）→
+写入 `chunks.jsonl` → 自动校验（核心接口必须可检索、块数异常时拒绝覆盖旧索引）。
+
 ## 接口
 
 - `GET /health`

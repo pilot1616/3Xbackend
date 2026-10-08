@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import json
 import re
 from typing import Any, TypedDict
 
 from langgraph.graph import END, StateGraph
 
+from .akshare_tool import AkshareToolError, call_akshare, format_result_for_prompt
 from .db import QueryResult
 from .llm import LLMClient, LLMLogger
+from .market_rag import search_interfaces
 
 
 MARKET_DATA_RULES = (
@@ -26,6 +29,27 @@ MARKET_DATA_RULES = (
 
 MARKET_TABLES = ("precious_metal_snapshots", "tech_market_snapshots")
 AI_TABLE = "ai_daily_snapshots"
+
+# 外部行情意图关键词：命中才走 akshare 取数节点，避免每个请求都多付一次 LLM 调用。
+# 这些是"库里没有、必须远程取"的数据诉求；库内已有行情的常规分析不在此列。
+EXTERNAL_MARKET_KEYWORDS = (
+    "akshare",
+    "上金所", "上海黄金交易所", "上海金", "上海银",
+    "sge", "au99", "au9999", "ag99",
+    "现货金", "现货银", "现货价格", "金价", "银价",
+    "分时", "实时行情", "实时数据",
+    "美股", "港股", "纳斯达克", "纳斯达克指数", "道琼斯", "标普",
+    "期货", "主力合约", "连续合约", "基差",
+    "cpi", "lpr", "通胀", "物价指数", "贷款市场报价利率",
+    "前复权", "后复权", "复权",
+    "etf", "日线", "周线", "月线",
+    "历史行情", "历史数据", "历史k", "k线数据",
+)
+
+
+def needs_external_market_data(prompt: str) -> bool:
+    text = prompt.lower()
+    return any(keyword in text for keyword in EXTERNAL_MARKET_KEYWORDS)
 
 
 def select_tables_for_prompt(prompt: str, available_tables: list[str]) -> list[str]:
@@ -67,6 +91,24 @@ class AgentState(TypedDict, total=False):
     answer: str
     query_summary: str
     error: str
+    # akshare 外部行情取数结果（format_result_for_prompt 的文本），供 analyze_data 汇总。
+    market_data_text: str
+
+
+def _extract_json(text: str) -> str:
+    """从 LLM 回复中抠出第一个 JSON 对象（容忍 ```json 围栏与前后废话）。"""
+    start = text.find("{")
+    if start < 0:
+        raise ValueError(f"no json object in response: {text[:200]}")
+    depth = 0
+    for i in range(start, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+    raise ValueError(f"unbalanced json in response: {text[:200]}")
 
 
 def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
@@ -84,6 +126,52 @@ def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
             "query_summary": "",
             "error": "",
         }
+
+    def fetch_market_data(state: AgentState) -> AgentState:
+        """外部行情节点：RAG 选接口 -> LLM 定参数 -> akshare tool 远程取数。
+
+        意图不命中或取数失败都不阻断主管线，只留下空 market_data_text。
+        """
+        prompt = state["prompt"]
+        if not needs_external_market_data(prompt):
+            return {**state, "market_data_text": ""}
+
+        candidates = search_interfaces(prompt, topk=3)
+        if not candidates:
+            return {**state, "market_data_text": ""}
+        from .llm import build_stable_messages
+
+        catalog_text = "\n\n".join(
+            f"候选接口 {i + 1}：{c['interface']}\n文档：\n{c['doc']}" for i, c in enumerate(candidates)
+        )
+        system = (
+            "你是 AKShare 行情接口参数规划助手。根据用户问题和候选接口文档，"
+            "选择最合适的一个接口并给出调用参数。"
+            "只输出一行 JSON：{\"interface\": \"接口名\", \"arguments\": {参数名: 值}}，"
+            "不要解释，不要 Markdown。日期参数一律用 yyyymmdd 字符串。"
+            "如果所有候选接口都无法回答用户问题，输出 {\"interface\": \"\"}。"
+        )
+        dynamic = f"用户问题：{prompt}\n\n候选接口文档：\n{catalog_text}\n\n请输出 JSON。"
+        try:
+            decision = llm.chat(build_stable_messages(system, "输出约定：只输出一行 JSON。", dynamic), "")
+            payload = json.loads(_extract_json(decision.content))
+        except (ValueError, json.JSONDecodeError):
+            return {**state, "market_data_text": ""}
+
+        iface = str(payload.get("interface") or "")
+        if iface not in {c["interface"] for c in candidates}:
+            return {**state, "market_data_text": ""}
+        arguments = payload.get("arguments") or {}
+        if not isinstance(arguments, dict):
+            arguments = {}
+
+        try:
+            result = call_akshare(iface, {str(k): v for k, v in arguments.items()})
+        except AkshareToolError:
+            # 数据源失败降级为无外部数据，主管线继续走库内分析。
+            return {**state, "market_data_text": ""}
+
+        return {**state, "market_data_text": format_result_for_prompt(result)}
 
     def plan_query(state: AgentState) -> AgentState:
         from .db import list_tables, table_fingerprint
@@ -173,11 +261,17 @@ def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
         query_result = state.get("query_result")
         if query_result:
             result_text = f"SQL: {query_result.sql}\nCOLUMNS: {query_result.columns}\nROWS: {query_result.rows}"
+        market_data_text = state.get("market_data_text") or ""
+        market_block = (
+            f"\n\n外部行情数据（AKShare 实时获取）：\n{market_data_text}" if market_data_text else ""
+        )
         dynamic_user = (
             f"用户问题：{state['prompt']}\n\n"
             f"查询摘要：\n{state.get('query_summary', '')}\n\n"
-            f"查询结果：\n{result_text}\n\n"
+            f"查询结果：\n{result_text}"
+            f"{market_block}\n\n"
             "请输出：结论、依据、异常点、建议。"
+            + ("分析时必须引用外部行情数据的具体数字。" if market_data_text else "")
         )
         analysis = llm.analyze(build_stable_messages(stable_system, stable_instruction, dynamic_user), "")
         return {**state, "analysis": analysis, "answer": analysis or "LLM returned empty response"}
@@ -191,6 +285,7 @@ def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
 
     graph = StateGraph(AgentState)
     graph.add_node("parse_prompt", parse_prompt)
+    graph.add_node("fetch_market_data", fetch_market_data)
     graph.add_node("plan_query", plan_query)
     graph.add_node("generate_sql", generate_sql)
     graph.add_node("run_db_query", run_db_query)
@@ -198,7 +293,8 @@ def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
     graph.add_node("format_response", format_response)
 
     graph.set_entry_point("parse_prompt")
-    graph.add_edge("parse_prompt", "plan_query")
+    graph.add_edge("parse_prompt", "fetch_market_data")
+    graph.add_edge("fetch_market_data", "plan_query")
     graph.add_edge("plan_query", "generate_sql")
     graph.add_edge("generate_sql", "run_db_query")
     graph.add_edge("run_db_query", "analyze_data")
