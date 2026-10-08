@@ -38,10 +38,18 @@ from .context import (
     plan_segmenting,
     summarize_instruction,
 )
+from .akshare_tool import AkshareToolError, call_akshare, list_akshare_functions
 from .db import build_engine, execute_readonly_sql, schema_summary
 from .graph import MARKET_DATA_RULES, build_graph
 from .llm import LLMClient, build_stable_messages
-from .types import ChatRequest, ChatResponse, PromptRequest, PromptResponse
+from .types import (
+    AkshareCallRequest,
+    AkshareCallResponse,
+    ChatRequest,
+    ChatResponse,
+    PromptRequest,
+    PromptResponse,
+)
 
 GENERIC_AGENT_ERROR = "分析服务暂时不可用，请稍后重试"
 
@@ -103,6 +111,24 @@ async def verify_internal_token(request: Request, call_next):
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/akshare/tools")
+def akshare_tools() -> dict[str, object]:
+    """列出所有允许调用的 akshare 接口（OpenAI tools schema 格式）。"""
+    return {"tools": list_akshare_functions()}
+
+
+@app.post("/akshare/call", response_model=AkshareCallResponse)
+def akshare_call(request: AkshareCallRequest) -> AkshareCallResponse:
+    """执行一个白名单内的 akshare 接口，返回 JSON 安全的行情数据。"""
+    try:
+        result = call_akshare(request.interface, request.arguments)
+    except AkshareToolError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception:
+        raise HTTPException(status_code=502, detail="行情数据源暂时不可用，请稍后重试") from None
+    return AkshareCallResponse(**result)
 
 
 @app.post("/prompt", response_model=PromptResponse)

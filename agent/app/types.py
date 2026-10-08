@@ -37,3 +37,18 @@ class ChatResponse(BaseModel):
     sources: list[dict[str, Any]] = Field(default_factory=list)
     run_id: str
     error: str = ""
+
+
+class AkshareCallRequest(BaseModel):
+    interface: str = Field(min_length=1)
+    arguments: dict[str, Any] = Field(default_factory=dict)
+
+
+class AkshareCallResponse(BaseModel):
+    interface: str
+    arguments: dict[str, Any]
+    columns: list[str]
+    rows: list[dict[str, Any]]
+    total_rows: int
+    truncated: bool = False
+    error: str = ""

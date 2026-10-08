@@ -7,3 +7,10 @@ pydantic>=2.8,<3
 httpx>=0.27,<1
 pytest>=8.3,<10
 python-dotenv>=1.0,<2
+akshare>=1.18,<2
+jieba>=0.42,<1
+rank_bm25>=0.2,<1
+# 以下为构建期依赖：仅 scripts/build_akshare_rag.py 重建 RAG 索引时需要，运行服务不需要
+requests>=2.31,<3
+beautifulsoup4>=4.12,<5
+lxml>=5.0,<6
