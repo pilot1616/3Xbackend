@@ -244,3 +244,57 @@ export function deleteQuestionFile(qid: number, fileName: string) {
     method: 'DELETE',
   });
 }
+
+export interface AgentLogRun {
+  run_id: string;
+  conversation_id: string;
+  status: string;
+  prompt: string;
+  generated_sql: string | null;
+  query_summary: string | null;
+  error: string | null;
+  started_at: string;
+  finished_at: string | null;
+  latency_ms: number | null;
+}
+
+export interface AgentLogRunDetail extends AgentLogRun {
+  sources_json: string | null;
+  user_message_id: string;
+  assistant_message_id: string | null;
+  llm_calls: Array<{
+    log_id: string;
+    stage: string;
+    model: string;
+    request_json: unknown;
+    response_json: unknown;
+    error: string | null;
+    latency_ms: number | null;
+    created_at: string;
+  }>;
+}
+
+export interface AgentLogStats {
+  stage: string;
+  calls: number;
+  errors: number;
+  avg_seconds: number | null;
+  max_seconds: number | null;
+}
+
+export function listAgentLogRuns(params: { limit?: number; status?: string; search?: string } = {}) {
+  const query = new URLSearchParams();
+  if (params.limit) query.set('limit', String(params.limit));
+  if (params.status) query.set('status', params.status);
+  if (params.search) query.set('search', params.search);
+  const qs = query.toString();
+  return request<{ records: AgentLogRun[] }>(`/api/v1/admin/agent-logs${qs ? `?${qs}` : ''}`);
+}
+
+export function getAgentLogRunDetail(runID: string) {
+  return request<AgentLogRunDetail>(`/api/v1/admin/agent-logs/${encodeURIComponent(runID)}`);
+}
+
+export function getAgentLogStats(sinceHours = 168) {
+  return request<{ records: AgentLogStats[] }>(`/api/v1/admin/agent-logs?view=stats&since_hours=${sinceHours}`);
+}

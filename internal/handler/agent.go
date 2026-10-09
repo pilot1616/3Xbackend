@@ -156,6 +156,35 @@ func (h *AgentHandler) Prompt(c *gin.Context) {
 	h.proxy(c, http.MethodPost, "/prompt", body)
 }
 
+// AgentLogs proxies read-only LLM log queries to the agent service.
+// Mounted behind authGuard + adminGuard: only admins may audit LLM traffic.
+func (h *AgentHandler) AgentLogs(c *gin.Context) {
+	runID := strings.TrimSpace(c.Param("runID"))
+	path := "/logs/stats"
+	switch {
+	case runID != "":
+		path = "/logs/runs/" + url.PathEscape(runID)
+	case c.Query("view") == "stats":
+		path = "/logs/stats"
+	default:
+		path = "/logs/runs"
+	}
+
+	query := url.Values{}
+	if view := c.Query("view"); view != "" {
+		query.Set("view", view)
+	}
+	for _, key := range []string{"limit", "status", "search", "since_hours"} {
+		if value := c.Query(key); value != "" {
+			query.Set(key, value)
+		}
+	}
+	if encoded := query.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
+	h.proxy(c, http.MethodGet, path, nil)
+}
+
 func (h *AgentHandler) currentUser(c *gin.Context) (*service.UserResponse, bool) {
 	userIDValue, exists := c.Get(middleware.ContextUserIDKey)
 	if !exists {

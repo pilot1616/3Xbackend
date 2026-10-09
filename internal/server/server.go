@@ -103,6 +103,8 @@ func (s *Server) registerRoutes() {
 	adminSyncGroup.POST("/ai-tech", s.adminHandler.SyncFinancialLatest)
 	adminSyncGroup.POST("/ai-dailies", s.forumHandler.SyncAIDailies)
 	adminSyncGroup.POST("/full-history", s.adminHandler.SyncFullHistory)
+	adminGroup.GET("/agent-logs", s.agentHandler.AgentLogs)
+	adminGroup.GET("/agent-logs/:runID", s.agentHandler.AgentLogs)
 
 	agentGroup := api.Group("/agent")
 	agentGroup.Use(s.authGuard)

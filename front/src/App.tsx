@@ -7,6 +7,7 @@ import { AppShell } from './components/AppShell';
 const AIChatPage = lazy(() => import('./pages/AIChatPage').then((m) => ({ default: m.AIChatPage })));
 const AIDailyPage = lazy(() => import('./pages/AIDailyPage').then((m) => ({ default: m.AIDailyPage })));
 const AdminSyncPage = lazy(() => import('./pages/AdminSyncPage').then((m) => ({ default: m.AdminSyncPage })));
+const AdminAgentLogsPage = lazy(() => import('./pages/AdminAgentLogsPage').then((m) => ({ default: m.AdminAgentLogsPage })));
 const AnalysisPage = lazy(() => import('./pages/AnalysisPage').then((m) => ({ default: m.AnalysisPage })));
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })));
 const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
@@ -35,6 +36,7 @@ export default function App() {
             <Route element={<AnalysisPage />} path="analysis" />
             <Route element={<AIDailyPage />} path="ai-daily" />
             <Route element={<AdminSyncPage />} path="admin/sync" />
+            <Route element={<AdminAgentLogsPage />} path="admin/agent-logs" />
             <Route element={<PublishPage />} path="publish" />
             <Route element={<AIChatPage />} path="ai-chat" />
             <Route element={<Navigate replace to="/ai-chat" />} path="album" />

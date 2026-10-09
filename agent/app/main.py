@@ -41,6 +41,7 @@ from .context import (
 from .akshare_tool import AkshareToolError, call_akshare, list_akshare_functions
 from .db import build_engine, execute_readonly_sql, schema_summary
 from .graph import MARKET_DATA_RULES, build_graph, fetch_external_market_text
+from .logs_viewer import list_runs, run_detail, stage_stats
 from .llm import LLMClient, build_stable_messages
 from .types import (
     AkshareCallRequest,
@@ -129,6 +130,27 @@ def akshare_call(request: AkshareCallRequest) -> AkshareCallResponse:
     except Exception:
         raise HTTPException(status_code=502, detail="行情数据源暂时不可用，请稍后重试") from None
     return AkshareCallResponse(**result)
+
+
+# ---- LLM 日志只读查询（运维后门，Go 侧用 adminGuard 包一层）----
+
+
+@app.get("/logs/runs")
+def logs_runs(limit: int = 50, status: str = "", search: str = "") -> dict[str, object]:
+    return {"records": list_runs(engine, limit=limit, status=status, search=search)}
+
+
+@app.get("/logs/runs/{run_id}")
+def logs_run_detail(run_id: str) -> dict[str, object]:
+    detail = run_detail(engine, run_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    return detail
+
+
+@app.get("/logs/stats")
+def logs_stats(since_hours: int = 168) -> dict[str, object]:
+    return {"records": stage_stats(engine, since_hours=since_hours)}
 
 
 @app.post("/prompt", response_model=PromptResponse)
