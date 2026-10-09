@@ -59,6 +59,9 @@ services:
       LLM_BASE_URL: ${LLM_BASE_URL:-https://ai-api-gateway.app.baizhi.cloud/api/openai}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-dev/gpt-5.5}
+      LLM_SQL_MODEL: ${LLM_SQL_MODEL:-}
+      LLM_ANALYZE_MODEL: ${LLM_ANALYZE_MODEL:-}
+      LLM_TOOL_MODEL: ${LLM_TOOL_MODEL:-}
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
       AGENT_ALLOWED_TABLES: ${AGENT_ALLOWED_TABLES:-}
       AGENT_SAMPLE_ROW_LIMIT: ${AGENT_SAMPLE_ROW_LIMIT:-5}
