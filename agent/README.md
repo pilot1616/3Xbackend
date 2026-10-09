@@ -15,7 +15,9 @@ uvicorn app.main:app --host 0.0.0.0 --port 8010
 
 ## AKShare 文档 RAG 索引（构建期）
 
-`/prompt` 管线的 `fetch_market_data` 节点用 RAG 检索 AKShare 官方文档来挑选行情接口。
+`/prompt` 管线的 `fetch_market_data` 节点与 `/chat` 管线共用 `fetch_external_market_text`：
+意图命中时用 RAG 检索 AKShare 官方文档挑选行情接口，LLM 生成参数后调用白名单接口远程取数，
+数据注入 SQL 生成与回答两轮；普通请求零开销，取数失败静默降级。
 检索索引是 `app/akshare_docs_data/chunks.jsonl`，随仓库提交，**运行服务不需要联网爬文档**。
 
 文档随 AKShare 版本演进，升级 `requirements.txt` 里的 `akshare` 后重建索引：
@@ -52,6 +54,7 @@ task agent:rag:build          # 等价于：cd agent && ./.venv/bin/python scrip
 - `AGENT_ALLOWED_TABLES`：限制 SQL 只读查询可访问的表（逗号分隔）。**留空时默认允许七张表**：三张市场/AI 数据表（`ai_daily_snapshots`、`precious_metal_snapshots`、`tech_market_snapshots`）加论坛公开内容（`questions`、`comments`、`question_files`、`question_likes`）；`users` 等含敏感信息的表任何默认配置下都不可查。需要收窄或扩展时显式配置。
 - `CORS_ALLOWED_ORIGINS`：浏览器跨域白名单（逗号分隔）。留空时允许任意来源（不携带凭据），仅限本地开发。
 - `LLM_TIMEOUT_SECONDS`：单次 LLM 调用超时，默认 35 秒。两次调用 + 5 秒 SQL 超时的最坏路径低于 Go 代理的 90 秒上限。
+- 分 stage 模型配置：`LLM_SQL_MODEL`（生成 SQL）、`LLM_ANALYZE_MODEL`（分析结论）、`LLM_TOOL_MODEL`（akshare 接口参数规划）。任一项留空时回落到全局 `LLM_MODEL`，只配 `LLM_MODEL` 即可全站生效。
 - `AGENT_SAMPLE_ROW_LIMIT`：采样行数上限。
 
 内置行为：

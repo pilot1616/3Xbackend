@@ -40,6 +40,11 @@ class Settings:
     llm_base_url: str = _env("LLM_BASE_URL", "https://ai-api-gateway.app.baizhi.cloud/api/openai")
     llm_api_key: str = _env("LLM_API_KEY", "")
     llm_model: str = _env("LLM_MODEL", "dev/gpt-5.5")
+    # 按 stage 覆盖模型：留空回落到 LLM_MODEL。SQL 生成要严谨、akshare
+    # 参数规划是轻量结构化输出，允许用不同（如更便宜/更强）的模型。
+    llm_sql_model: str = _env("LLM_SQL_MODEL", "")
+    llm_analyze_model: str = _env("LLM_ANALYZE_MODEL", "")
+    llm_tool_model: str = _env("LLM_TOOL_MODEL", "")
     llm_timeout_seconds: int = _env_int("LLM_TIMEOUT_SECONDS", 35)
     allowed_tables: str = _env("AGENT_ALLOWED_TABLES", "")
     sample_row_limit: int = _env_int("AGENT_SAMPLE_ROW_LIMIT", 5)
@@ -59,6 +64,16 @@ class Settings:
         if not self.cors_allowed_origins:
             return []
         return [item.strip() for item in self.cors_allowed_origins.split(",") if item.strip()]
+
+    def model_for_stage(self, stage: str) -> str:
+        """按调用用途取模型；对应配置留空时统一回落到全局 LLM_MODEL。"""
+        if stage == "sql":
+            return self.llm_sql_model or self.llm_model
+        if stage == "analyze":
+            return self.llm_analyze_model or self.llm_model
+        if stage == "tool":
+            return self.llm_tool_model or self.llm_model
+        return self.llm_model
 
     @property
     def db_url(self) -> str:

@@ -111,6 +111,54 @@ def _extract_json(text: str) -> str:
     raise ValueError(f"unbalanced json in response: {text[:200]}")
 
 
+def fetch_external_market_text(prompt: str, llm: LLMClient) -> str:
+    """外部行情取数（RAG 选接口 -> LLM 定参数 -> akshare tool 执行）。
+
+    供 LangGraph 节点与 /chat 管线共用；任何一步失败都返回空字符串降级，
+    绝不抛异常打断主管线。
+    """
+    from .llm import build_stable_messages
+
+    if not needs_external_market_data(prompt):
+        return ""
+
+    candidates = search_interfaces(prompt, topk=3)
+    if not candidates:
+        return ""
+
+    catalog_text = "\n\n".join(
+        f"候选接口 {i + 1}：{c['interface']}\n文档：\n{c['doc']}" for i, c in enumerate(candidates)
+    )
+    system = (
+        "你是 AKShare 行情接口参数规划助手。根据用户问题和候选接口文档，"
+        "选择最合适的一个接口并给出调用参数。"
+        "只输出一行 JSON：{\"interface\": \"接口名\", \"arguments\": {参数名: 值}}，"
+        "不要解释，不要 Markdown。日期参数一律用 yyyymmdd 字符串。"
+        "如果所有候选接口都无法回答用户问题，输出 {\"interface\": \"\"}。"
+    )
+    dynamic = f"用户问题：{prompt}\n\n候选接口文档：\n{catalog_text}\n\n请输出 JSON。"
+    try:
+        decision = llm.chat(build_stable_messages(system, "输出约定：只输出一行 JSON。", dynamic), "", stage="tool")
+        payload = json.loads(_extract_json(decision.content))
+    except (ValueError, json.JSONDecodeError):
+        return ""
+
+    iface = str(payload.get("interface") or "")
+    if iface not in {c["interface"] for c in candidates}:
+        return ""
+    arguments = payload.get("arguments") or {}
+    if not isinstance(arguments, dict):
+        arguments = {}
+
+    try:
+        result = call_akshare(iface, {str(k): v for k, v in arguments.items()})
+    except AkshareToolError:
+        # 数据源失败降级为无外部数据，主管线继续走库内分析。
+        return ""
+
+    return format_result_for_prompt(result)
+
+
 def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
     llm = LLMClient(logger=llm_logger)
 
@@ -128,50 +176,8 @@ def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
         }
 
     def fetch_market_data(state: AgentState) -> AgentState:
-        """外部行情节点：RAG 选接口 -> LLM 定参数 -> akshare tool 远程取数。
-
-        意图不命中或取数失败都不阻断主管线，只留下空 market_data_text。
-        """
-        prompt = state["prompt"]
-        if not needs_external_market_data(prompt):
-            return {**state, "market_data_text": ""}
-
-        candidates = search_interfaces(prompt, topk=3)
-        if not candidates:
-            return {**state, "market_data_text": ""}
-        from .llm import build_stable_messages
-
-        catalog_text = "\n\n".join(
-            f"候选接口 {i + 1}：{c['interface']}\n文档：\n{c['doc']}" for i, c in enumerate(candidates)
-        )
-        system = (
-            "你是 AKShare 行情接口参数规划助手。根据用户问题和候选接口文档，"
-            "选择最合适的一个接口并给出调用参数。"
-            "只输出一行 JSON：{\"interface\": \"接口名\", \"arguments\": {参数名: 值}}，"
-            "不要解释，不要 Markdown。日期参数一律用 yyyymmdd 字符串。"
-            "如果所有候选接口都无法回答用户问题，输出 {\"interface\": \"\"}。"
-        )
-        dynamic = f"用户问题：{prompt}\n\n候选接口文档：\n{catalog_text}\n\n请输出 JSON。"
-        try:
-            decision = llm.chat(build_stable_messages(system, "输出约定：只输出一行 JSON。", dynamic), "")
-            payload = json.loads(_extract_json(decision.content))
-        except (ValueError, json.JSONDecodeError):
-            return {**state, "market_data_text": ""}
-
-        iface = str(payload.get("interface") or "")
-        if iface not in {c["interface"] for c in candidates}:
-            return {**state, "market_data_text": ""}
-        arguments = payload.get("arguments") or {}
-        if not isinstance(arguments, dict):
-            arguments = {}
-
-        try:
-            result = call_akshare(iface, {str(k): v for k, v in arguments.items()})
-        except AkshareToolError:
-            # 数据源失败降级为无外部数据，主管线继续走库内分析。
-            return {**state, "market_data_text": ""}
-
-        return {**state, "market_data_text": format_result_for_prompt(result)}
+        """外部行情节点：逻辑在 fetch_external_market_text（与 /chat 共用）。"""
+        return {**state, "market_data_text": fetch_external_market_text(state["prompt"], llm)}
 
     def plan_query(state: AgentState) -> AgentState:
         from .db import list_tables, table_fingerprint
@@ -231,7 +237,7 @@ def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
             f"上下文：{state.get('context', {})}\n\n"
             "请生成一条 MySQL 查询。"
         )
-        sql = llm.analyze(build_stable_messages(stable_system, stable_instruction, dynamic_user), "")
+        sql = llm.analyze(build_stable_messages(stable_system, stable_instruction, dynamic_user), "", stage="sql")
         return {**state, "schema": schema, "sql": sql.strip()}
 
     def run_db_query(state: AgentState) -> AgentState:
@@ -273,7 +279,7 @@ def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
             "请输出：结论、依据、异常点、建议。"
             + ("分析时必须引用外部行情数据的具体数字。" if market_data_text else "")
         )
-        analysis = llm.analyze(build_stable_messages(stable_system, stable_instruction, dynamic_user), "")
+        analysis = llm.analyze(build_stable_messages(stable_system, stable_instruction, dynamic_user), "", stage="analyze")
         return {**state, "analysis": analysis, "answer": analysis or "LLM returned empty response"}
 
     def format_response(state: AgentState) -> AgentState:

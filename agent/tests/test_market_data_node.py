@@ -64,11 +64,12 @@ class FakeLLM:
         self.content = content
         self.calls = 0
 
-    def chat(self, messages, stage):
+    def chat(self, messages, user_prompt="", stage=""):
         self.calls += 1
+        self.last_stage = stage
         return self
 
-    def analyze(self, system_prompt, user_prompt):
+    def analyze(self, system_prompt, user_prompt, stage=""):
         return self.content
 
 

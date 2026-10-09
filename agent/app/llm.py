@@ -56,10 +56,10 @@ class LLMClient:
         self._logger = logger
         self._stage_count = 0
 
-    def analyze(self, system_prompt: str, user_prompt: str) -> str:
-        return self.chat(system_prompt, user_prompt).content
+    def analyze(self, system_prompt: str, user_prompt: str, stage: str = "") -> str:
+        return self.chat(system_prompt, user_prompt, stage=stage).content
 
-    def chat(self, system_prompt: str, user_prompt: str) -> LLMCallResult:
+    def chat(self, system_prompt: str, user_prompt: str, stage: str = "") -> LLMCallResult:
         # 兼容旧签名：system_prompt 传 list 时直接作为完整 messages 使用（稳定前缀模式）。
         messages = (
             list(system_prompt)
@@ -69,8 +69,9 @@ class LLMClient:
                 {"role": "user", "content": user_prompt},
             ]
         )
+        model = settings.model_for_stage(stage) if stage else settings.llm_model
         payload = {
-            "model": settings.llm_model,
+            "model": model,
             "messages": messages,
             "stream": False,
         }
@@ -108,7 +109,7 @@ class LLMClient:
         self._stage_count += 1
         stage = "graph_llm_call" if self._stage_count > 1 else "graph_generate_sql"
         try:
-            self._logger(stage, settings.llm_model, request, response, latency_ms, error)
+            self._logger(stage, str(request.get("model") or settings.llm_model), request, response, latency_ms, error)
         except Exception:
             pass
 
