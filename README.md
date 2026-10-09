@@ -26,6 +26,8 @@
 - AI 联动分析页：AI 日报主题趋势、市场趋势、综合联动判断
 - AI 日报独立栏目：日报检索、阅读、章节导航
 - 管理员后台同步控制台：同步最新数据、补齐完整历史数据、查看失败提示
+- 管理员 LLM 日志查看器：按请求浏览每次 LLM 调用的完整 prompt/响应/耗时/错误（`/admin/agent-logs`）
+- Agent 联动分析：数据库 SQL 分析 + AKShare 外部行情（上金所/美股/期货/宏观等 20 个白名单接口）按需融合
 - `data-fetch` 定时同步 AkShare 金融快照和历史数据
 - 启动后定时同步 `hex2077.dev` AI 日报数据
 - 独立 `data-fetch/` 服务：通过 AkShare 拉取最新金融快照和历年金融历史数据
@@ -217,6 +219,19 @@ vi .env
 - `GET /conversations`
 - `GET /conversations/{conversation_id}/messages`
 - `POST /chat`
+- `GET /akshare/tools`、`POST /akshare/call`：AKShare 白名单接口的目录与受控执行（调试用）
+- `GET /logs/runs`、`GET /logs/runs/{run_id}`、`GET /logs/stats`：LLM 日志只读查询（运维后门）
+
+核心行为：
+
+- `/prompt` 走 LangGraph 管线：`parse_prompt → fetch_market_data → plan_query → generate_sql → run_db_query → analyze_data`
+- `/chat` 是带会话历史的多轮流程，两次 LLM 调用（生成 SQL → 归纳回答），带坏 SQL 自修复
+- 两条管线的用户问题命中外部行情意图（上金所/现货金银/美股港股/期货/分时/复权/CPI/LPR/ETF 等关键词）时，
+  共用 `fetch_external_market_text`：RAG 检索 AKShare 官方文档选接口（索引在 `agent/app/akshare_docs_data/chunks.jsonl`，
+  随仓库提交，升级 akshare 版本后用 `task agent:rag:build` 重建）→ LLM 定参数 → 白名单执行 → 数据注入回答
+- 普通请求不触发外部取数，零额外开销；取数失败静默降级，不阻断回答
+- 每次请求写入 `agent_runs` 审计总账，每次 LLM 调用写入 `agent_llm_logs`（stage/model/请求/响应/错误/耗时），
+  可通过管理员日志页查看（见下文「管理员后台」）
 
 浏览器不直连 agent，统一走 Go 后端的 `/api/v1/agent/*` 代理接口。
 
@@ -272,6 +287,9 @@ task startup:init
 - `/analysis`：展示 AI 主题趋势、市场趋势和综合联动判断
 - `/ai-daily`：只展示 AI 日报内容阅读、搜索和翻页
 - `/admin/sync`：管理员后台同步控制台，支持同步最新数据和一次性补齐完整历史数据
+- `/admin/agent-logs`：管理员 LLM 日志查看器（终端风格），展示阶段统计、请求总账和单次请求的全部 LLM 调用明细；
+  数据走 `GET /api/v1/admin/agent-logs[/:runID]`（authGuard + adminGuard 双重保护），代理到 agent 的只读 `/logs/*` 接口。
+  生产环境需要配置 `AUTH_ADMIN_USERNAMES` 指定管理员账号，否则无人可访问
 
 说明：`/analysis` 页面本身不直接抓取外部站点，它消费后端已经入库的 AI 日报和市场快照；因此首次查看前，建议先确保市场与 AI 日报同步任务至少跑过一轮。
 
@@ -463,6 +481,7 @@ brew install go-task/tap/go-task
 - `task startup:init`：初始化历年金融数据、AI 日报全量和论坛演示数据
 - `task ai:daily:sync`：手动执行 AI 日报同步
 - `task agent`：运行 Agent 服务
+- `task agent:rag:build`：重建 AKShare 文档 RAG 索引（升级 akshare 版本后执行）
 - `task compose:up`：启动完整 Compose 环境
 - `task compose:down`：关闭完整 Compose 环境
 
@@ -483,6 +502,7 @@ brew install go-task/tap/go-task
 - `AUTH_ALLOW_DEFAULT_SECRET`
 - `CORS_ALLOWED_ORIGINS`（逗号分隔的跨域白名单；留空表示允许任意来源，仅限本地开发）
 - `AUTH_TOKEN_EXPIRE_HOURS`
+- `AUTH_ADMIN_USERNAMES`（逗号分隔的管理员用户名列表；`/admin/sync`、`/admin/agent-logs` 等管理页要求命中，默认为空即无人是管理员）
 - `STORAGE_PUBLIC_DIR`
 - `STORAGE_IMAGE_DIR`
 - `STORAGE_UPLOAD_DIR`

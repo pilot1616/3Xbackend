@@ -1515,6 +1515,20 @@ Agent（LangGraph + LLM 分析服务）独立运行在 `8010` 端口，由 Go �
 - 取数失败或 LLM 决策无效时静默降级为无外部数据，不影响主管线
 - 直接调用接口（调试用）：`GET /api/v1/agent/akshare/tools` 列出 20 个白名单接口；`POST /api/v1/agent/akshare/call`（`{"interface": "spot_hist_sge", "arguments": {"symbol": "Au99.99"}}`）执行调用，目录外接口返回 `400`
 
+### `GET /api/v1/admin/agent-logs`（LLM 日志查看）
+
+仅管理员（`AUTH_ADMIN_USERNAMES` 配置的账号）。只读查询 agent 的审计日志，供前端 `/admin/agent-logs` 页面使用。
+三种视图由代理层路由：
+
+- `GET /api/v1/admin/agent-logs?limit=50&status=failed&search=黄金` — 最近的 run 总账列表
+  （`run_id`、状态、问题摘要、生成 SQL 摘要、错误、耗时；`limit` 上限 200，`search` 模糊匹配 prompt）
+- `GET /api/v1/admin/agent-logs/{runID}` — 单次 run 明细：完整问题、SQL、来源、错误，附 `llm_calls` 数组
+  （该 run 的每次 LLM 调用：`stage`、`model`、完整 `request_json`/`response_json`、`error`、`latency_ms`）
+- `GET /api/v1/admin/agent-logs?view=stats&since_hours=168` — 按 stage 聚合统计（调用量/错误数/平均与最大耗时，默认最近 7 天）
+
+stage 取值：`generate_sql`/`generate_sql_repair`/`analyze_data`（/chat 流程）、`graph_generate_sql`/`graph_llm_call`（/prompt 管线）、`fetch_market_data`（chat 侧外部行情取数）。
+run 不存在时返回 `404`；未登录 `401`、非管理员 `403`。
+
 ## 已移除的旧前端接口
 
 以下旧接口曾用于兼容 `example/` 目录下的旧前端，因为不校验身份（请求体自报用户名即可冒充任意用户删帖、发帖），存在安全风险，已全部移除：
