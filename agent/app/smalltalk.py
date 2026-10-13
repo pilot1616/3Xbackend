@@ -1,67 +1,60 @@
 # -*- coding: utf-8 -*-
-"""闲聊意图识别：判断 /chat 消息是否无需查库即可回答。
+"""闲聊意图判断：由 LLM 分类，替代写死的关键词规则。
 
-纯规则、零 LLM 开销：问候/身份/感谢/告别/闲聊类消息直接走对话路径，
-跳过 SQL 生成与"结论/依据/风险/建议"分析模板。判定采取保守策略——
-只要消息里出现任何数据诉求信号（标的、指标、行情词、数据表字段词），
-一律视为业务问题走原管线，宁可多查一次库也不吞掉正经提问。
+问候/身份/感谢/玩笑等闲聊消息无需查库，走直答快车道；业务问题走
+SQL 管线。判断由一轮轻量 LLM 调用完成，带最近对话历史，能正确处理
+"继续"、"接着说"这类依赖上下文的指代。
+
+保守策略：LLM 回复解析失败、输出不合法时一律视为业务问题（宁可多查
+一次库，不吞掉正经提问）。
 """
 from __future__ import annotations
 
-import re
+import json
+from typing import Any
 
-# 显式数据诉求：命中任何一条都绝不当成闲聊。
-DATA_SIGNALS = (
-    # 标的与指标
-    "黄金", "白银", "铂金", "钯金", "铜", "镍", "铝", "锌", "金", "银",
-    "xau", "xag", "xpt", "xpd", "xauusd", "xagusd",
-    "股票", "股价", "美股", "港股", "a股", "基金", "etf", "指数",
-    "英伟达", "苹果", "微软", "amd", "博通", "台积电", "特斯拉",
-    "aapl", "msft", "nvda", "amd", "avgo", "tsm", "ndx", "qqq", "xlk", "smh", "igv", "soxx",
-    "价格", "行情", "走势", "k线", "涨", "跌", "涨幅", "跌幅", "收盘", "开盘",
-    "市值", "市盈率", "估值", "pe", "贝塔", "beta", "成交量",
-    "现货", "期货", "合约", "金交所", "上金所",
-    # 数据与报表
-    "日报", "ai日报", "资讯", "新闻", "数据", "查询", "统计", "分析", "趋势",
-    "最近", "历史", "今天", "昨天", "本周", "上周", "本月", "上月", "最新",
-    "多少", "几", "排名", "对比", "联动", "相关性", "关系",
-    # 论坛业务
-    "帖子", "评论", "论坛", "问题", "回答", "用户",
+from .llm import LLMClient, build_stable_messages
+
+# 注入判断的历史条数上限（最近 N 条原文，含 user/assistant）。
+HISTORY_LIMIT = 6
+
+_SMALLTALK_SYSTEM = (
+    "你是聊天意图分类器。判断用户的最新消息是否属于「闲聊」："
+    "问候语、询问你的身份/能力、感谢、告别、玩笑、情绪表达等不需要查询任何数据就能回答的消息。"
+    "需要查数据的问题（行情、价格、日报、统计、对比等）不是闲聊；"
+    "依赖历史对话才能理解的「继续」「接着说」不算闲聊，除非历史显示只是在寒暄。"
+    "只输出一行 JSON，不要解释，不要 Markdown："
+    '{"smalltalk": true 或 false, "type": "greeting/identity/thanks/farewell/joke/business"}'
 )
 
-# 明确的闲聊信号。
-GREETING_RE = re.compile(
-    r"^(你好|您好|hi|hello|hey|哈喽|嗨|早上好|上午好|下午好|晚上好|早安|晚安|"
-    r"在吗|在么|你是谁|你叫什么|你是什么|自我介绍|介绍一下你自己)[!！。~～?？\s]*$",
-    re.IGNORECASE,
-)
-THANKS_RE = re.compile(r"^(谢谢|感谢|多谢|辛苦了|thx|thanks|thank you|好的|嗯+|哦+|收到|明白|了解|ok|okay)[!！。~～\s]*$", re.IGNORECASE)
-FAREWELL_RE = re.compile(r"^(拜拜|再见|下次见|bye|goodbye|晚安)[!！。~～\s]*$", re.IGNORECASE)
-
-# 身份/能力闲聊：句子里问"你是/你会/你能"但没有具体数据诉求。
-IDENTITY_RE = re.compile(r"你是|你会|你能|你是小狗|是小狗|名字|谁做的|谁开发|什么模型")
-
-# 无数据诉求的短句（寒暄、玩笑、情绪表达）：交给闲聊路径自由发挥。
-_CHITCHAT_MAX_LEN = 20
+_SMALLTALK_INSTRUCTION = "输出约定：只输出一行 JSON。"
 
 
-def is_smalltalk(message: str) -> bool:
-    """判断消息是否为无需查库的闲聊。
+def classify_message(llm: LLMClient, message: str, history: list[dict[str, Any]] | None = None) -> bool:
+    """返回 True 表示消息是闲聊（走直答）；False 或判断失败表示业务问题。"""
+    history_text = ""
+    for item in (history or [])[-HISTORY_LIMIT:]:
+        role = str(item.get("role") or "user")
+        content = str(item.get("content") or "")[:200]
+        history_text += f"{role}: {content}\n"
 
-    顺序很重要：先排除数据诉求，再匹配闲聊模式；超长文本永远不是闲聊。
-    """
-    text = (message or "").strip()
-    if not text or len(text) > _CHITCHAT_MAX_LEN:
+    dynamic = f"最新消息：{message}"
+    if history_text:
+        dynamic = f"[最近对话]\n{history_text}\n{dynamic}"
+
+    try:
+        result = llm.chat(
+            build_stable_messages(_SMALLTALK_SYSTEM, _SMALLTALK_INSTRUCTION, dynamic),
+            "",
+            stage="tool",
+        )
+        text = result.content.strip()
+        start = text.find("{")
+        end = text.rfind("}")
+        if start < 0 or end <= start:
+            return False
+        payload = json.loads(text[start : end + 1])
+    except Exception:
+        # 分类失败保守降级为业务问题。
         return False
-
-    lowered = text.lower()
-    if any(signal in lowered for signal in DATA_SIGNALS):
-        return False
-
-    if GREETING_RE.match(text) or THANKS_RE.match(text) or FAREWELL_RE.match(text):
-        return True
-    if IDENTITY_RE.search(text):
-        return True
-
-    # 其余情况视为业务问题，走查库管线（保守：不猜）。
-    return False
+    return payload.get("smalltalk") is True

@@ -43,7 +43,7 @@ from .db import build_engine, execute_readonly_sql, schema_summary
 from .graph import MARKET_DATA_RULES, build_graph, fetch_external_market_text, market_query_result_is_insufficient
 from .logs_viewer import list_runs, run_detail, stage_stats
 from .llm import LLMClient, build_stable_messages
-from .smalltalk import is_smalltalk
+from .smalltalk import classify_message
 from .types import (
     AkshareCallRequest,
     AkshareCallResponse,
@@ -274,9 +274,10 @@ def chat(request: ChatRequest) -> ChatResponse:
     run_id = create_run(engine, conversation_id, user_message_id, request.message)
 
     try:
-        # 闲聊直答：问候/身份/感谢/玩笑类消息无需查库，跳过 SQL 与分析模板，
-        # 用同一份 system 角色 + 历史（不含 schema，省 token）单轮回答。
-        if is_smalltalk(request.message):
+        # 闲聊直答：由 LLM 判断消息是否为问候/身份/玩笑类闲聊（一轮轻量调用，
+        # 带最近历史以理解"继续"等指代）。闲聊跳过 SQL 与分析模板单轮直答；
+        # 业务问题或判断失败都走完整查库管线。
+        if classify_message(llm, request.message, recent):
             smalltalk_system = (
                 "你是企业内部 AI 金融分析助手，负责分析贵金属、科技市场行情和 AI 日报数据。"
                 "用户当前的消息是日常寒暄、身份询问或玩笑类闲聊，不需要查询任何数据："

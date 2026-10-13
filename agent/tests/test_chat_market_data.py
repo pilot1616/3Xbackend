@@ -11,12 +11,13 @@ class _FakeChatResult(SimpleNamespace):
 
 
 def _make_llm(content_by_stage: dict[str, str], calls: list):
-    """stage -> content 的假 LLM；记录每次调用。"""
+    """stage -> content 的假 LLM；记录每次调用。tool 分类默认判为业务问题。"""
 
     def chat(messages, user_prompt, stage=""):
         calls.append(stage)
+        content = content_by_stage.get(stage, '{"smalltalk": false}' if stage == "tool" else "ok")
         return SimpleNamespace(
-            content=content_by_stage.get(stage, "ok"),
+            content=content,
             request={"model": "fake-model", "messages": messages},
             response={},
             latency_ms=1,
@@ -63,9 +64,9 @@ def test_chat_fetches_market_data_only_when_db_result_empty(monkeypatch) -> None
 
     assert captured["prompt"] == "查一下上海黄金交易所Au99.99最近行情"
     assert response.reply == "结论：金价480"
-    # 取数发生在 SQL 执行之后，回答轮动态输入携带外部行情块
-    assert calls[0] == "sql"
-    assert "analyze" in calls
+    # 第一个 LLM 调用是 smalltalk 分类（tool），其后才是 SQL 生成
+    assert calls[0] == "tool"
+    assert "sql" in calls and "analyze" in calls
 
 
 def test_chat_skips_market_fetch_when_db_result_has_rows(monkeypatch) -> None:
@@ -146,7 +147,8 @@ def test_chat_skips_market_fetch_for_plain_question(monkeypatch) -> None:
     # 意图门控在 fetch_external_market_text 内部短路：函数被调用但不发起任何 LLM/RAG 工作
     assert fetch_calls == ["总结一下论坛里关于基金的讨论"]
     assert response.reply == "普通回答"
-    assert not any("tool" in stage for stage in calls)
+    # 分类器的 tool 调用必有；akshare 参数规划的 tool 调用不应出现（只有一次 tool）
+    assert calls.count("tool") == 1
 
 
 def test_chat_market_fetch_failure_degrades(monkeypatch) -> None:
