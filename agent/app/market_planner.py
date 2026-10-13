@@ -267,4 +267,40 @@ def run_market_plan(llm: LLMClient, prompt: str, search_doc) -> str:
         parts.append(
             f"[步骤{r['step']}] {r['purpose']}（{r['interface']}）：{_result_digest(r['result'], hints)}"
         )
-    return "\n\n".join(parts)
+    raw_text = "\n\n".join(parts)
+    if not raw_text:
+        return ""
+
+    # analyst 节点：从原始步骤产出中筛选、核对、提炼事实清单。
+    # 失败时保守回落到原始摘要文本（筛不动至少不丢数据）。
+    curated = analyze_market_data(llm, prompt, raw_text)
+    return curated if curated else raw_text
+
+
+_ANALYST_SYSTEM = (
+    "你是行情数据分析师，负责整理外部接口取回的原始数据，供后续回答使用。"
+    "输入是若干步骤的原始接口产出（可能含大量无关行、重复信息或失败步骤）。"
+    "请筛选与用户问题直接相关的数据，输出一份紧凑的「数据事实清单」：\n"
+    "1. 只保留回答问题需要的关键数字（最新价、日期、涨跌幅、市值等），剔除无关行；\n"
+    "2. 交叉核对一致性（如步骤间的名称与代码是否对应，日期口径是否最新）；\n"
+    "3. 必须注明数据边界：数据覆盖到哪个日期、是否截断、哪些字段缺失；\n"
+    "4. 不要给出投资结论或建议——结论由后续环节完成，你只输出事实；\n"
+    "5. 如果数据与问题无关或不足以回答，原样说明缺口，不要编造数字。"
+)
+
+
+def analyze_market_data(llm: LLMClient, prompt: str, raw_text: str) -> str:
+    """analyst 节点：把原始步骤产出整理成事实清单；任何失败返回空串（回落原文）。"""
+    if not raw_text or len(raw_text) < 50:
+        return ""
+    dynamic = f"用户问题：{prompt}\n\n原始取数结果：\n{raw_text}\n\n请输出数据事实清单。"
+    try:
+        result = llm.chat(
+            build_stable_messages(_ANALYST_SYSTEM, "输出约定：直接输出事实清单，纯文本。", dynamic),
+            "",
+            stage="tool",
+        )
+        text = (result.content or "").strip()
+        return text if len(text) >= 30 else ""
+    except Exception:
+        return ""

@@ -99,6 +99,44 @@ def test_run_market_plan_two_steps_end_to_end(monkeypatch) -> None:
     assert "华天科技" in text and "14.98" in text
 
 
+def test_run_market_plan_runs_analyst_after_steps(monkeypatch) -> None:
+    """步骤产出后走 analyst 节点：返回整理后的事实清单而非原始摘要。
+
+    单步计划的 LLM 调用次序：plan -> fill -> analyst（decide_next 对单步短路）。
+    """
+    llm = ScriptedLLM([
+        json.dumps([{"step": 1, "purpose": "直接取", "interface": "spot_hist_sge"}]),  # plan
+        "{}",  # step1 填参（无参数接口）
+        "事实清单：Au99.99 最新收盘 480.5（2024-01-02），数据覆盖至该日。",  # analyst
+    ])
+    monkeypatch.setattr(
+        market_planner, "call_akshare",
+        lambda name, arguments: {"interface": name, "arguments": arguments, "columns": ["date", "close"],
+                                  "rows": [{"date": "2024-01-02", "close": 480.5}], "total_rows": 1},
+    )
+    text = run_market_plan(llm, "上海金行情", lambda name: "doc")
+    assert text.startswith("事实清单：")
+    assert "480.5" in text
+    # analyst 是最后一次 tool 调用
+    assert llm.calls[-1][0] == "tool"
+
+
+def test_run_market_plan_falls_back_to_raw_when_analyst_fails(monkeypatch) -> None:
+    """analyst 输出过短/失败 -> 回落原始步骤摘要，不丢数据。"""
+    llm = ScriptedLLM([
+        json.dumps([{"step": 1, "purpose": "直接取", "interface": "spot_hist_sge"}]),  # plan
+        "{}",  # step1 填参
+        "嗯",  # analyst 返回过短
+    ])
+    monkeypatch.setattr(
+        market_planner, "call_akshare",
+        lambda name, arguments: {"interface": name, "arguments": arguments, "columns": ["date", "close"],
+                                  "rows": [{"date": "2024-01-02", "close": 480.5}], "total_rows": 1},
+    )
+    text = run_market_plan(llm, "上海金行情", lambda name: "doc")
+    assert "480.5" in text and "[步骤1]" in text  # 原始摘要仍在
+
+
 def test_run_market_plan_fails_fast_when_plan_dies(monkeypatch) -> None:
     """第一步就 fail（数据源没有该标的）-> 返回空文本降级。"""
     llm = ScriptedLLM([
