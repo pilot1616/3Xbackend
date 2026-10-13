@@ -68,6 +68,12 @@ CATALOG: dict[str, AkshareFunction] = {
         ),
         # ---- A 股 ----
         AkshareFunction(
+            name="stock_info_a_code_name",
+            description="东方财富/交易所-沪深京 A 股代码名称表（全市场，用于把中文名解析成股票代码，结果按行数截断）",
+            params={},
+            default_limit=50,
+        ),
+        AkshareFunction(
             name="stock_zh_a_hist",
             description="东方财富-沪深京 A 股日/周/月历史行情（当日收盘价需收盘后获取）",
             params={
@@ -291,10 +297,27 @@ def list_akshare_functions() -> list[dict[str, Any]]:
     ]
 
 
+def catalog_summary() -> list[dict[str, str]]:
+    """接口目录摘要（名称+描述），供多步规划器生成计划用。"""
+    return [{"name": fn.name, "description": fn.description} for fn in CATALOG.values()]
+
+
+def get_interface_doc(name: str) -> str:
+    """按接口名取文档文本：优先本地文档块，缺失时用目录元数据合成兜底。"""
+    from .market_rag import _catalog_bodies, _catalog_synthetic_body
+
+    if name not in CATALOG:
+        return f"接口 {name} 不在允许目录中"
+    body = _catalog_bodies().get(name)
+    return body if body else _catalog_synthetic_body(name)
+
+
 def format_result_for_prompt(result: dict[str, Any]) -> str:
     """把调用结果压成给 LLM 看的紧凑文本（省 token，保留全部关键列）。"""
-    if not result["rows"]:
-        return f"接口 {result['interface']} 返回 0 行"
+    interface = result.get("interface", "?")
+    arguments = result.get("arguments", {})
+    if not result.get("rows"):
+        return f"接口 {interface} 返回 0 行" + (f"（错误：{result['error']}）" if result.get("error") else "")
     head = json.dumps(result["rows"], ensure_ascii=False, default=str)
     note = f"（共 {result['total_rows']} 行，已截断）" if result.get("truncated") else f"（共 {result['total_rows']} 行）"
-    return f"接口 {result['interface']} {result['arguments']} 返回{note}：\n{head}"
+    return f"接口 {interface} {arguments} 返回{note}：\n{head}"
