@@ -159,6 +159,18 @@ def fetch_external_market_text(prompt: str, llm: LLMClient) -> str:
     return format_result_for_prompt(result)
 
 
+def market_query_result_is_insufficient(query_result) -> bool:
+    """判断库内查询结果是否"回答不了"当前问题。
+
+    只有结果为空（无行）时才视为不足；行数多寡不代表覆盖不足，
+    避免把正常的小结果集误判成需要远程取数。兼容 QueryResult 与 dict 形态。
+    """
+    if query_result is None:
+        return True
+    rows = query_result.get("rows") if isinstance(query_result, dict) else query_result.rows
+    return not rows
+
+
 def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
     llm = LLMClient(logger=llm_logger)
 
@@ -176,7 +188,9 @@ def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
         }
 
     def fetch_market_data(state: AgentState) -> AgentState:
-        """外部行情节点：逻辑在 fetch_external_market_text（与 /chat 共用）。"""
+        """外部行情降级节点：库内结果不足且意图命中时才远程取数（先查库后取数）。"""
+        if not market_query_result_is_insufficient(state.get("query_result")):
+            return {**state, "market_data_text": ""}
         return {**state, "market_data_text": fetch_external_market_text(state["prompt"], llm)}
 
     def plan_query(state: AgentState) -> AgentState:
@@ -299,11 +313,12 @@ def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
     graph.add_node("format_response", format_response)
 
     graph.set_entry_point("parse_prompt")
-    graph.add_edge("parse_prompt", "fetch_market_data")
-    graph.add_edge("fetch_market_data", "plan_query")
+    graph.add_edge("parse_prompt", "plan_query")
     graph.add_edge("plan_query", "generate_sql")
     graph.add_edge("generate_sql", "run_db_query")
-    graph.add_edge("run_db_query", "analyze_data")
+    # 先查库：库内结果不足且命中外部行情意图时，才降级远程取数。
+    graph.add_edge("run_db_query", "fetch_market_data")
+    graph.add_edge("fetch_market_data", "analyze_data")
     graph.add_edge("analyze_data", "format_response")
     graph.add_edge("format_response", END)
 

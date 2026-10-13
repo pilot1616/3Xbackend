@@ -87,7 +87,22 @@ tasks:
     deps: [init]
     cmds:
       - |
-        sh -c 'trap "kill 0" EXIT INT TERM; \
+        sh -c '
+        cleanup() {
+          [ -n "$PIDS" ] && kill -TERM $PIDS 2>/dev/null
+          sleep 1
+          [ -n "$PIDS" ] && kill -9 $PIDS 2>/dev/null
+          exit 0
+        }
+        trap cleanup EXIT INT TERM HUP
+        # 预清理：清掉上次异常退出（如双击 Ctrl+C 触发 SIGKILL 绕过 trap）留下的端口占用
+        for port in "${SERVER_PORT:-3000}" "${AGENT_PORT:-8010}" 5173; do
+          stale=$(lsof -ti tcp:"$port" -sTCP:LISTEN 2>/dev/null)
+          if [ -n "$stale" ]; then
+            echo "port $port occupied by stale process, killing: $stale"
+            kill -9 $stale 2>/dev/null
+          fi
+        done
         ( SERVER_PORT="${SERVER_PORT:-3000}" \
           DATABASE_MYSQL_USER="${DATABASE_MYSQL_USER:-root}" \
           DATABASE_MYSQL_PASSWORD="${DATABASE_MYSQL_PASSWORD:-root}" \
@@ -96,14 +111,15 @@ tasks:
           DATABASE_MYSQL_SCHEMA="${DATABASE_MYSQL_SCHEMA:-3X}" \
           AUTH_SECRET="${AUTH_SECRET:-3Xbackend-dev-secret}" \
           AUTH_ALLOW_DEFAULT_SECRET="${AUTH_ALLOW_DEFAULT_SECRET:-1}" \
-          go run ./cmd ) & \
+          go run ./cmd ) & PIDS="$!"
         ( cd agent && \
           [ -f .env ] && set -a && . ./.env && set +a || true; \
           unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY all_proxy; \
           PYTHON_BIN="./.venv/bin/python"; \
           [ -x "$PYTHON_BIN" ] || PYTHON_BIN="python3"; \
-          "$PYTHON_BIN" -m uvicorn app.main:app --host "${AGENT_HOST:-0.0.0.0}" --port "${AGENT_PORT:-8010}" ) & \
-        ( cd front && npm run dev -- --host 0.0.0.0 )'
+          "$PYTHON_BIN" -m uvicorn app.main:app --host "${AGENT_HOST:-0.0.0.0}" --port "${AGENT_PORT:-8010}" ) & PIDS="$PIDS $!"
+        ( cd front && npm run dev -- --host 0.0.0.0 ) & PIDS="$PIDS $!"
+        wait'
 
   dev:docker:
     desc: 启动 Docker MySQL 后进行本地前后端联调
@@ -199,6 +215,16 @@ tasks:
     deps: [init, db:up, db:wait]
     cmds:
       - task data:fetch
+
+  data:integrity:
+    desc: 检查 AI 日报与市场数据完整性并自动补数（--start 指定起始日期，--no-repair 只检查）
+    dir: data-fetch
+    cmds:
+      - |
+        [ -f .env ] && set -a && . ./.env && set +a || true; \
+        PYTHON_BIN="./.venv/bin/python"; \
+        [ -x "$PYTHON_BIN" ] || PYTHON_BIN="python3"; \
+        "$PYTHON_BIN" -m app.check_data_integrity {{.CLI_ARGS}}
 
   startup:init:
     desc: 启动初始化：历年金融数据、AI 日报全量、随机用户数据

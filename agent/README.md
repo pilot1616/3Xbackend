@@ -15,9 +15,10 @@ uvicorn app.main:app --host 0.0.0.0 --port 8010
 
 ## AKShare 文档 RAG 索引（构建期）
 
-`/prompt` 管线的 `fetch_market_data` 节点与 `/chat` 管线共用 `fetch_external_market_text`：
-意图命中时用 RAG 检索 AKShare 官方文档挑选行情接口，LLM 生成参数后调用白名单接口远程取数，
-数据注入 SQL 生成与回答两轮；普通请求零开销，取数失败静默降级。
+`/prompt` 管线的 `fetch_market_data` 节点与 `/chat` 管线共用 `fetch_external_market_text`，
+均遵循先查库、后取数：先生成并执行库内只读 SQL，仅当结果为空且意图命中时才用 RAG 检索
+AKShare 官方文档挑选行情接口，LLM 生成参数后调用白名单接口远程取数，数据注入回答轮；
+库内有数据、意图不命中或取数失败时都不发起远程调用，静默降级。
 检索索引是 `app/akshare_docs_data/chunks.jsonl`，随仓库提交，**运行服务不需要联网爬文档**。
 
 文档随 AKShare 版本演进，升级 `requirements.txt` 里的 `akshare` 后重建索引：

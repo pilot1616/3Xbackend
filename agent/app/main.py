@@ -40,7 +40,7 @@ from .context import (
 )
 from .akshare_tool import AkshareToolError, call_akshare, list_akshare_functions
 from .db import build_engine, execute_readonly_sql, schema_summary
-from .graph import MARKET_DATA_RULES, build_graph, fetch_external_market_text
+from .graph import MARKET_DATA_RULES, build_graph, fetch_external_market_text, market_query_result_is_insufficient
 from .logs_viewer import list_runs, run_detail, stage_stats
 from .llm import LLMClient, build_stable_messages
 from .types import (
@@ -273,12 +273,6 @@ def chat(request: ChatRequest) -> ChatResponse:
     run_id = create_run(engine, conversation_id, user_message_id, request.message)
 
     try:
-        # 外部行情：与 /prompt 的 fetch_market_data 节点共用同一逻辑；
-        # 意图不命中零开销，命中后任何失败都降级为空文本，不阻断聊天。
-        market_data_text = fetch_external_market_text(request.message, llm)
-        if market_data_text:
-            log_llm(engine, run_id, "fetch_market_data", settings.model_for_stage("tool"), {"interface": "akshare"}, {"rows": market_data_text[:2000]})
-
         # 前缀缓存要求"同一 stage 的多次请求"开头逐字节一致：
         # 共享 system（角色+规则+schema），stage 差异放在各自的 instruction 里，
         # 动态内容（问题/历史/查询结果）全部集中在最后一条 user。
@@ -300,17 +294,11 @@ def chat(request: ChatRequest) -> ChatResponse:
             "必须输出人能直接看懂的中文结论，绝对不要输出 SQL 或代码；"
             "结构为：结论、依据（引用具体数字）、风险、建议。"
         )
-        # 外部行情块注入 SQL 生成与回答两轮：前者用于联动分析，后者强制引用数字。
-        market_block = f"\n\n外部行情数据（AKShare 实时获取）：\n{market_data_text}" if market_data_text else ""
-        market_answer_rule = (
-            "\n分析时必须引用外部行情数据的具体数字。" if market_data_text else ""
-        )
 
         dynamic_for_sql = (
             f"用户问题：{request.message}\n\n"
             f"{history_text}\n\n"
-            f"上下文：{request.context}"
-            f"{market_block}\n\n"
+            f"上下文：{request.context}\n\n"
             "请生成一条能回答用户问题的 MySQL 查询。"
             + (f"\n{summarize_instruction()}" if plan.should_summarize else "")
         )
@@ -319,7 +307,7 @@ def chat(request: ChatRequest) -> ChatResponse:
             sql_call = llm.chat(sql_messages, "", stage="sql")
             log_llm(engine, run_id, "generate_sql", sql_call.request["model"], sql_call.request, sql_call.response, latency_ms=sql_call.latency_ms)
         except Exception as exc:
-            log_llm(engine, run_id, "generate_sql", settings.model_for_stage("sql"), {"messages": sql_messages}, None, error=str(exc))
+            log_llm(engine, run_id, "generate_sql", settings.model_for_stage("sql"), {"model": settings.model_for_stage("sql"), "messages": sql_messages}, None, error=str(exc))
             raise
 
         # 20 行足够分析用：结果行是 prompt 输入大头，直接决定第二轮耗时。
@@ -339,9 +327,20 @@ def chat(request: ChatRequest) -> ChatResponse:
                 sql_call = llm.chat(repair_messages, "", stage="sql")
                 log_llm(engine, run_id, "generate_sql_repair", sql_call.request["model"], sql_call.request, sql_call.response, latency_ms=sql_call.latency_ms)
             except Exception as exc:
-                log_llm(engine, run_id, "generate_sql_repair", settings.model_for_stage("sql"), {"messages": repair_messages}, None, error=str(exc))
+                log_llm(engine, run_id, "generate_sql_repair", settings.model_for_stage("sql"), {"model": settings.model_for_stage("sql"), "messages": repair_messages}, None, error=str(exc))
                 raise
             query_result = execute_readonly_sql(engine, sql_call.content, limit=20)
+        # 先查库后取数：库内结果不足（空结果）且问题命中外部行情意图时，
+        # 才降级走 akshare 远程取数；任何失败都降级为空文本，不阻断聊天。
+        market_data_text = ""
+        if market_query_result_is_insufficient(query_result):
+            market_data_text = fetch_external_market_text(request.message, llm)
+            if market_data_text:
+                log_llm(engine, run_id, "fetch_market_data", settings.model_for_stage("tool"), {"interface": "akshare"}, {"rows": market_data_text[:2000]})
+        market_block = f"\n\n外部行情数据（AKShare 实时获取）：\n{market_data_text}" if market_data_text else ""
+        market_answer_rule = (
+            "\n分析时必须引用外部行情数据的具体数字。" if market_data_text else ""
+        )
         visible_query_summary = f"columns={query_result.columns}\nrows={len(query_result.rows)}"
         sources = jsonable_encoder([{"sql": query_result.sql, "columns": query_result.columns, "rows": query_result.rows}])
 
@@ -359,7 +358,7 @@ def chat(request: ChatRequest) -> ChatResponse:
             answer_call = llm.chat(answer_messages, "", stage="analyze")
             log_llm(engine, run_id, "analyze_data", answer_call.request["model"], answer_call.request, answer_call.response, latency_ms=answer_call.latency_ms)
         except Exception as exc:
-            log_llm(engine, run_id, "analyze_data", settings.model_for_stage("analyze"), {"messages": answer_messages}, None, error=str(exc))
+            log_llm(engine, run_id, "analyze_data", settings.model_for_stage("analyze"), {"model": settings.model_for_stage("analyze"), "messages": answer_messages}, None, error=str(exc))
             raise
 
         reply_text, segment_summary = parse_reply_payload(answer_call.content)

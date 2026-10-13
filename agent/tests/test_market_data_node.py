@@ -89,9 +89,22 @@ def _make_graph_with(monkeypatch, llm, akshare_result=None, akshare_error=False)
 def test_fetch_market_node_skips_non_market_prompt(monkeypatch) -> None:
     llm = FakeLLM("")
     node = _make_graph_with(monkeypatch, llm)
-    state = node.invoke({"prompt": "分析AI日报主题热度", "market_data_text": None})
+    state = node.invoke({"prompt": "分析AI日报主题热度", "query_result": None, "market_data_text": None})
     assert state["market_data_text"] == ""
     assert llm.calls == 0  # 意图不命中不花 LLM 调用
+
+
+def test_fetch_market_node_skips_when_db_result_sufficient(monkeypatch) -> None:
+    """先查库后取数：库内有行时即使意图命中也不远程取数。"""
+    llm = FakeLLM("")
+    node = _make_graph_with(monkeypatch, llm)
+    state = node.invoke({
+        "prompt": "上海金交所最新行情",
+        "query_result": {"sql": "SELECT 1", "columns": ["price"], "rows": [{"price": "480"}]},
+        "market_data_text": None,
+    })
+    assert state["market_data_text"] == ""
+    assert llm.calls == 0  # 库内数据足够，一次 LLM 都不花
 
 
 def test_fetch_market_node_calls_tool_and_formats(monkeypatch) -> None:
@@ -105,7 +118,7 @@ def test_fetch_market_node_calls_tool_and_formats(monkeypatch) -> None:
         "truncated": False,
     }
     node = _make_graph_with(monkeypatch, llm, akshare_result=akshare_result)
-    state = node.invoke({"prompt": "查一下上海黄金交易所Au99.99的历史行情"})
+    state = node.invoke({"prompt": "查一下上海黄金交易所Au99.99的历史行情", "query_result": None})
     assert "spot_hist_sge" in state["market_data_text"]
     assert "480.5" in state["market_data_text"]
 
@@ -114,19 +127,19 @@ def test_fetch_market_node_rejects_off_candidate_interface(monkeypatch) -> None:
     # LLM 幻觉出候选之外（目录之外）的接口 -> 必须拒绝，不能执行。
     llm = FakeLLM('{"interface": "stock_zh_a_tick_163", "arguments": {}}')
     node = _make_graph_with(monkeypatch, llm, akshare_result={"rows": [{"x": 1}], "total_rows": 1, "interface": "x", "arguments": {}, "truncated": False})
-    state = node.invoke({"prompt": "上海金交所最新行情"})
+    state = node.invoke({"prompt": "上海金交所最新行情", "query_result": None})
     assert state["market_data_text"] == ""
 
 
 def test_fetch_market_node_survives_tool_error(monkeypatch) -> None:
     llm = FakeLLM('{"interface": "spot_hist_sge", "arguments": {"symbol": "Au99.99"}}')
     node = _make_graph_with(monkeypatch, llm, akshare_error=True)
-    state = node.invoke({"prompt": "上海金交所最新行情"})
+    state = node.invoke({"prompt": "上海金交所最新行情", "query_result": None})
     assert state["market_data_text"] == ""
 
 
 def test_fetch_market_node_survives_bad_llm_json(monkeypatch) -> None:
     llm = FakeLLM("我觉得应该用 spot_hist_sge，但是我不输出 JSON")
     node = _make_graph_with(monkeypatch, llm, akshare_result={"rows": [], "total_rows": 0, "interface": "x", "arguments": {}, "truncated": False})
-    state = node.invoke({"prompt": "上海金交所最新行情"})
+    state = node.invoke({"prompt": "上海金交所最新行情", "query_result": None})
     assert state["market_data_text"] == ""

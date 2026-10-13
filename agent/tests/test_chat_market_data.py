@@ -1,4 +1,4 @@
-"""chat 管线的外部行情接入测试：意图命中取数注入，普通问题零开销。"""
+"""chat 管线的外部行情接入测试：先查库，库内结果不足且意图命中才降级取数。"""
 
 from types import SimpleNamespace
 
@@ -25,7 +25,8 @@ def _make_llm(content_by_stage: dict[str, str], calls: list):
     return SimpleNamespace(chat=chat)
 
 
-def test_chat_injects_market_data_when_intent_hits(monkeypatch) -> None:
+def test_chat_fetches_market_data_only_when_db_result_empty(monkeypatch) -> None:
+    """库内查询结果为空（回答不了）且意图命中 -> 降级取数并注入。"""
     captured: dict[str, str] = {}
 
     def fake_fetch(prompt, llm):
@@ -62,9 +63,49 @@ def test_chat_injects_market_data_when_intent_hits(monkeypatch) -> None:
 
     assert captured["prompt"] == "查一下上海黄金交易所Au99.99最近行情"
     assert response.reply == "结论：金价480"
-    # SQL 与回答两轮的动态输入都必须携带外部行情块
-    sql_dynamic = fake_llm.chat and calls
-    assert "sql" in calls and "analyze" in calls
+    # 取数发生在 SQL 执行之后，回答轮动态输入携带外部行情块
+    assert calls[0] == "sql"
+    assert "analyze" in calls
+
+
+def test_chat_skips_market_fetch_when_db_result_has_rows(monkeypatch) -> None:
+    """先查库后取数：库内有行时即使意图命中也绝不远程取数。"""
+    fetch_calls: list[str] = []
+
+    def fake_fetch(prompt, llm):
+        fetch_calls.append(prompt)
+        return "不该被取到的外部数据"
+
+    monkeypatch.setattr(main, "fetch_external_market_text", fake_fetch)
+    monkeypatch.setattr(main, "ensure_chat_tables", lambda engine: None)
+    monkeypatch.setattr(main, "create_or_touch_conversation", lambda *a, **k: "conv1")
+    monkeypatch.setattr(main, "count_messages", lambda *a, **k: 0)
+    monkeypatch.setattr(main, "summarized_message_count", lambda *a, **k: 0)
+    monkeypatch.setattr(main, "list_summaries", lambda *a, **k: [])
+    monkeypatch.setattr(main, "recent_messages", lambda *a, **k: [])
+    monkeypatch.setattr(main, "add_message", lambda *a, **k: "msg1")
+    monkeypatch.setattr(main, "create_run", lambda *a, **k: "run1")
+    monkeypatch.setattr(main, "log_llm", lambda *a, **k: None)
+    monkeypatch.setattr(main, "schema_summary", lambda *a, **k: "mock schema")
+    monkeypatch.setattr(main, "execute_readonly_sql", lambda *a, **k: SimpleNamespace(sql="SELECT 1", columns=["price"], rows=[{"price": "480"}]))
+    monkeypatch.setattr(main, "finish_run", lambda *a, **k: None)
+    monkeypatch.setattr(main, "parse_reply_payload", lambda content: (content, ""))
+    monkeypatch.setattr(main, "upsert_summary", lambda *a, **k: None)
+
+    calls: list[str] = []
+    fake_llm = _make_llm({"sql": "SELECT 1", "analyze": "库内回答"}, calls)
+    monkeypatch.setattr(main, "LLMClient", lambda: fake_llm)
+
+    request = __import__("app.types", fromlist=["ChatRequest"]).ChatRequest(
+        conversation_id=None,
+        message="查一下上海黄金交易所Au99.99最近行情",
+        context={"source": "analysis-page-chat"},
+        user=__import__("app.types", fromlist=["AgentUser"]).AgentUser(id=1, username="u"),
+    )
+    response = main.chat(request)
+
+    assert fetch_calls == []  # 库内数据足够，不发起取数
+    assert response.reply == "库内回答"
 
 
 def test_chat_skips_market_fetch_for_plain_question(monkeypatch) -> None:
