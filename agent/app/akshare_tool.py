@@ -241,12 +241,21 @@ def validate_call(name: str, arguments: dict[str, Any]) -> AkshareFunction:
     return fn
 
 
+# 规划器专用元参数：按关键词在返回行内做本地过滤，过滤后再截断。
+# 不传给 akshare 本身，也不进白名单参数校验——只有 planner 的填参环节会用。
+ROW_FILTER_KEY = "_row_filter"
+
+
 def call_akshare(name: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
     """执行一个白名单内的 akshare 接口，返回 JSON 安全的 {columns, rows, total_rows}。
 
-    行数超过 fn.default_limit 时尾部截断，total_rows 保留真实行数供分析时说明。
+    arguments 可带 ROW_FILTER_KEY 元参数（关键词，任意行内字段命中即保留），
+    用于全市场大表（代码表、实时快照）：先过滤再截断，命中行才不会被
+    前 30 行截断吞掉。行数超过 fn.default_limit 时尾部截断，total_rows
+    保留真实行数供分析时说明。
     """
     arguments = {k: v for k, v in (arguments or {}).items() if v not in (None, "")}
+    row_filter = str(arguments.pop(ROW_FILTER_KEY, "") or "").strip()
     fn = validate_call(name, arguments)
 
     func: Callable[..., Any] = getattr(ak, name, None)
@@ -260,7 +269,16 @@ def call_akshare(name: str, arguments: dict[str, Any] | None = None) -> dict[str
         raise AkshareToolError(f"接口 {name} 调用失败: {str(exc)[:200]}") from exc
 
     if frame is None or len(frame) == 0:
-        return {"interface": name, "arguments": arguments, "columns": [], "rows": [], "total_rows": 0}
+        return {"interface": name, "arguments": arguments, "columns": [], "rows": [], "total_rows": 0,
+                "row_filter": row_filter or None}
+
+    if row_filter:
+        filter_lower = row_filter.lower()
+        mask = frame.apply(
+            lambda row: row.astype(str).str.lower().str.contains(filter_lower, regex=False).any(),
+            axis=1,
+        )
+        frame = frame[mask]
 
     limit = fn.default_limit
     columns = [str(c) for c in frame.columns]
@@ -271,6 +289,7 @@ def call_akshare(name: str, arguments: dict[str, Any] | None = None) -> dict[str
     return {
         "interface": name,
         "arguments": arguments,
+        "row_filter": row_filter or None,
         "columns": columns,
         "rows": rows,
         "total_rows": int(len(frame)),

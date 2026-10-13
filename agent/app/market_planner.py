@@ -36,7 +36,11 @@ _PLAN_SYSTEM = (
     f"- 最多 {MAX_STEPS} 步，每步调用一个接口；\n"
     '- 参数里可以引用前序步骤的结果，写法为 "$stepN.字段说明"，例如第一步查'
     ' "华天科技的代码"，第二步参数写 {"symbol": "$step1.代码"}；\n'
-    "- 如果问题需要先做名称到代码的解析（如 A股中文名），第一步应使用代码名称表接口；\n"
+    "- 全市场大表接口（A股代码名称表 stock_info_a_code_name、A股实时快照"
+    " stock_zh_a_spot_em）支持元参数 _row_filter：填用户问题里的标的名称关键词，"
+    "服务端会在全表行内过滤后再返回，务必带上，否则命中行会被截断吞掉；\n"
+    "- 如果问题需要先做名称到代码的解析（如 A股中文名），优先用 stock_info_a_code_name"
+    "（其数据源不稳定，若该步失败可将 stock_zh_a_spot_em + _row_filter 作为备选）；\n"
     "- 能一步取到就直接一步，不要为简单问题强行拆步。\n"
     '只输出一行 JSON 数组，不要解释，不要 Markdown：'
     '[{"step": 1, "purpose": "这一步取什么", "interface": "接口名"}, ...]'
@@ -45,7 +49,9 @@ _PLAN_SYSTEM = (
 _FILL_SYSTEM = (
     "你是 AKShare 接口参数填写助手。根据接口文档、用户问题和前序步骤的结果，"
     "为当前这一步填写调用参数。前序结果里如果有占位符引用的信息，直接用具体值替换。"
-    "日期参数一律用 yyyymmdd 字符串；只输出一行 JSON 参数对象，"
+    "日期参数一律用 yyyymmdd 字符串；全市场大表接口（stock_info_a_code_name、"
+    "stock_zh_a_spot_em）必须带 _row_filter 参数，值为用户问题里的标的名关键词"
+    "（如 中芯国际、紫金矿业）。只输出一行 JSON 参数对象，"
     "不要解释，不要 Markdown：{\"参数名\": \"值\", ...}"
 )
 
@@ -246,7 +252,18 @@ def run_market_plan(llm: LLMClient, prompt: str, search_doc) -> str:
         try:
             result = call_akshare(interface, arguments)
         except AkshareToolError:
-            result = {"interface": interface, "arguments": arguments, "columns": [], "rows": [], "total_rows": 0, "error": "调用失败"}
+            # 数据源偶发抖动/源站挂掉：换一次参数重试（LLM 重新填参），
+            # 仍失败才记为空结果。教训（错误信息）会出现在下一轮填参上下文里。
+            retry_args = fill_arguments(
+                llm, interface, interface_doc,
+                prompt, step["purpose"] + "（上次该接口调用失败，请换参数或用备选参数重试）",
+                step_results,
+            )
+            retry_args = _resolve_placeholders(retry_args, step_results)
+            try:
+                result = call_akshare(interface, retry_args)
+            except AkshareToolError:
+                result = {"interface": interface, "arguments": arguments, "columns": [], "rows": [], "total_rows": 0, "error": "调用失败（重试后仍失败）"}
         step_results.append({**step, "result": result})
 
         action = decide_next(llm, prompt, steps, step_results)
@@ -318,12 +335,14 @@ def _dataset_brief(step_results: list[dict[str, Any]]) -> str:
         rows = result.get("rows") or []
         columns = result.get("columns") or []
         error = f"，错误：{result['error']}" if result.get("error") else ""
+        row_filter = f"（已按「{result['row_filter']}」过滤）" if result.get("row_filter") else ""
         preview = json.dumps(rows[:BRIEF_ROWS], ensure_ascii=False, default=str) if rows else "（无数据行）"
         if len(preview) > 400:
             preview = preview[:400] + "…"
         blocks.append(
             f"[步骤{r['step']}] {r['purpose']}\n"
-            f"  接口: {r['interface']} 参数: {json.dumps(result.get('arguments', {}), ensure_ascii=False)}{error}\n"
+            f"  接口: {r['interface']} 参数: {json.dumps(result.get('arguments', {}), ensure_ascii=False)}"
+            f"{row_filter}{error}\n"
             f"  共 {result.get('total_rows', len(rows))} 行，列: {columns}\n"
             f"  预览: {preview}"
         )
