@@ -117,11 +117,36 @@ def _find_value(step_result: dict[str, Any], hint: str) -> Any:
     return None
 
 
-def _result_digest(result: dict[str, Any]) -> str:
-    """步骤结果的紧凑摘要，注入后续 LLM 调用。"""
+def _result_digest(result: dict[str, Any], hints: list[str] | None = None) -> str:
+    """步骤结果的紧凑摘要，注入后续 LLM 调用。
+
+    hints 是当前/后续步骤的占位符提示（如"股票代码"）：全市场大表（代码表、
+    实时快照）直接倾倒会被截断成无关的前 50 行，先按提示过滤出命中行再格式化。
+    """
     from .akshare_tool import format_result_for_prompt
 
-    return format_result_for_prompt(result)[:STEP_RESULT_CHARS]
+    filtered = result
+    if hints and result.get("rows") and len(result["rows"]) > 10:
+        matched = _filter_rows_by_hints(result, hints)
+        if matched:
+            filtered = {**result, "rows": matched, "total_rows": len(matched), "truncated": False,
+                        "_filtered_note": f"已按提示过滤出 {len(matched)} 行相关记录"}
+    return format_result_for_prompt(filtered)[:STEP_RESULT_CHARS]
+
+
+def _filter_rows_by_hints(result: dict[str, Any], hints: list[str]) -> list[dict[str, Any]]:
+    """在结果行里找包含任一提示词的行（名称/代码等模糊匹配）。"""
+    hints_lower = [h.lower() for h in hints if h]
+    if not hints_lower:
+        return []
+    matched = []
+    for row in result["rows"]:
+        row_text = " ".join(str(v) for v in row.values() if v).lower()
+        if any(h in row_text for h in hints_lower):
+            matched.append(row)
+        if len(matched) >= 5:
+            break
+    return matched
 
 
 def plan_steps(llm: LLMClient, prompt: str) -> list[dict[str, Any]]:
@@ -233,10 +258,13 @@ def run_market_plan(llm: LLMClient, prompt: str, search_doc) -> str:
         if action == "satisfied":
             break
 
-    # 汇总所有步骤产出
-    parts = [
-        f"[步骤{r['step']}] {r['purpose']}（{r['interface']}）：{_result_digest(r['result'])}"
-        for r in step_results
-        if r["result"].get("rows")
-    ]
+    # 汇总所有步骤产出：中间步骤（代码表等大表）按整体用户问题+各步目的过滤命中行
+    parts = []
+    for r in step_results:
+        if not r["result"].get("rows"):
+            continue
+        hints = [prompt] + [s["purpose"] for s in steps]
+        parts.append(
+            f"[步骤{r['step']}] {r['purpose']}（{r['interface']}）：{_result_digest(r['result'], hints)}"
+        )
     return "\n\n".join(parts)

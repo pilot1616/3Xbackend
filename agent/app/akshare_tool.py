@@ -312,12 +312,41 @@ def get_interface_doc(name: str) -> str:
     return body if body else _catalog_synthetic_body(name)
 
 
+# 注入 prompt 的单条结果 JSON 长度上限；超出时头尾保留（行情数据最新行在尾部，
+# 只留头部会把"最新价"截掉，导致分析轮看不到近期行情）。
+PROMPT_RESULT_CHARS = 1400
+
+
 def format_result_for_prompt(result: dict[str, Any]) -> str:
-    """把调用结果压成给 LLM 看的紧凑文本（省 token，保留全部关键列）。"""
+    """把调用结果压成给 LLM 看的紧凑文本（省 token，保留全部关键列）。
+
+    行数多时保留头尾各若干行、中间以省略标注替代：历史行情接口按日期升序
+    返回，最新行情在尾部，头部截断会丢掉最关键的数据。
+    """
     interface = result.get("interface", "?")
     arguments = result.get("arguments", {})
+    error_note = f"（错误：{result['error']}）" if result.get("error") else ""
     if not result.get("rows"):
-        return f"接口 {interface} 返回 0 行" + (f"（错误：{result['error']}）" if result.get("error") else "")
-    head = json.dumps(result["rows"], ensure_ascii=False, default=str)
+        return f"接口 {interface} 返回 0 行{error_note}"
     note = f"（共 {result['total_rows']} 行，已截断）" if result.get("truncated") else f"（共 {result['total_rows']} 行）"
-    return f"接口 {interface} {arguments} 返回{note}：\n{head}"
+
+    rows = result["rows"]
+    head = json.dumps(rows, ensure_ascii=False, default=str)
+    if len(head) <= PROMPT_RESULT_CHARS:
+        return f"接口 {interface} {arguments} 返回{note}：\n{head}"
+
+    # 头尾各保留一半预算；反复二分行数直到两部分 JSON 都装得下。
+    half = PROMPT_RESULT_CHARS // 2
+    keep = max(1, len(rows) // 2)
+    while keep > 1:
+        head_part = json.dumps(rows[:keep], ensure_ascii=False, default=str)
+        tail_part = json.dumps(rows[-keep:], ensure_ascii=False, default=str)
+        if len(head_part) <= half and len(tail_part) <= half:
+            omitted = len(rows) - 2 * keep
+            return (
+                f"接口 {interface} {arguments} 返回{note}（中间省略 {omitted} 行，最后一行是最新数据）：\n"
+                f"{head_part}\n……（省略 {omitted} 行）……\n{tail_part}"
+            )
+        keep = max(1, keep // 2)
+    # 极端兜底：只留最后一行
+    return f"接口 {interface} {arguments} 返回{note}（仅保留最后一行，即最新数据）：\n{json.dumps(rows[-1:], ensure_ascii=False, default=str)}"
