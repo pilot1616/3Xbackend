@@ -271,36 +271,149 @@ def run_market_plan(llm: LLMClient, prompt: str, search_doc) -> str:
     if not raw_text:
         return ""
 
-    # analyst 节点：从原始步骤产出中筛选、核对、提炼事实清单。
-    # 失败时保守回落到原始摘要文本（筛不动至少不丢数据）。
-    curated = analyze_market_data(llm, prompt, raw_text)
+    # analyst 节点：循环式筛选。数据集带元信息分页给 LLM，按需查看，
+    # 避免把全部原始数据塞进单个 prompt。失败回落原始摘要文本。
+    curated = analyze_market_data(llm, prompt, step_results)
     return curated if curated else raw_text
 
 
+# ---- analyst：循环式数据筛选 ----
+
+# 最多查看数据块的轮数（每轮一次 LLM 小调用，token 少而准）。
+ANALYST_MAX_ROUNDS = 5
+# 单次"查看数据块"返回给 LLM 的最大字符数（超出时本地截断，头尾保留）。
+VIEW_CHARS = 1500
+# 数据目录里每个步骤的简要信息行数上限。
+BRIEF_ROWS = 3
+
 _ANALYST_SYSTEM = (
-    "你是行情数据分析师，负责整理外部接口取回的原始数据，供后续回答使用。"
-    "输入是若干步骤的原始接口产出（可能含大量无关行、重复信息或失败步骤）。"
-    "请筛选与用户问题直接相关的数据，输出一份紧凑的「数据事实清单」：\n"
-    "1. 只保留回答问题需要的关键数字（最新价、日期、涨跌幅、市值等），剔除无关行；\n"
-    "2. 交叉核对一致性（如步骤间的名称与代码是否对应，日期口径是否最新）；\n"
-    "3. 必须注明数据边界：数据覆盖到哪个日期、是否截断、哪些字段缺失；\n"
-    "4. 不要给出投资结论或建议——结论由后续环节完成，你只输出事实；\n"
-    "5. 如果数据与问题无关或不足以回答，原样说明缺口，不要编造数字。"
+    "你是行情数据分析师。fetch 环节刚通过外部接口取回了一批数据，你需要从中"
+    "筛选出回答用户问题所需的事实，最后输出一份「数据事实清单」。\n"
+    "工作方式：\n"
+    "1. 数据按步骤组织，每步有元信息（接口、参数、行数）和简要预览；完整数据按需查看；\n"
+    "2. 每轮你只能输出一行 JSON，不要解释，不要 Markdown：\n"
+    '   - 查看某步的完整数据: {"action": "view", "step": 2, "filter": "可选，行过滤关键词，如 2026-10 或 中芯"}\n'
+    '   - 记录一条事实并继续: {"action": "keep", "fact": "一句话事实（含具体数字与日期）"}\n'
+    '   - 数据足够，输出最终清单: {"action": "finish"}\n'
+    '   - 数据无法回答问题: {"action": "abort", "reason": "缺口说明"}\n'
+    "3. facts 可以跨多轮累积（keep 多次）；view 不消耗 facts；\n"
+    "4. 交叉核对一致性（名称与代码、日期口径），只保留与问题直接相关的数据；\n"
+    "5. 不要给出投资结论或建议，只输出事实。\n"
+    "你输出的每一轮都必须是上述四种 action 之一的 JSON。"
+)
+
+_ANALYST_FINAL_INSTRUCTION = (
+    "基于以上已确认的事实（facts）输出最终的数据事实清单："
+    "列出关键数字（最新价、日期、涨跌幅、市值等）、交叉核对结果、数据边界"
+    "（数据覆盖到哪个日期、是否截断、哪些字段缺失）。"
+    "不要给出投资结论或建议。"
 )
 
 
-def analyze_market_data(llm: LLMClient, prompt: str, raw_text: str) -> str:
-    """analyst 节点：把原始步骤产出整理成事实清单；任何失败返回空串（回落原文）。"""
-    if not raw_text or len(raw_text) < 50:
+def _dataset_brief(step_results: list[dict[str, Any]]) -> str:
+    """数据目录：每步的元信息 + 前几行预览。LLM 据此决定查看哪步。"""
+    blocks = []
+    for r in step_results:
+        result = r["result"]
+        rows = result.get("rows") or []
+        columns = result.get("columns") or []
+        error = f"，错误：{result['error']}" if result.get("error") else ""
+        preview = json.dumps(rows[:BRIEF_ROWS], ensure_ascii=False, default=str) if rows else "（无数据行）"
+        if len(preview) > 400:
+            preview = preview[:400] + "…"
+        blocks.append(
+            f"[步骤{r['step']}] {r['purpose']}\n"
+            f"  接口: {r['interface']} 参数: {json.dumps(result.get('arguments', {}), ensure_ascii=False)}{error}\n"
+            f"  共 {result.get('total_rows', len(rows))} 行，列: {columns}\n"
+            f"  预览: {preview}"
+        )
+    return "\n".join(blocks)
+
+
+def _view_step_data(step_result: dict[str, Any], filter_hint: str) -> str:
+    """返回某步的完整数据（可带本地过滤）；超长时头尾保留。"""
+    rows = step_result["result"].get("rows") or []
+    if filter_hint:
+        hint = filter_hint.lower()
+        rows = [
+            row for row in rows
+            if hint in " ".join(str(v) for v in row.values() if v).lower()
+        ]
+        if not rows:
+            return f"（步骤{step_result['step']} 没有匹配过滤条件「{filter_hint}」的行）"
+    text = json.dumps(rows, ensure_ascii=False, default=str)
+    if len(text) <= VIEW_CHARS:
+        return f"共 {len(rows)} 行：{text}"
+    # 头尾保留（最新行情在尾部）
+    half = VIEW_CHARS // 2
+    keep = max(1, len(rows) // 2)
+    while keep > 1:
+        head_part = json.dumps(rows[:keep], ensure_ascii=False, default=str)
+        tail_part = json.dumps(rows[-keep:], ensure_ascii=False, default=str)
+        if len(head_part) <= half and len(tail_part) <= half:
+            omitted = len(rows) - 2 * keep
+            return f"共 {len(rows)} 行（中间省略 {omitted} 行，尾部是最新数据）：\n{head_part}\n……\n{tail_part}"
+        keep = max(1, keep // 2)
+    return f"共 {len(rows)} 行（仅保留最后一行，即最新数据）：\n{json.dumps(rows[-1:], ensure_ascii=False, default=str)}"
+
+
+def analyze_market_data(llm: LLMClient, prompt: str, step_results: list[dict[str, Any]]) -> str:
+    """analyst 循环：目录 → 按需查看 → 累积事实 → 输出事实清单。
+
+    返回事实清单文本；整个循环失败时返回空串（调用方回落原始摘要）。
+    """
+    if not step_results or not any((r["result"].get("rows") for r in step_results)):
         return ""
-    dynamic = f"用户问题：{prompt}\n\n原始取数结果：\n{raw_text}\n\n请输出数据事实清单。"
+
+    brief = _dataset_brief(step_results)
+    dynamic = f"用户问题：{prompt}\n\n取数数据集：\n{brief}\n\n请开始筛选（输出一行 JSON）。"
+    facts: list[str] = []
+    messages = build_stable_messages(_ANALYST_SYSTEM, "输出约定：每轮只输出一行 JSON。", dynamic)
+
     try:
-        result = llm.chat(
-            build_stable_messages(_ANALYST_SYSTEM, "输出约定：直接输出事实清单，纯文本。", dynamic),
+        for _ in range(ANALYST_MAX_ROUNDS):
+            result = llm.chat(messages, "", stage="tool")
+            payload = _parse_json_object(result.content or "")
+            if not payload:
+                break
+            action = payload.get("action")
+
+            if action == "keep":
+                fact = str(payload.get("fact") or "").strip()
+                if fact:
+                    facts.append(fact)
+
+            if action == "finish":
+                break
+            if action == "abort":
+                reason = str(payload.get("reason") or "数据无法回答问题")
+                facts.append(f"[数据缺口] {reason}")
+                break
+            if action == "view":
+                step_no = int(payload.get("step") or 0)
+                target = next((r for r in step_results if r["step"] == step_no), None)
+                view_text = _view_step_data(target, str(payload.get("filter") or "")) if target else f"（不存在步骤{step_no}）"
+                # 查看结果作为新一轮 user 消息追加，模型在原对话上继续
+                messages.append({"role": "assistant", "content": json.dumps(payload, ensure_ascii=False)})
+                messages.append({"role": "user", "content": f"[步骤{step_no} 数据]\n{view_text}\n\n继续（输出一行 JSON；已记录事实 {len(facts)} 条）。"})
+            else:
+                # keep 或无法识别的动作：让模型继续下一轮
+                messages.append({"role": "assistant", "content": json.dumps(payload, ensure_ascii=False)})
+                messages.append({"role": "user", "content": f"已记录 {len(facts)} 条事实。继续（输出一行 JSON）。"})
+
+        if not facts:
+            return ""
+        facts_text = "\n".join(f"- {f}" for f in facts)
+        final = llm.chat(
+            build_stable_messages(
+                _ANALYST_SYSTEM,
+                _ANALYST_FINAL_INSTRUCTION,
+                f"用户问题：{prompt}\n\n已确认的事实：\n{facts_text}",
+            ),
             "",
             stage="tool",
         )
-        text = (result.content or "").strip()
+        text = (final.content or "").strip()
         return text if len(text) >= 30 else ""
     except Exception:
         return ""
