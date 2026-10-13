@@ -43,6 +43,7 @@ from .db import build_engine, execute_readonly_sql, schema_summary
 from .graph import MARKET_DATA_RULES, build_graph, fetch_external_market_text, market_query_result_is_insufficient
 from .logs_viewer import list_runs, run_detail, stage_stats
 from .llm import LLMClient, build_stable_messages
+from .smalltalk import is_smalltalk
 from .types import (
     AkshareCallRequest,
     AkshareCallResponse,
@@ -273,6 +274,34 @@ def chat(request: ChatRequest) -> ChatResponse:
     run_id = create_run(engine, conversation_id, user_message_id, request.message)
 
     try:
+        # 闲聊直答：问候/身份/感谢/玩笑类消息无需查库，跳过 SQL 与分析模板，
+        # 用同一份 system 角色 + 历史（不含 schema，省 token）单轮回答。
+        if is_smalltalk(request.message):
+            smalltalk_system = (
+                "你是企业内部 AI 金融分析助手，负责分析贵金属、科技市场行情和 AI 日报数据。"
+                "用户当前的消息是日常寒暄、身份询问或玩笑类闲聊，不需要查询任何数据："
+                "用轻松自然的中文直接回复即可，可以顺带介绍你能提供的行情分析能力，"
+                "引导用户提出具体的数据问题。不要使用结论/依据/风险/建议的分析模板，"
+                "不要输出 SQL 或 JSON。"
+            )
+            dynamic = f"用户消息：{request.message}\n\n{history_text}"
+            chat_messages = build_stable_messages(smalltalk_system, "直接回复用户。", dynamic)
+            try:
+                direct_call = llm.chat(chat_messages, "", stage="analyze")
+                log_llm(engine, run_id, "smalltalk_reply", direct_call.request["model"], direct_call.request, direct_call.response, latency_ms=direct_call.latency_ms)
+            except Exception as exc:
+                log_llm(engine, run_id, "smalltalk_reply", settings.model_for_stage("analyze"), {"model": settings.model_for_stage("analyze"), "messages": chat_messages}, None, error=str(exc))
+                raise
+            reply_text, segment_summary = parse_reply_payload(direct_call.content)
+            assistant_message_id = add_message(engine, conversation_id, user, "assistant", reply_text)
+            if plan.should_summarize and segment_summary:
+                try:
+                    upsert_summary(engine, conversation_id, plan.pending_index, plan.pending_end - plan.pending_start, segment_summary)
+                except Exception:
+                    pass
+            finish_run(engine, run_id, "success", assistant_message_id=assistant_message_id, latency_ms=direct_call.latency_ms)
+            return ChatResponse(conversation_id=conversation_id, message_id=assistant_message_id, reply=reply_text, query_summary="", sources=[], run_id=run_id)
+
         # 前缀缓存要求"同一 stage 的多次请求"开头逐字节一致：
         # 共享 system（角色+规则+schema），stage 差异放在各自的 instruction 里，
         # 动态内容（问题/历史/查询结果）全部集中在最后一条 user。
