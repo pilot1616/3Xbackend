@@ -30,8 +30,28 @@ MARKET_DATA_RULES = (
 MARKET_TABLES = ("precious_metal_snapshots", "tech_market_snapshots")
 AI_TABLE = "ai_daily_snapshots"
 
-# 外部行情意图关键词：命中才走 akshare 取数节点，避免每个请求都多付一次 LLM 调用。
-# 这些是"库里没有、必须远程取"的数据诉求；库内已有行情的常规分析不在此列。
+
+def known_symbols_text(engine) -> str:
+    """库内已实际同步的标的清单（名称+代码），供 LLM 判断数据缺口时参考。
+
+    直接查库而非读配置：配置里有但还没同步到的标的，同样属于"库内没有"。
+    """
+    from sqlalchemy import text
+
+    names: list[str] = []
+    try:
+        with engine.connect() as conn:
+            for table in MARKET_TABLES:
+                rows = conn.execute(
+                    text(f"SELECT DISTINCT name, symbol FROM `{table}` ORDER BY symbol")
+                ).fetchall()
+                names.extend(f"{name}({symbol})" for name, symbol in rows)
+    except Exception:
+        return ""
+    return "、".join(dict.fromkeys(names))
+
+
+# 外部行情意图关键词：保留作为廉价预筛，LLM 门控前的快速通道。
 EXTERNAL_MARKET_KEYWORDS = (
     "akshare",
     "上金所", "上海黄金交易所", "上海金", "上海银",
@@ -50,6 +70,44 @@ EXTERNAL_MARKET_KEYWORDS = (
 def needs_external_market_data(prompt: str) -> bool:
     text = prompt.lower()
     return any(keyword in text for keyword in EXTERNAL_MARKET_KEYWORDS)
+
+
+def classify_external_data_need(llm, prompt: str, engine=None) -> bool:
+    """由 LLM 判断"库内回答不了"的问题是否需要外部行情数据。
+
+    关键词门控覆盖不了任意标的名/指标表达（如"华天科技"不在词表），
+    改为把问题与库内标的清单交给 LLM 判断。判断失败保守返回 False，
+    不阻断主管线。
+    """
+    from .llm import build_stable_messages
+
+    known = known_symbols_text(engine) if engine is not None else ""
+    known_block = f"内部数据库已同步的标的：{known}。" if known else "内部数据库的行情标的以查询结果为准。"
+    system = (
+        "你是数据需求分类器。用户的问题在内部数据库里没有查到结果，"
+        "需要判断该问题是否可以通过外部行情数据源（AKShare，支持A股/港股/美股个股与指数、"
+        "贵金属现货与期货、宏观指标如CPI/LPR、ETF日线等）获取数据来回答。"
+        f"{known_block}"
+        "如果用户问的是上述清单之外的标的、或任何可由外部数据源回答的行情/宏观问题，输出 true；"
+        "纯闲聊、与数据无关、或外部源也无法回答的问题，输出 false。"
+        "只输出一行 JSON：{\"need_external\": true 或 false}，不要解释，不要 Markdown。"
+    )
+    dynamic = f"用户问题：{prompt}\n\n请输出 JSON。"
+    try:
+        result = llm.chat(
+            build_stable_messages(system, "输出约定：只输出一行 JSON。", dynamic),
+            "",
+            stage="tool",
+        )
+        text = result.content.strip()
+        start = text.find("{")
+        end = text.rfind("}")
+        if start < 0 or end <= start:
+            return False
+        payload = json.loads(text[start : end + 1])
+        return payload.get("need_external") is True
+    except Exception:
+        return False
 
 
 def select_tables_for_prompt(prompt: str, available_tables: list[str]) -> list[str]:
@@ -188,8 +246,10 @@ def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
         }
 
     def fetch_market_data(state: AgentState) -> AgentState:
-        """外部行情降级节点：库内结果不足且意图命中时才远程取数（先查库后取数）。"""
+        """外部行情降级节点：库内结果不足时由 LLM 判断是否需要外部数据。"""
         if not market_query_result_is_insufficient(state.get("query_result")):
+            return {**state, "market_data_text": ""}
+        if not classify_external_data_need(llm, state["prompt"], db_engine):
             return {**state, "market_data_text": ""}
         return {**state, "market_data_text": fetch_external_market_text(state["prompt"], llm)}
 

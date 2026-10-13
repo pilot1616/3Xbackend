@@ -40,7 +40,7 @@ from .context import (
 )
 from .akshare_tool import AkshareToolError, call_akshare, list_akshare_functions
 from .db import build_engine, execute_readonly_sql, schema_summary
-from .graph import MARKET_DATA_RULES, build_graph, fetch_external_market_text, market_query_result_is_insufficient
+from .graph import MARKET_DATA_RULES, build_graph, classify_external_data_need, fetch_external_market_text, market_query_result_is_insufficient
 from .logs_viewer import list_runs, run_detail, stage_stats
 from .llm import LLMClient, build_stable_messages
 from .smalltalk import classify_message
@@ -360,10 +360,10 @@ def chat(request: ChatRequest) -> ChatResponse:
                 log_llm(engine, run_id, "generate_sql_repair", settings.model_for_stage("sql"), {"model": settings.model_for_stage("sql"), "messages": repair_messages}, None, error=str(exc))
                 raise
             query_result = execute_readonly_sql(engine, sql_call.content, limit=20)
-        # 先查库后取数：库内结果不足（空结果）且问题命中外部行情意图时，
-        # 才降级走 akshare 远程取数；任何失败都降级为空文本，不阻断聊天。
+        # 先查库后取数：库内结果不足（空结果）时，由 LLM 判断问题是否需要
+        # 外部行情数据；命中才走 akshare 取数，任何失败都降级为空文本不阻断聊天。
         market_data_text = ""
-        if market_query_result_is_insufficient(query_result):
+        if market_query_result_is_insufficient(query_result) and classify_external_data_need(llm, request.message, engine):
             market_data_text = fetch_external_market_text(request.message, llm)
             if market_data_text:
                 log_llm(engine, run_id, "fetch_market_data", settings.model_for_stage("tool"), {"interface": "akshare"}, {"rows": market_data_text[:2000]})

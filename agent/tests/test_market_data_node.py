@@ -1,5 +1,7 @@
 import json
 
+from types import SimpleNamespace
+
 import pytest
 
 from app.akshare_tool import AkshareToolError
@@ -60,14 +62,31 @@ def test_extract_json_plain_and_fenced() -> None:
 
 
 class FakeLLM:
-    def __init__(self, content: str) -> None:
+    """按需返回内容：need_external 为门控分类回复，其余按 replies 队列依次返回。"""
+
+    def __init__(self, content: str, need_external: bool = True) -> None:
         self.content = content
+        self.need_external = need_external
         self.calls = 0
+        self.stages: list[str] = []
 
     def chat(self, messages, user_prompt="", stage=""):
         self.calls += 1
-        self.last_stage = stage
-        return self
+        self.stages.append(stage)
+        if stage == "tool" and self.calls == 1:
+            # 第一次 tool 调用是外部数据需求分类
+            return SimpleNamespace(
+                content=json.dumps({"need_external": self.need_external}),
+                request={"model": "fake", "messages": messages},
+                response={},
+                latency_ms=1,
+            )
+        return SimpleNamespace(
+            content=self.content,
+            request={"model": "fake", "messages": messages},
+            response={},
+            latency_ms=1,
+        )
 
     def analyze(self, system_prompt, user_prompt, stage=""):
         return self.content
@@ -87,11 +106,12 @@ def _make_graph_with(monkeypatch, llm, akshare_result=None, akshare_error=False)
 
 
 def test_fetch_market_node_skips_non_market_prompt(monkeypatch) -> None:
-    llm = FakeLLM("")
+    """LLM 门控判定为非数据诉求 -> 不发起取数。"""
+    llm = FakeLLM("", need_external=False)
     node = _make_graph_with(monkeypatch, llm)
     state = node.invoke({"prompt": "分析AI日报主题热度", "query_result": None, "market_data_text": None})
     assert state["market_data_text"] == ""
-    assert llm.calls == 0  # 意图不命中不花 LLM 调用
+    assert llm.calls == 1  # 只花一次门控分类调用，无接口规划调用
 
 
 def test_fetch_market_node_skips_when_db_result_sufficient(monkeypatch) -> None:

@@ -27,7 +27,7 @@ def _make_llm(content_by_stage: dict[str, str], calls: list):
 
 
 def test_chat_fetches_market_data_only_when_db_result_empty(monkeypatch) -> None:
-    """库内查询结果为空（回答不了）且意图命中 -> 降级取数并注入。"""
+    """库内查询结果为空（回答不了）且 LLM 门控判定需要外部数据 -> 降级取数并注入。"""
     captured: dict[str, str] = {}
 
     def fake_fetch(prompt, llm):
@@ -35,6 +35,7 @@ def test_chat_fetches_market_data_only_when_db_result_empty(monkeypatch) -> None
         return "接口 spot_hist_sge {'symbol': 'Au99.99'} 返回：[{...}]"
 
     monkeypatch.setattr(main, "fetch_external_market_text", fake_fetch)
+    monkeypatch.setattr(main, "classify_external_data_need", lambda llm, prompt, engine=None: True)
     monkeypatch.setattr(main, "ensure_chat_tables", lambda engine: None)
     monkeypatch.setattr(main, "create_or_touch_conversation", lambda *a, **k: "conv1")
     monkeypatch.setattr(main, "count_messages", lambda *a, **k: 0)
@@ -110,6 +111,7 @@ def test_chat_skips_market_fetch_when_db_result_has_rows(monkeypatch) -> None:
 
 
 def test_chat_skips_market_fetch_for_plain_question(monkeypatch) -> None:
+    """LLM 门控判定不需要外部数据 -> 不发起取数。"""
     fetch_calls: list[str] = []
 
     def fake_fetch(prompt, llm):
@@ -117,6 +119,11 @@ def test_chat_skips_market_fetch_for_plain_question(monkeypatch) -> None:
         return ""
 
     monkeypatch.setattr(main, "fetch_external_market_text", fake_fetch)
+    gate_calls: list[str] = []
+    def fake_gate(llm, prompt, engine=None):
+        gate_calls.append(prompt)
+        return False
+    monkeypatch.setattr(main, "classify_external_data_need", fake_gate)
     monkeypatch.setattr(main, "ensure_chat_tables", lambda engine: None)
     monkeypatch.setattr(main, "create_or_touch_conversation", lambda *a, **k: "conv1")
     monkeypatch.setattr(main, "count_messages", lambda *a, **k: 0)
@@ -144,10 +151,11 @@ def test_chat_skips_market_fetch_for_plain_question(monkeypatch) -> None:
     )
     response = main.chat(request)
 
-    # 意图门控在 fetch_external_market_text 内部短路：函数被调用但不发起任何 LLM/RAG 工作
-    assert fetch_calls == ["总结一下论坛里关于基金的讨论"]
+    # 库内结果为空时门控被调用一次并拒绝；取数函数完全不被触发
+    assert gate_calls == ["总结一下论坛里关于基金的讨论"]
+    assert fetch_calls == []
     assert response.reply == "普通回答"
-    # 分类器的 tool 调用必有；akshare 参数规划的 tool 调用不应出现（只有一次 tool）
+    # 只有 smalltalk 分类一次 tool 调用，无 akshare 参数规划的 tool 调用
     assert calls.count("tool") == 1
 
 
