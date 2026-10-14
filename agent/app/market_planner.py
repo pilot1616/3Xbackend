@@ -460,6 +460,11 @@ def analyze_market_data(llm: LLMClient, prompt: str, step_results: list[dict[str
             stage="tool",
         )
         text = (final.content or "").strip()
+        # 协议泄漏防护：模型偶尔复读循环里的 action JSON 原文而非人话清单。
+        # 检测到内部协议标记时直接用 facts 兜底输出（事实本身是可靠的）。
+        if '"action"' in text or text.lstrip("-* ").startswith('{"'):
+            header = f"数据事实清单（用户问题：{prompt}）：\n"
+            return header + facts_text if len(header + facts_text) >= 30 else ""
         return text if len(text) >= 30 else ""
     except Exception:
         return ""

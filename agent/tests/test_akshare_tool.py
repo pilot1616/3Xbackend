@@ -116,3 +116,32 @@ def test_format_result_for_prompt_compact() -> None:
         }
     )
     assert "spot_hist_sge" in text and "480.5" in text and math.isfinite(len(text))
+
+
+def test_call_akshare_retries_transient_connection_errors(monkeypatch) -> None:
+    """连接类瞬时错误原地重试；确定性错误立即抛出。"""
+    import app.akshare_tool as at
+
+    calls = {"n": 0}
+    monkeypatch.setattr(at.time, "sleep", lambda s: None)
+
+    def flaky(**kwargs):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise ConnectionError("Remote end closed connection without response")
+        return __import__("pandas").DataFrame({"close": [1.0]})
+
+    monkeypatch.setattr(at.ak, "spot_hist_sge", flaky)
+    result = at.call_akshare("spot_hist_sge", {"symbol": "Au99.99"})
+    assert calls["n"] == 3
+    assert result["rows"][0]["close"] == 1.0
+
+    def always_bad(**kwargs):
+        raise ValueError("参数不合法")
+
+    monkeypatch.setattr(at.ak, "spot_hist_sge", always_bad)
+    try:
+        at.call_akshare("spot_hist_sge", {"symbol": "Au99.99"})
+        raise SystemExit("should raise")
+    except at.AkshareToolError:
+        pass

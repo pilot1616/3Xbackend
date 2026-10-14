@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from app import market_planner
 from app.market_planner import (
     _resolve_placeholders,
+    analyze_market_data,
     plan_steps,
     run_market_plan,
 )
@@ -226,3 +227,17 @@ def test_history_flows_through_planner_chain() -> None:
     assert "上海金" in llm.calls[0][1]  # plan
     assert "上海金" in llm.calls[1][1]  # fill
     assert any("上海金" in content for _, content in llm.calls[3:])  # analyst 轮次
+
+
+def test_analyst_final_output_leak_is_sanitized(monkeypatch) -> None:
+    """最终清单复读内部协议 JSON 时，用 facts 兜底输出而非透传。"""
+    llm = ScriptedLLM([
+        json.dumps({"action": "keep", "fact": "比亚迪A股代码为002594，最新收盘价数据缺失"}),
+        json.dumps({"action": "finish"}),
+        '{"action": "keep", "fact": "比亚迪A股代码为002594"}',  # 复读协议原文
+    ])
+    step_results = [{"step": 1, "purpose": "查代码", "interface": "stock_info_a_code_name",
+                     "result": {"arguments": {}, "columns": ["code"], "rows": [{"code": "002594"}], "total_rows": 1}}]
+    text = analyze_market_data(llm, "继续", step_results, [{"role": "user", "content": "看一下比亚迪"}])
+    assert '"action"' not in text  # 协议原文不能透传
+    assert "002594" in text  # facts 兜底

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import math
+import time
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -20,6 +21,10 @@ import akshare as ak
 MAX_ROWS = 50
 # akshare 底层是爬虫式 HTTP 调用，必须限时，防止数据源挂起拖垮 worker。
 CALL_TIMEOUT_SECONDS = 30.0
+# 连接类瞬时错误（东财等源限流掐连接）的原地重试次数与间隔；
+# 这类失败重放同一参数即可恢复，交给 LLM 重新填参没有意义。
+CONN_RETRY_ATTEMPTS = 3
+CONN_RETRY_BACKOFF_SECONDS = 2.0
 
 
 @dataclass(frozen=True)
@@ -262,11 +267,24 @@ def call_akshare(name: str, arguments: dict[str, Any] | None = None) -> dict[str
     if func is None:
         raise AkshareToolError(f"当前 akshare 版本没有接口 {name}")
 
-    try:
-        frame = func(**arguments)
-    except Exception as exc:
-        # 数据源错误原文可能带内部 URL 细节，压缩成单行再返回。
-        raise AkshareToolError(f"接口 {name} 调用失败: {str(exc)[:200]}") from exc
+    last_exc: Exception | None = None
+    for attempt in range(1, CONN_RETRY_ATTEMPTS + 1):
+        try:
+            frame = func(**arguments)
+            break
+        except Exception as exc:
+            # 只对连接类瞬时错误重试（连接被掐/超时/重置等）；
+            # 参数错误、数据为空等确定性失败立即抛出。
+            message = str(exc).lower()
+            transient = any(
+                marker in message
+                for marker in ("connection aborted", "connection reset", "connection refused",
+                               "remote end closed", "remotedisconnected", "timed out", "connectionerror")
+            )
+            last_exc = exc
+            if not transient or attempt == CONN_RETRY_ATTEMPTS:
+                raise AkshareToolError(f"接口 {name} 调用失败: {str(exc)[:200]}") from exc
+            time.sleep(CONN_RETRY_BACKOFF_SECONDS * attempt)
 
     if frame is None or len(frame) == 0:
         return {"interface": name, "arguments": arguments, "columns": [], "rows": [], "total_rows": 0,
