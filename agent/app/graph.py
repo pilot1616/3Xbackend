@@ -72,11 +72,17 @@ def needs_external_market_data(prompt: str) -> bool:
     return any(keyword in text for keyword in EXTERNAL_MARKET_KEYWORDS)
 
 
-def classify_external_data_need(llm, prompt: str, engine=None) -> bool:
+def classify_external_data_need(
+    llm,
+    prompt: str,
+    engine=None,
+    history: list[dict[str, Any]] | None = None,
+) -> bool:
     """由 LLM 判断"库内回答不了"的问题是否需要外部行情数据。
 
     关键词门控覆盖不了任意标的名/指标表达（如"华天科技"不在词表），
-    改为把问题与库内标的清单交给 LLM 判断。判断失败保守返回 False，
+    改为把问题与库内标的清单交给 LLM 判断。带最近对话历史，让"继续"、
+    "那美股呢"这类指代消息能结合上文判断。判断失败保守返回 False，
     不阻断主管线。
     """
     from .llm import build_stable_messages
@@ -90,9 +96,19 @@ def classify_external_data_need(llm, prompt: str, engine=None) -> bool:
         f"{known_block}"
         "如果用户问的是上述清单之外的标的、或任何可由外部数据源回答的行情/宏观问题，输出 true；"
         "纯闲聊、与数据无关、或外部源也无法回答的问题，输出 false。"
+        "注意：消息可能是「继续」「那XX呢」这类依赖上下文的指代——必须结合最近对话判断"
+        "它实际指向的数据诉求，而不是只看消息字面。"
         "只输出一行 JSON：{\"need_external\": true 或 false}，不要解释，不要 Markdown。"
     )
-    dynamic = f"用户问题：{prompt}\n\n请输出 JSON。"
+    history_text = ""
+    for item in (history or [])[-6:]:
+        role = str(item.get("role") or "user")
+        content = str(item.get("content") or "")[:200]
+        history_text += f"{role}: {content}\n"
+    dynamic = f"用户问题：{prompt}"
+    if history_text:
+        dynamic = f"[最近对话]\n{history_text}\n{dynamic}"
+    dynamic += "\n\n请输出 JSON。"
     try:
         result = llm.chat(
             build_stable_messages(system, "输出约定：只输出一行 JSON。", dynamic),

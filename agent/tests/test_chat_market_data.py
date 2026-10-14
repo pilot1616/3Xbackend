@@ -35,7 +35,7 @@ def test_chat_fetches_market_data_only_when_db_result_empty(monkeypatch) -> None
         return "接口 spot_hist_sge {'symbol': 'Au99.99'} 返回：[{...}]"
 
     monkeypatch.setattr(main, "fetch_external_market_text", fake_fetch)
-    monkeypatch.setattr(main, "classify_external_data_need", lambda llm, prompt, engine=None: True)
+    monkeypatch.setattr(main, "classify_external_data_need", lambda llm, prompt, engine=None, history=None: True)
     monkeypatch.setattr(main, "ensure_chat_tables", lambda engine: None)
     monkeypatch.setattr(main, "create_or_touch_conversation", lambda *a, **k: "conv1")
     monkeypatch.setattr(main, "count_messages", lambda *a, **k: 0)
@@ -120,8 +120,8 @@ def test_chat_skips_market_fetch_for_plain_question(monkeypatch) -> None:
 
     monkeypatch.setattr(main, "fetch_external_market_text", fake_fetch)
     gate_calls: list[str] = []
-    def fake_gate(llm, prompt, engine=None):
-        gate_calls.append(prompt)
+    def fake_gate(llm, prompt, engine=None, history=None):
+        gate_calls.append((prompt, history))
         return False
     monkeypatch.setattr(main, "classify_external_data_need", fake_gate)
     monkeypatch.setattr(main, "ensure_chat_tables", lambda engine: None)
@@ -152,7 +152,7 @@ def test_chat_skips_market_fetch_for_plain_question(monkeypatch) -> None:
     response = main.chat(request)
 
     # 库内结果为空时门控被调用一次并拒绝；取数函数完全不被触发
-    assert gate_calls == ["总结一下论坛里关于基金的讨论"]
+    assert gate_calls == [("总结一下论坛里关于基金的讨论", [])]  # 无历史时也把空列表传入
     assert fetch_calls == []
     assert response.reply == "普通回答"
     # 只有 smalltalk 分类一次 tool 调用，无 akshare 参数规划的 tool 调用

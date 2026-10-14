@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.akshare_tool import AkshareToolError
-from app.graph import _extract_json, needs_external_market_data
+from app.graph import _extract_json, classify_external_data_need, needs_external_market_data
 from app.market_rag import search_interfaces
 
 
@@ -163,3 +163,30 @@ def test_fetch_market_node_survives_bad_llm_json(monkeypatch) -> None:
     node = _make_graph_with(monkeypatch, llm, akshare_result={"rows": [], "total_rows": 0, "interface": "x", "arguments": {}, "truncated": False})
     state = node.invoke({"prompt": "上海金交所最新行情", "query_result": None})
     assert state["market_data_text"] == ""
+
+
+def test_external_gate_uses_history_for_anaphora(monkeypatch) -> None:
+    """「继续」类指代消息：门控必须结合历史判断，而不是只看字面。"""
+    import json as _json
+    from types import SimpleNamespace as _NS
+
+    class GateLLM:
+        def __init__(self):
+            self.calls = []
+
+        def chat(self, messages, user_prompt="", stage=""):
+            self.calls.append((stage, messages[-1]["content"]))
+            return _NS(content=_json.dumps({"need_external": True}),
+                       request={"model": "fake", "messages": messages}, response={}, latency_ms=1)
+
+        def analyze(self, system_prompt, user_prompt, stage=""):
+            return ""
+
+    llm = GateLLM()
+    history = [
+        {"role": "user", "content": "看一下比亚迪"},
+        {"role": "assistant", "content": "结论：库里没有比亚迪的记录，无法判断。"},
+    ]
+    assert classify_external_data_need(llm, "继续", engine=None, history=history)
+    # 历史进入了门控 prompt，字面"继续"旁边的上文可见
+    assert "比亚迪" in llm.calls[0][1]
