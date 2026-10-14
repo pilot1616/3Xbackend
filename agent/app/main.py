@@ -364,7 +364,7 @@ def chat(request: ChatRequest) -> ChatResponse:
         # 外部行情数据；命中才走 akshare 取数，任何失败都降级为空文本不阻断聊天。
         market_data_text = ""
         if market_query_result_is_insufficient(query_result) and classify_external_data_need(llm, request.message, engine, recent):
-            market_data_text = fetch_external_market_text(request.message, llm)
+            market_data_text = fetch_external_market_text(request.message, llm, recent)
             if market_data_text:
                 log_llm(engine, run_id, "fetch_market_data", settings.model_for_stage("tool"), {"interface": "akshare"}, {"rows": market_data_text[:2000]})
         market_block = f"\n\n外部行情数据（AKShare 实时获取）：\n{market_data_text}" if market_data_text else ""

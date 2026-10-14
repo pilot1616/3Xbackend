@@ -30,7 +30,7 @@ def test_chat_fetches_market_data_only_when_db_result_empty(monkeypatch) -> None
     """库内查询结果为空（回答不了）且 LLM 门控判定需要外部数据 -> 降级取数并注入。"""
     captured: dict[str, str] = {}
 
-    def fake_fetch(prompt, llm):
+    def fake_fetch(prompt, llm, history=None):
         captured["prompt"] = prompt
         return "接口 spot_hist_sge {'symbol': 'Au99.99'} 返回：[{...}]"
 
@@ -74,7 +74,7 @@ def test_chat_skips_market_fetch_when_db_result_has_rows(monkeypatch) -> None:
     """先查库后取数：库内有行时即使意图命中也绝不远程取数。"""
     fetch_calls: list[str] = []
 
-    def fake_fetch(prompt, llm):
+    def fake_fetch(prompt, llm, history=None):
         fetch_calls.append(prompt)
         return "不该被取到的外部数据"
 
@@ -114,7 +114,7 @@ def test_chat_skips_market_fetch_for_plain_question(monkeypatch) -> None:
     """LLM 门控判定不需要外部数据 -> 不发起取数。"""
     fetch_calls: list[str] = []
 
-    def fake_fetch(prompt, llm):
+    def fake_fetch(prompt, llm, history=None):
         fetch_calls.append(prompt)
         return ""
 
@@ -161,7 +161,7 @@ def test_chat_skips_market_fetch_for_plain_question(monkeypatch) -> None:
 
 def test_chat_market_fetch_failure_degrades(monkeypatch) -> None:
     """取数函数内部已兜底返回空字符串；chat 不应因行情失败而 500。"""
-    def fake_fetch(prompt, llm):
+    def fake_fetch(prompt, llm, history=None):
         return ""  # graph.fetch_external_market_text 的降级契约
 
     monkeypatch.setattr(main, "fetch_external_market_text", fake_fetch)

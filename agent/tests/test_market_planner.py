@@ -201,3 +201,28 @@ def test_run_market_plan_survives_tool_error(monkeypatch) -> None:
 
 def test_run_market_plan_empty_plan_returns_empty(monkeypatch) -> None:
     assert run_market_plan(ScriptedLLM(["我不输出 JSON"]), "x", lambda name: "doc") == ""
+
+
+def test_history_flows_through_planner_chain() -> None:
+    """history 必须到达 plan / fill / decide / analyst 的每一轮 prompt。"""
+    llm = ScriptedLLM([
+        json.dumps([{"step": 1, "purpose": "取行情", "interface": "spot_hist_sge"}]),  # plan
+        json.dumps({}),  # fill
+        json.dumps({"action": "satisfied"}),  # decide（1步计划会短路，这里防御性保留）
+        json.dumps({"action": "keep", "fact": "Au99.99 最新收盘 480.5"}),  # analyst 轮1
+        json.dumps({"action": "finish"}),  # analyst 轮2
+        "数据事实清单：Au99.99 最新收盘 480.5。",  # analyst 最终
+    ])
+    history = [{"role": "user", "content": "看一下上海金"}, {"role": "assistant", "content": "好的"}]
+    orig_call = market_planner.call_akshare
+    market_planner.call_akshare = lambda name, arguments: {"interface": name, "arguments": arguments, "columns": ["close"], "rows": [{"close": 480.5}], "total_rows": 1}
+    try:
+        text = run_market_plan(llm, "继续", lambda name: "doc", history)
+    finally:
+        market_planner.call_akshare = orig_call
+
+    assert "上海金" in text or "480.5" in text
+    # plan / fill / analyst 的动态输入里都带历史
+    assert "上海金" in llm.calls[0][1]  # plan
+    assert "上海金" in llm.calls[1][1]  # fill
+    assert any("上海金" in content for _, content in llm.calls[3:])  # analyst 轮次

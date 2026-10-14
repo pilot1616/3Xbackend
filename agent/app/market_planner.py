@@ -155,14 +155,34 @@ def _filter_rows_by_hints(result: dict[str, Any], hints: list[str]) -> list[dict
     return matched
 
 
-def plan_steps(llm: LLMClient, prompt: str) -> list[dict[str, Any]]:
+# 注入规划/填参/决策/analyst 各环节的最近历史条数。
+PLANNER_HISTORY_LIMIT = 6
+
+
+def _history_text(history: list[dict[str, Any]] | None) -> str:
+    """把对话历史压成紧凑文本；空返回空串。"""
+    if not history:
+        return ""
+    lines = []
+    for item in history[-PLANNER_HISTORY_LIMIT:]:
+        role = str(item.get("role") or "user")
+        content = str(item.get("content") or "")[:200]
+        lines.append(f"{role}: {content}")
+    return "[最近对话]\n" + "\n".join(lines)
+
+
+def plan_steps(llm: LLMClient, prompt: str, history: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     """生成取数步骤计划；计划非法或为空返回 []。"""
+    hist = _history_text(history)
+    dynamic = f"用户问题：{prompt}"
+    if hist:
+        dynamic = f"{hist}\n\n{dynamic}"
     try:
         result = llm.chat(
             build_stable_messages(
                 _PLAN_SYSTEM.replace("{catalog}", _catalog_digest()),
                 "输出约定：只输出一行 JSON 数组。",
-                f"用户问题：{prompt}",
+                dynamic,
             ),
             "",
             stage="tool",
@@ -184,13 +204,15 @@ def plan_steps(llm: LLMClient, prompt: str) -> list[dict[str, Any]]:
     return valid
 
 
-def fill_arguments(llm: LLMClient, interface: str, interface_doc: str, prompt: str, purpose: str, step_results: list[dict[str, Any]]) -> dict[str, Any]:
+def fill_arguments(llm: LLMClient, interface: str, interface_doc: str, prompt: str, purpose: str, step_results: list[dict[str, Any]], history: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     """为当前步骤填参数；解析失败返回空参数（必填校验会拦下并报错）。"""
     results_text = "\n\n".join(
         f"步骤{r['step']}（{r['purpose']}）：{_result_digest(r['result'])}" for r in step_results
     ) or "（无前序步骤）"
+    hist = _history_text(history)
+    hist_block = f"{hist}\n\n" if hist else ""
     dynamic = (
-        f"用户问题：{prompt}\n\n当前步骤目的：{purpose}\n\n"
+        f"{hist_block}用户问题：{prompt}\n\n当前步骤目的：{purpose}\n\n"
         f"接口：{interface}\n文档：\n{interface_doc}\n\n前序步骤结果：\n{results_text}\n\n"
         "请输出该接口的调用参数 JSON。"
     )
@@ -206,7 +228,7 @@ def fill_arguments(llm: LLMClient, interface: str, interface_doc: str, prompt: s
         return {}
 
 
-def decide_next(llm: LLMClient, prompt: str, steps: list[dict[str, Any]], step_results: list[dict[str, Any]]) -> str:
+def decide_next(llm: LLMClient, prompt: str, steps: list[dict[str, Any]], step_results: list[dict[str, Any]], history: list[dict[str, Any]] | None = None) -> str:
     """判断取数是否完成：satisfied / next / fail；判断失败保守按 satisfied（已有数据可用）。"""
     if len(step_results) >= len(steps):
         return "satisfied"
@@ -214,12 +236,14 @@ def decide_next(llm: LLMClient, prompt: str, steps: list[dict[str, Any]], step_r
     results_text = "\n\n".join(
         f"步骤{r['step']}（{r['purpose']}）：{_result_digest(r['result'])}" for r in step_results
     )
+    hist = _history_text(history)
+    hist_block = f"{hist}\n\n" if hist else ""
     try:
         result = llm.chat(
             build_stable_messages(
                 _DECIDE_SYSTEM,
                 "输出约定：只输出一行 JSON。",
-                f"用户问题：{prompt}\n\n计划：{plan_text}\n\n已获结果：\n{results_text}",
+                f"{hist_block}用户问题：{prompt}\n\n计划：{plan_text}\n\n已获结果：\n{results_text}",
             ),
             "",
             stage="tool",
@@ -232,13 +256,14 @@ def decide_next(llm: LLMClient, prompt: str, steps: list[dict[str, Any]], step_r
     return "satisfied"
 
 
-def run_market_plan(llm: LLMClient, prompt: str, search_doc) -> str:
+def run_market_plan(llm: LLMClient, prompt: str, search_doc, history: list[dict[str, Any]] | None = None) -> str:
     """规划并执行取数计划，返回注入分析轮的 market_data_text。
 
     search_doc: (interface_name) -> str，返回接口文档文本（RAG/目录查找的回调）。
+    history 是最近对话（含指代消息的上文），透传给所有 LLM 子调用。
     任何环节失败都不抛异常：返回空字符串降级，由主管线继续。
     """
-    steps = plan_steps(llm, prompt)
+    steps = plan_steps(llm, prompt, history)
     if not steps:
         return ""
 
@@ -246,7 +271,7 @@ def run_market_plan(llm: LLMClient, prompt: str, search_doc) -> str:
     for step in steps:
         interface = step["interface"]
         interface_doc = search_doc(interface)
-        arguments = fill_arguments(llm, interface, interface_doc, prompt, step["purpose"], step_results)
+        arguments = fill_arguments(llm, interface, interface_doc, prompt, step["purpose"], step_results, history)
         # 占位符先做本地替换，减少 LLM 填参出错面
         arguments = _resolve_placeholders(arguments, step_results)
         try:
@@ -257,7 +282,7 @@ def run_market_plan(llm: LLMClient, prompt: str, search_doc) -> str:
             retry_args = fill_arguments(
                 llm, interface, interface_doc,
                 prompt, step["purpose"] + "（上次该接口调用失败，请换参数或用备选参数重试）",
-                step_results,
+                step_results, history,
             )
             retry_args = _resolve_placeholders(retry_args, step_results)
             try:
@@ -266,7 +291,7 @@ def run_market_plan(llm: LLMClient, prompt: str, search_doc) -> str:
                 result = {"interface": interface, "arguments": arguments, "columns": [], "rows": [], "total_rows": 0, "error": "调用失败（重试后仍失败）"}
         step_results.append({**step, "result": result})
 
-        action = decide_next(llm, prompt, steps, step_results)
+        action = decide_next(llm, prompt, steps, step_results, history)
         if action == "fail":
             # 计划不可达：放弃取数（除非已有部分结果可用）
             if any((r["result"].get("rows") for r in step_results)):
@@ -290,7 +315,7 @@ def run_market_plan(llm: LLMClient, prompt: str, search_doc) -> str:
 
     # analyst 节点：循环式筛选。数据集带元信息分页给 LLM，按需查看，
     # 避免把全部原始数据塞进单个 prompt。失败回落原始摘要文本。
-    curated = analyze_market_data(llm, prompt, step_results)
+    curated = analyze_market_data(llm, prompt, step_results, history)
     return curated if curated else raw_text
 
 
@@ -376,7 +401,7 @@ def _view_step_data(step_result: dict[str, Any], filter_hint: str) -> str:
     return f"共 {len(rows)} 行（仅保留最后一行，即最新数据）：\n{json.dumps(rows[-1:], ensure_ascii=False, default=str)}"
 
 
-def analyze_market_data(llm: LLMClient, prompt: str, step_results: list[dict[str, Any]]) -> str:
+def analyze_market_data(llm: LLMClient, prompt: str, step_results: list[dict[str, Any]], history: list[dict[str, Any]] | None = None) -> str:
     """analyst 循环：目录 → 按需查看 → 累积事实 → 输出事实清单。
 
     返回事实清单文本；整个循环失败时返回空串（调用方回落原始摘要）。
@@ -385,7 +410,9 @@ def analyze_market_data(llm: LLMClient, prompt: str, step_results: list[dict[str
         return ""
 
     brief = _dataset_brief(step_results)
-    dynamic = f"用户问题：{prompt}\n\n取数数据集：\n{brief}\n\n请开始筛选（输出一行 JSON）。"
+    hist = _history_text(history)
+    hist_block = f"{hist}\n\n" if hist else ""
+    dynamic = f"{hist_block}用户问题：{prompt}\n\n取数数据集：\n{brief}\n\n请开始筛选（输出一行 JSON）。"
     facts: list[str] = []
     messages = build_stable_messages(_ANALYST_SYSTEM, "输出约定：每轮只输出一行 JSON。", dynamic)
 
@@ -427,7 +454,7 @@ def analyze_market_data(llm: LLMClient, prompt: str, step_results: list[dict[str
             build_stable_messages(
                 _ANALYST_SYSTEM,
                 _ANALYST_FINAL_INSTRUCTION,
-                f"用户问题：{prompt}\n\n已确认的事实：\n{facts_text}",
+                f"{hist_block}用户问题：{prompt}\n\n已确认的事实：\n{facts_text}",
             ),
             "",
             stage="tool",

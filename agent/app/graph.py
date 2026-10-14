@@ -185,9 +185,10 @@ def _extract_json(text: str) -> str:
     raise ValueError(f"unbalanced json in response: {text[:200]}")
 
 
-def fetch_external_market_text(prompt: str, llm: LLMClient) -> str:
+def fetch_external_market_text(prompt: str, llm: LLMClient, history: list[dict[str, Any]] | None = None) -> str:
     """外部行情取数：优先多步计划（LLM 编排逐步调用），失败回落单步 RAG 路径。
 
+    history 是最近对话（解析指代消息），透传给 planner 的所有 LLM 子调用。
     供 LangGraph 节点与 /chat 管线共用；任何一步失败都返回空字符串降级，
     绝不抛异常打断主管线。
     """
@@ -196,7 +197,7 @@ def fetch_external_market_text(prompt: str, llm: LLMClient) -> str:
 
     # 首选多步计划：LLM 按接口目录摘要编排（如先查代码再查行情），
     # 解决单步路径"只知道中文名填不了参数"的死结。
-    plan_text = run_market_plan(llm, prompt, get_interface_doc)
+    plan_text = run_market_plan(llm, prompt, get_interface_doc, history)
     if plan_text:
         return plan_text
 
@@ -216,7 +217,10 @@ def fetch_external_market_text(prompt: str, llm: LLMClient) -> str:
         "不要解释，不要 Markdown。日期参数一律用 yyyymmdd 字符串。"
         "如果所有候选接口都无法回答用户问题，输出 {\"interface\": \"\"}。"
     )
-    dynamic = f"用户问题：{prompt}\n\n候选接口文档：\n{catalog_text}\n\n请输出 JSON。"
+    from .market_planner import _history_text
+    hist = _history_text(history)
+    hist_block = f"{hist}\n\n" if hist else ""
+    dynamic = f"{hist_block}用户问题：{prompt}\n\n候选接口文档：\n{catalog_text}\n\n请输出 JSON。"
     try:
         decision = llm.chat(build_stable_messages(system, "输出约定：只输出一行 JSON。", dynamic), "", stage="tool")
         payload = json.loads(_extract_json(decision.content))
