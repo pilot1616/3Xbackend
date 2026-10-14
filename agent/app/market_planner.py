@@ -41,6 +41,8 @@ _PLAN_SYSTEM = (
     "服务端会在全表行内过滤后再返回，务必带上，否则命中行会被截断吞掉；\n"
     "- 如果问题需要先做名称到代码的解析（如 A股中文名），优先用 stock_info_a_code_name"
     "（其数据源不稳定，若该步失败可将 stock_zh_a_spot_em + _row_filter 作为备选）；\n"
+    "- A股日 K 优先用 stock_zh_a_hist；如果它调用失败（东财 kline 接口常被限流），"
+    "改用备用的 stock_zh_a_daily（新浪源，symbol 要带 sz/sh 前缀，如 sz002594）；\n"
     "- 能一步取到就直接一步，不要为简单问题强行拆步。\n"
     '只输出一行 JSON 数组，不要解释，不要 Markdown：'
     '[{"step": 1, "purpose": "这一步取什么", "interface": "接口名"}, ...]'
@@ -288,7 +290,8 @@ def run_market_plan(llm: LLMClient, prompt: str, search_doc, history: list[dict[
             try:
                 result = call_akshare(interface, retry_args)
             except AkshareToolError:
-                result = {"interface": interface, "arguments": arguments, "columns": [], "rows": [], "total_rows": 0, "error": "调用失败（重试后仍失败）"}
+                result = {"interface": interface, "arguments": arguments, "columns": [], "rows": [], "total_rows": 0,
+                          "error": "调用失败（重试后仍失败）"}
         step_results.append({**step, "result": result})
 
         action = decide_next(llm, prompt, steps, step_results, history)

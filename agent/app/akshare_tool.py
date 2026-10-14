@@ -91,6 +91,17 @@ CATALOG: dict[str, AkshareFunction] = {
             required=("symbol",),
         ),
         AkshareFunction(
+            name="stock_zh_a_daily",
+            description="新浪财经-沪深京 A 股日频历史行情（东方财富 kline 接口被限流时的备用源；"
+                        "symbol 必须带交易所前缀：深市 sz002594、沪市 sh600519，不复权）",
+            params={
+                "symbol": '带交易所前缀的代码，如 "sz002594" / "sh600519"',
+                "start_date": '开始日期，格式 "20200101"',
+                "end_date": '结束日期，格式 "20240528"',
+            },
+            required=("symbol",),
+        ),
+        AkshareFunction(
             name="stock_zh_a_spot_em",
             description="东方财富-沪深京 A 股实时行情快照（全市场，结果按行数截断）",
             params={},
