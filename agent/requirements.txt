@@ -10,6 +10,7 @@ python-dotenv>=1.0,<2
 akshare>=1.18,<2
 jieba>=0.42,<1
 rank_bm25>=0.2,<1
+jq>=1.8,<2
 # 以下为构建期依赖：仅 scripts/build_akshare_rag.py 重建 RAG 索引时需要，运行服务不需要
 requests>=2.31,<3
 beautifulsoup4>=4.12,<5

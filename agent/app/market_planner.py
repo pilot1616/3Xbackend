@@ -56,7 +56,10 @@ _FILL_SYSTEM = (
     "查最新行情时 end_date 用今天、start_date 用最近 1~3 个月，绝不要沿用历史对话里出现过的旧日期；"
     "全市场大表接口（stock_info_a_code_name、"
     "stock_zh_a_spot_em）必须带 _row_filter 参数，值为用户问题里的标的名关键词"
-    "（如 中芯国际、紫金矿业）。只输出一行 JSON 参数对象，"
+    '（如 中芯国际、紫金矿业），也支持 jq 表达式（以 . 开头，如 . | map(select(.name == "牧原股份"))）。'
+    '引用前序步骤结果时，占位符支持 jq 精确取值："$step1<[0].code>" 取第1步第一行的 code 字段，'
+    '或 "$step1<map(select(.name == "牧原股份")) | .[0].code>" 按名称筛选后取代码。'
+    "只输出一行 JSON 参数对象，"
     "不要解释，不要 Markdown：{\"参数名\": \"值\", ...}"
 )
 
@@ -91,12 +94,35 @@ def _extract_iface_doc_text(interface_doc: str) -> str:
 
 
 def _resolve_placeholders(arguments: dict[str, Any], step_results: list[dict[str, Any]]) -> dict[str, Any]:
-    """把 $stepN.field 占位符替换为前序步骤结果里的值；解析不到的保留原样交 LLM 处理。"""
+    """把 $stepN 占位符替换为前序步骤结果里的值；解析不到的保留原样交 LLM 处理。
+
+    两种写法：
+    - "$stepN.提示词"：列名/模糊匹配（旧格式，向后兼容）；
+    - "$stepN<jq 表达式>"：jq 作用于该步 rows，如 "$step1<[0].code"、
+      "$step1<map(select(.name == \\"牧原股份\\")) | .[0].code>"。
+    """
     resolved: dict[str, Any] = {}
     for key, value in arguments.items():
         text = str(value)
         if not text.startswith("$step"):
             resolved[key] = value
+            continue
+        # jq 形式：$stepN<expression>
+        jq_match = re.match(r"^\$step(\d+)<(.+)>$", text, re.DOTALL)
+        if jq_match:
+            step_no, expr = int(jq_match.group(1)), jq_match.group(2)
+            source = next((r for r in step_results if r.get("step") == step_no), None)
+            if source:
+                from .jq_filter import eval_jq
+
+                jq_rows = eval_jq(source["result"].get("rows") or [], expr.strip())
+                if jq_rows:
+                    first = jq_rows[0]
+                    resolved[key] = first.get("value", first) if isinstance(first, dict) else first
+                else:
+                    resolved[key] = value  # 无结果/失败，保留原样
+            else:
+                resolved[key] = value
             continue
         match = re.match(r"^\$step(\d+)\.(.+)$", text)
         if not match:
@@ -109,11 +135,25 @@ def _resolve_placeholders(arguments: dict[str, Any], step_results: list[dict[str
 
 
 def _find_value(step_result: dict[str, Any], hint: str) -> Any:
-    """在步骤结果里按提示找值：先精确列名，再按行内模糊匹配。"""
+    """在步骤结果里按提示找值：jq 路径优先，再列名精确匹配，最后行内模糊匹配。
+
+    hint 以 . 开头时视为 jq 表达式，作用于该步的 rows（如 ".[0].code"）。
+    """
     rows = step_result.get("rows") or []
-    columns = step_result.get("columns") or []
     if not rows:
         return None
+
+    from .jq_filter import eval_jq, is_jq_filter
+
+    if is_jq_filter(hint):
+        jq_rows = eval_jq(rows, hint)
+        if jq_rows:
+            first = jq_rows[0]
+            return first.get("value", first) if isinstance(first, dict) else first
+        if jq_rows is not None:
+            return None  # 合法 jq 但无结果
+
+    columns = step_result.get("columns") or []
     hint_lower = hint.lower()
     exact = [c for c in columns if c.lower() in hint_lower or hint_lower in c.lower()]
     for row in rows:
@@ -396,7 +436,13 @@ _ANALYST_SYSTEM = (
     "工作方式：\n"
     "1. 数据按步骤组织，每步有元信息（接口、参数、行数）和简要预览；完整数据按需查看；\n"
     "2. 每轮你只能输出一行 JSON，不要解释，不要 Markdown：\n"
-    '   - 查看某步的完整数据: {"action": "view", "step": 2, "filter": "可选，行过滤关键词，如 2026-10 或 最新"}\n'
+    '   - 查看某步的完整数据: {"action": "view", "step": 2, "filter": "<过滤条件>"}\n'
+    '     filter 支持两种写法：\n'
+    '     a) jq 表达式（以 . 开头，推荐，作用于该步的行数组）：\n'
+    '        ".[-3:]" 取最新3行；". | map(select(\\"日期\\" >= \\"2026-10-01\\"))" 按日期过滤；\n'
+    '        ". | map({日期, 收盘, 涨跌幅})" 只留需要的列；\n'
+    '        ". | sort_by(.日期) | .[-1]" 取日期最新的一行\n'
+    '     b) 普通关键词（如 2026-10），按行内包含匹配\n'
     '   - 记录一条事实并继续: {"action": "keep", "fact": "一句话事实（含具体数字与日期）"}\n'
     '   - 数据足够，输出最终清单: {"action": "finish"}\n'
     '   - 数据无法回答问题: {"action": "abort", "reason": "缺口说明"}\n'
@@ -445,9 +491,20 @@ def _dataset_brief(step_results: list[dict[str, Any]]) -> str:
 
 
 def _view_step_data(step_result: dict[str, Any], filter_hint: str) -> str:
-    """返回某步的完整数据（可带本地过滤）；超长时头尾保留。"""
+    """返回某步的完整数据（可带过滤）；超长时头尾保留。
+
+    filter_hint 以 . 或 [ 开头时按 jq 表达式求值（支持日期比较、排序、投影）；
+    否则按关键词做行内包含匹配；jq 求值失败回落关键词。
+    """
     rows = step_result["result"].get("rows") or []
     if filter_hint:
+        from .jq_filter import eval_jq_text, is_jq_filter
+
+        if is_jq_filter(filter_hint):
+            jq_text = eval_jq_text(rows, filter_hint)
+            if jq_text is not None:
+                return f"jq 筛选「{filter_hint}」结果：\n{jq_text}"
+            # jq 求值失败 -> 回落关键词匹配
         hint = filter_hint.lower()
         rows = [
             row for row in rows

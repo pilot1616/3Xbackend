@@ -302,12 +302,27 @@ def call_akshare(name: str, arguments: dict[str, Any] | None = None) -> dict[str
                 "row_filter": row_filter or None}
 
     if row_filter:
-        filter_lower = row_filter.lower()
-        mask = frame.apply(
-            lambda row: row.astype(str).str.lower().str.contains(filter_lower, regex=False).any(),
-            axis=1,
-        )
-        frame = frame[mask]
+        from .jq_filter import eval_jq, is_jq_filter
+
+        jq_applied = False
+        if is_jq_filter(row_filter):
+            # jq 表达式：作用于 DataFrame 的行记录列表，命中行重建 frame。
+            records = frame.to_dict(orient="records")
+            jq_rows = eval_jq(records, row_filter)
+            if jq_rows is not None:
+                if jq_rows:
+                    frame = type(frame)(jq_rows)
+                else:
+                    frame = frame.iloc[[]]  # 合法表达式但无命中
+                jq_applied = True
+            # jq 求值失败 -> 回落关键词 contains
+        if not jq_applied:
+            filter_lower = row_filter.lower()
+            mask = frame.apply(
+                lambda row: row.astype(str).str.lower().str.contains(filter_lower, regex=False).any(),
+                axis=1,
+            )
+            frame = frame[mask]
 
     limit = fn.default_limit
     columns = [str(c) for c in frame.columns]
