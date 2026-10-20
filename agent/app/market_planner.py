@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import date
 from typing import Any
 
 from .akshare_tool import AkshareToolError, call_akshare, catalog_summary
@@ -51,7 +52,9 @@ _PLAN_SYSTEM = (
 _FILL_SYSTEM = (
     "你是 AKShare 接口参数填写助手。根据接口文档、用户问题和前序步骤的结果，"
     "为当前这一步填写调用参数。前序结果里如果有占位符引用的信息，直接用具体值替换。"
-    "日期参数一律用 yyyymmdd 字符串；全市场大表接口（stock_info_a_code_name、"
+    "日期参数一律用 yyyymmdd 字符串，且以今天（{today}）为锚："
+    "查最新行情时 end_date 用今天、start_date 用最近 1~3 个月，绝不要沿用历史对话里出现过的旧日期；"
+    "全市场大表接口（stock_info_a_code_name、"
     "stock_zh_a_spot_em）必须带 _row_filter 参数，值为用户问题里的标的名关键词"
     "（如 中芯国际、紫金矿业）。只输出一行 JSON 参数对象，"
     "不要解释，不要 Markdown：{\"参数名\": \"值\", ...}"
@@ -173,12 +176,17 @@ def _history_text(history: list[dict[str, Any]] | None) -> str:
     return "[最近对话]\n" + "\n".join(lines)
 
 
-def plan_steps(llm: LLMClient, prompt: str, history: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
-    """生成取数步骤计划；计划非法或为空返回 []。"""
+def plan_steps(llm: LLMClient, prompt: str, history: list[dict[str, Any]] | None = None, replan_hint: str = "") -> list[dict[str, Any]]:
+    """生成取数步骤计划；计划非法或为空返回 []。replan_hint 非空时是重规划（附失败教训）。"""
     hist = _history_text(history)
     dynamic = f"用户问题：{prompt}"
     if hist:
         dynamic = f"{hist}\n\n{dynamic}"
+    if replan_hint:
+        dynamic = (
+            f"上一轮计划的以下步骤全部失败，请改用备用数据源重新规划"
+            f"（如东财 kline 限流时改用新浪 stock_zh_a_daily）：\n{replan_hint}\n\n{dynamic}"
+        )
     try:
         result = llm.chat(
             build_stable_messages(
@@ -220,7 +228,7 @@ def fill_arguments(llm: LLMClient, interface: str, interface_doc: str, prompt: s
     )
     try:
         result = llm.chat(
-            build_stable_messages(_FILL_SYSTEM, "输出约定：只输出一行 JSON 参数对象。", dynamic),
+            build_stable_messages(_FILL_SYSTEM.replace("{today}", date.today().isoformat()), "输出约定：只输出一行 JSON 参数对象。", dynamic),
             "",
             stage="tool",
         )
@@ -263,13 +271,50 @@ def run_market_plan(llm: LLMClient, prompt: str, search_doc, history: list[dict[
 
     search_doc: (interface_name) -> str，返回接口文档文本（RAG/目录查找的回调）。
     history 是最近对话（含指代消息的上文），透传给所有 LLM 子调用。
+    首轮计划无产出时，带失败教训重规划一次（换备用数据源）。
     任何环节失败都不抛异常：返回空字符串降级，由主管线继续。
     """
-    steps = plan_steps(llm, prompt, history)
-    if not steps:
-        return ""
+    step_results = _run_plan_once(llm, prompt, search_doc, history)
+    failures = getattr(_run_plan_once, "_last_failures", [])
+    # 有失败步骤就重规划一次（换备用数据源），已成功的步骤结果作为 prefill 传入
+    # （如已解析出的股票代码），重规划轮不必重取；全部成功则直接产出。
+    if step_results and not failures:
+        return _compose_output(llm, prompt, step_results, _plan_purposes(step_results), history)
 
-    step_results: list[dict[str, Any]] = []
+    # 首轮无产出或部分失败：带失败教训重规划（如东财 kline 限流 -> 换新浪源）。
+    lessons = "; ".join(
+        f"步骤{s['step']} 接口 {s['interface']} 失败({s['error']})——"
+        "必须改用【不同的接口/数据源】规划该步骤，不要再用同一个接口"
+        for s in failures
+    )
+    if not lessons:
+        return ""
+    prior_ok = [r for r in step_results if r["result"].get("rows")]
+    step_results = _run_plan_once(llm, prompt, search_doc, history, replan_hint=lessons, prior_results=prior_ok)
+    if step_results and any(r["result"].get("rows") for r in step_results):
+        return _compose_output(llm, prompt, step_results, _plan_purposes(step_results), history)
+    return ""
+
+
+def _record_failures(step_results: list[dict[str, Any]]) -> None:
+    """把失败步骤的教训挂到函数属性上，供外层重规划参考。"""
+    _run_plan_once._last_failures = [
+        {**s, "error": s["result"].get("error") or "返回空数据"}
+        for s in step_results if not s["result"].get("rows")
+    ]
+
+
+def _run_plan_once(llm: LLMClient, prompt: str, search_doc, history, replan_hint: str = "", prior_results: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    """执行一轮完整的计划-执行流程，返回步骤结果列表（含空结果步骤）。
+
+    replan_hint 非空表示重规划（附失败教训）；prior_results 是上一轮成功
+    的步骤结果，作为前序上下文（占位符引用、填参参考）带入。
+    """
+    steps = plan_steps(llm, prompt, history, replan_hint)
+    if not steps:
+        return []
+
+    step_results: list[dict[str, Any]] = list(prior_results or [])
     for step in steps:
         interface = step["interface"]
         interface_doc = search_doc(interface)
@@ -296,28 +341,37 @@ def run_market_plan(llm: LLMClient, prompt: str, search_doc, history: list[dict[
 
         action = decide_next(llm, prompt, steps, step_results, history)
         if action == "fail":
-            # 计划不可达：放弃取数（除非已有部分结果可用）
-            if any((r["result"].get("rows") for r in step_results)):
-                break
-            return ""
+            # 计划不可达：终止本轮（失败教训已记录，供外层重规划）
+            break
         if action == "satisfied":
             break
 
-    # 汇总所有步骤产出：中间步骤（代码表等大表）按整体用户问题+各步目的过滤命中行
+    # 记录失败步骤的教训（供外层重规划）；部分成功时只记失败的那些。
+    failed = [s for s in step_results if not s["result"].get("rows")]
+    if failed:
+        _record_failures(step_results)
+    else:
+        _run_plan_once._last_failures = []
+    return step_results
+
+
+def _plan_purposes(step_results: list[dict[str, Any]]) -> list[str]:
+    return [r["purpose"] for r in step_results]
+
+
+def _compose_output(llm: LLMClient, prompt: str, step_results: list[dict[str, Any]], purposes: list[str], history) -> str:
+    """汇总步骤产出并跑 analyst；无产出返回空串。"""
     parts = []
     for r in step_results:
         if not r["result"].get("rows"):
             continue
-        hints = [prompt] + [s["purpose"] for s in steps]
+        hints = [prompt] + purposes
         parts.append(
             f"[步骤{r['step']}] {r['purpose']}（{r['interface']}）：{_result_digest(r['result'], hints)}"
         )
     raw_text = "\n\n".join(parts)
     if not raw_text:
         return ""
-
-    # analyst 节点：循环式筛选。数据集带元信息分页给 LLM，按需查看，
-    # 避免把全部原始数据塞进单个 prompt。失败回落原始摘要文本。
     curated = analyze_market_data(llm, prompt, step_results, history)
     return curated if curated else raw_text
 
@@ -334,10 +388,15 @@ BRIEF_ROWS = 3
 _ANALYST_SYSTEM = (
     "你是行情数据分析师。fetch 环节刚通过外部接口取回了一批数据，你需要从中"
     "筛选出回答用户问题所需的事实，最后输出一份「数据事实清单」。\n"
+    "今天是 {today}。行情数据的新鲜度至关重要：\n"
+    "- 历史行情接口通常按日期升序返回，最新数据在【尾部最后一行】；\n"
+    "- keep 之前必须确认日期是可得的最新交易日；如果 keep 的事实日期离今天超过 7 天，"
+    "视为筛选失败，必须用 view（filter 填最新年份月份）定位最新行；\n"
+    "- 引用价格时必须标注该价格的日期。\n"
     "工作方式：\n"
     "1. 数据按步骤组织，每步有元信息（接口、参数、行数）和简要预览；完整数据按需查看；\n"
     "2. 每轮你只能输出一行 JSON，不要解释，不要 Markdown：\n"
-    '   - 查看某步的完整数据: {"action": "view", "step": 2, "filter": "可选，行过滤关键词，如 2026-10 或 中芯"}\n'
+    '   - 查看某步的完整数据: {"action": "view", "step": 2, "filter": "可选，行过滤关键词，如 2026-10 或 最新"}\n'
     '   - 记录一条事实并继续: {"action": "keep", "fact": "一句话事实（含具体数字与日期）"}\n'
     '   - 数据足够，输出最终清单: {"action": "finish"}\n'
     '   - 数据无法回答问题: {"action": "abort", "reason": "缺口说明"}\n'
@@ -364,9 +423,17 @@ def _dataset_brief(step_results: list[dict[str, Any]]) -> str:
         columns = result.get("columns") or []
         error = f"，错误：{result['error']}" if result.get("error") else ""
         row_filter = f"（已按「{result['row_filter']}」过滤）" if result.get("row_filter") else ""
-        preview = json.dumps(rows[:BRIEF_ROWS], ensure_ascii=False, default=str) if rows else "（无数据行）"
-        if len(preview) > 400:
-            preview = preview[:400] + "…"
+        # 历史行情按日期升序返回：预览必须含尾部（最新数据），否则 LLM 只见最旧的行。
+        if rows:
+            preview = json.dumps(rows[:BRIEF_ROWS], ensure_ascii=False, default=str)
+            if len(rows) > BRIEF_ROWS:
+                tail = json.dumps(rows[-BRIEF_ROWS:], ensure_ascii=False, default=str)
+                omitted = max(0, len(rows) - 2 * BRIEF_ROWS)
+                preview += f"\n  ……（省略 {omitted} 行）……\n  尾部（最新）: {tail}"
+            if len(preview) > 700:
+                preview = preview[:700] + "…"
+        else:
+            preview = "（无数据行）"
         blocks.append(
             f"[步骤{r['step']}] {r['purpose']}\n"
             f"  接口: {r['interface']} 参数: {json.dumps(result.get('arguments', {}), ensure_ascii=False)}"
@@ -415,9 +482,10 @@ def analyze_market_data(llm: LLMClient, prompt: str, step_results: list[dict[str
     brief = _dataset_brief(step_results)
     hist = _history_text(history)
     hist_block = f"{hist}\n\n" if hist else ""
+    system = _ANALYST_SYSTEM.replace("{today}", date.today().isoformat())
     dynamic = f"{hist_block}用户问题：{prompt}\n\n取数数据集：\n{brief}\n\n请开始筛选（输出一行 JSON）。"
     facts: list[str] = []
-    messages = build_stable_messages(_ANALYST_SYSTEM, "输出约定：每轮只输出一行 JSON。", dynamic)
+    messages = build_stable_messages(system, "输出约定：每轮只输出一行 JSON。", dynamic)
 
     try:
         for _ in range(ANALYST_MAX_ROUNDS):
@@ -455,7 +523,7 @@ def analyze_market_data(llm: LLMClient, prompt: str, step_results: list[dict[str
         facts_text = "\n".join(f"- {f}" for f in facts)
         final = llm.chat(
             build_stable_messages(
-                _ANALYST_SYSTEM,
+                system,
                 _ANALYST_FINAL_INSTRUCTION,
                 f"{hist_block}用户问题：{prompt}\n\n已确认的事实：\n{facts_text}",
             ),

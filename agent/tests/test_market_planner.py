@@ -241,3 +241,76 @@ def test_analyst_final_output_leak_is_sanitized(monkeypatch) -> None:
     text = analyze_market_data(llm, "继续", step_results, [{"role": "user", "content": "看一下比亚迪"}])
     assert '"action"' not in text  # 协议原文不能透传
     assert "002594" in text  # facts 兜底
+
+
+def test_replan_on_partial_failure_uses_prefill(monkeypatch) -> None:
+    """部分步骤失败（东财限流）-> 触发重规划且必须换不同接口；成功步骤结果保留为前序。"""
+    history = [{"role": "user", "content": "看一下牧原股份的日K行情"}]
+    replan_prompts: list[str] = []
+
+    # 消耗次序：plan1, fill1, decide(next), fill2, fill2-retry,
+    # [decide 短路：len(step_results)==len(steps) 直接 satisfied，不调 LLM]
+    # replan-plan, replan-fill, analyst(finish), analyst final
+    llm = ScriptedLLM([
+        # 轮1 plan：东财链
+        json.dumps([
+            {"step": 1, "purpose": "查代码", "interface": "stock_info_a_code_name"},
+            {"step": 2, "purpose": "查日K", "interface": "stock_zh_a_hist"},
+        ]),
+        json.dumps({"_row_filter": "牧原股份"}),                       # fill step1
+        json.dumps({"action": "next"}),                                # decide after step1
+        json.dumps({"symbol": "002714", "start_date": "20261001"}),   # fill step2
+        json.dumps({"symbol": "002714", "start_date": "20261001"}),   # fill step2 重试
+        # replan plan（重规划）：换新浪链（decide 对最后一步短路，不消耗）
+        json.dumps([
+            {"step": 1, "purpose": "查日K", "interface": "stock_zh_a_daily"},
+        ]),
+        json.dumps({"symbol": "sz002714", "start_date": "20261001"}), # replan fill
+        json.dumps({"action": "finish"}),                              # analyst finish
+        "数据事实清单：002714 最新收盘 41.23（2026-10-19）。",          # analyst 最终
+    ])
+
+    def fake_call(name, arguments):
+        if name == "stock_zh_a_hist":
+            from app.akshare_tool import AkshareToolError
+            raise AkshareToolError("接口 stock_zh_a_hist 调用失败: remote end closed")
+        if name == "stock_info_a_code_name":
+            return {"interface": name, "arguments": arguments, "columns": ["code", "name"],
+                    "rows": [{"code": "002714", "name": "牧原股份"}], "total_rows": 1}
+        return {"interface": name, "arguments": arguments, "columns": ["date", "close"],
+                "rows": [{"date": "2026-10-19", "close": 41.23}], "total_rows": 1}
+
+    monkeypatch.setattr(market_planner, "call_akshare", fake_call)
+
+    text = run_market_plan(llm, "继续", lambda name: "doc", history)
+
+    # 重规划轮真的发起了（step2 失败 -> 外层带教训重规划）
+    plan_prompts = [c[1] for c in llm.calls if "上一轮计划的以下步骤全部失败" in c[1]]
+    assert plan_prompts, "replan prompt was never issued"
+    assert "上一轮计划的以下步骤全部失败" in plan_prompts[0]
+    assert "改用备用数据源" in plan_prompts[0]
+    # 最终拿到了新浪源的数据
+    assert "41.23" in text and "2026-10-19" in text
+
+
+def test_no_replan_when_all_steps_succeed(monkeypatch) -> None:
+    """全部成功不触发重规划（只有一次 plan 调用）。"""
+    # 单步计划 decide 短路（len(step_results)==len(steps)），不消耗 decide 回复。
+    llm = ScriptedLLM([
+        json.dumps([{"step": 1, "purpose": "直接取", "interface": "spot_hist_sge"}]),
+        "{}",                                          # fill
+        json.dumps({"action": "finish"}),              # analyst finish
+        "数据事实清单：最新收盘 480.5。",
+    ])
+    monkeypatch.setattr(
+        market_planner, "call_akshare",
+        lambda name, arguments: {"interface": name, "arguments": arguments, "columns": ["close"],
+                                  "rows": [{"close": 480.5}], "total_rows": 1},
+    )
+    text = run_market_plan(llm, "上海金行情", lambda name: "doc")
+    assert "480.5" in text
+    # plan 调用的 dynamic 含"用户问题"且非 fill/analyst/decide 特征
+    plan_calls = [c for c in llm.calls if "当前步骤目的" not in c[1] and "取数数据集" not in c[1]
+                  and "计划：步骤" not in c[1] and "已确认的事实" not in c[1]
+                  and "请开始筛选" not in c[1] and "上一轮计划" not in c[1]]
+    assert len(plan_calls) == 1
