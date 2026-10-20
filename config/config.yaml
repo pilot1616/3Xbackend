@@ -6,7 +6,8 @@ auth:
   # 留空或使用已知默认值会导致启动失败；本地开发可用 AUTH_ALLOW_DEFAULT_SECRET=1 跳过校验。
   secret: ""
   token_expire_hours: 24
-  admin_usernames: ""
+  # 管理员按用户名（手机号）判断，逗号分隔
+  admin_usernames: "13900000001"
 
 cors:
   # 浏览器跨域白名单（逗号分隔）。留空表示允许任意来源，仅限本地开发使用。
