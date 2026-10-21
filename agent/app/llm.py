@@ -55,8 +55,20 @@ class LLMClient:
     RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 
     def __init__(self, logger: LLMLogger | None = None) -> None:
+        # 非流式：整体超时用配置值（当前 25s 量级）。
+        # 流式：连接 10s，但 read 是"两个 chunk 的间隔"——推理模型（grok）在
+        # 思考阶段可能 1-2 分钟不吐 chunk，给足 180s，只防真挂死。
+        stream_timeout = httpx.Timeout(10.0, read=180.0, write=30.0, connect=10.0)
         self._client = httpx.Client(
-            timeout=settings.llm_timeout_seconds,
+            timeout=httpx.Timeout(settings.llm_timeout_seconds),
+            base_url=settings.llm_base_url,
+            headers={
+                "Authorization": f"Bearer {settings.llm_api_key}",
+                "Content-Type": "application/json",
+            },
+        )
+        self._stream_client = httpx.Client(
+            timeout=stream_timeout,
             base_url=settings.llm_base_url,
             headers={
                 "Authorization": f"Bearer {settings.llm_api_key}",
@@ -166,7 +178,7 @@ class LLMClient:
         parts: list[str] = []
         try:
             try:
-                with self._client.stream("POST", "/chat/completions", json=payload) as response:
+                with self._stream_client.stream("POST", "/chat/completions", json=payload) as response:
                     response.raise_for_status()
                     for line in response.iter_lines():
                         line = (line or "").strip()

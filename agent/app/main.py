@@ -360,8 +360,16 @@ def _chat_stream_events(request: ChatRequest) -> Generator[str, None, None]:
         sql_messages = build_stable_messages(stable_system, sql_instruction, dynamic_for_sql)
         yield sse_event("stage", {"stage": SSE_STAGE_GENERATE_SQL})
         try:
-            sql_call = llm.chat(sql_messages, "", stage="sql")
-            log_llm(engine, run_id, "generate_sql", sql_call.request["model"], sql_call.request, sql_call.response, latency_ms=sql_call.latency_ms)
+            # SQL 阶段也走流式：内容聚合不透传（用户不该看到 SQL），
+            # 但连接保持字节流动，避免网关/代理在长推理期间因静默超时断链。
+            sql_stream = llm.chat_stream(sql_messages, "", stage="sql")
+            if sql_stream.error:
+                log_llm(engine, run_id, "generate_sql", settings.model_for_stage("sql"), {"messages": sql_messages}, None, error=sql_stream.error)
+                yield from fail(sql_stream.error)
+                return
+            log_llm(engine, run_id, "generate_sql", sql_stream.request["model"], sql_stream.request, {"stream": True, "content": sql_stream.content}, latency_ms=sql_stream.latency_ms)
+            yield from _sse_heartbeat()
+            sql_call = sql_stream
         except Exception as exc:
             log_llm(engine, run_id, "generate_sql", settings.model_for_stage("sql"), {"messages": sql_messages}, None, error=str(exc))
             yield from fail(str(exc))
@@ -380,8 +388,14 @@ def _chat_stream_events(request: ChatRequest) -> Generator[str, None, None]:
             )
             repair_messages = build_stable_messages(stable_system, sql_instruction, repair_dynamic)
             try:
-                sql_call = llm.chat(repair_messages, "", stage="sql")
-                log_llm(engine, run_id, "generate_sql_repair", sql_call.request["model"], sql_call.request, sql_call.response, latency_ms=sql_call.latency_ms)
+                sql_stream = llm.chat_stream(repair_messages, "", stage="sql")
+                if sql_stream.error:
+                    log_llm(engine, run_id, "generate_sql_repair", settings.model_for_stage("sql"), {"messages": repair_messages}, None, error=sql_stream.error)
+                    yield from fail(sql_stream.error)
+                    return
+                log_llm(engine, run_id, "generate_sql_repair", sql_stream.request["model"], sql_stream.request, {"stream": True, "content": sql_stream.content}, latency_ms=sql_stream.latency_ms)
+                yield from _sse_heartbeat()
+                sql_call = sql_stream
             except Exception as exc:
                 log_llm(engine, run_id, "generate_sql_repair", settings.model_for_stage("sql"), {"messages": repair_messages}, None, error=str(exc))
                 yield from fail(str(exc))
@@ -452,6 +466,12 @@ def _chat_stream_events(request: ChatRequest) -> Generator[str, None, None]:
         yield sse_event("done", {"message_id": assistant_message_id, "reply": reply_text})
     except Exception as exc:
         yield from fail(str(exc))
+
+
+def _sse_heartbeat(count: int = 3) -> Generator[str, None, None]:
+    """SSE 注释帧心跳：保持连接上有字节流动，不产生任何事件语义。"""
+    for _ in range(count):
+        yield ": keepalive\n\n"
 
 
 def _emit_deltas(raw_content: str, reply_text: str, is_summary_round: bool) -> Generator[str, None, None]:
