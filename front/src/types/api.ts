@@ -507,3 +507,14 @@ export interface AgentChatResponse {
   run_id: string;
   error: string;
 }
+
+export type AgentStreamStage = 'smalltalk' | 'generate_sql' | 'repair_sql' | 'fetch_market_data' | 'analyze';
+
+export interface AgentStreamHandlers {
+  onMeta?: (payload: { run_id: string; conversation_id: string }) => void;
+  onStage?: (payload: { stage: AgentStreamStage }) => void;
+  onSources?: (payload: { query_summary: string; sources: AgentSourceSample[] }) => void;
+  onDelta?: (payload: { text: string }) => void;
+  onDone?: (payload: { message_id: string; reply: string }) => void;
+  onError?: (payload: { message: string }) => void;
+}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { listAgentConversations, listAgentMessages, sendAgentChat } from '../api/forum';
+import { listAgentConversations, listAgentMessages } from '../api/forum';
+import { streamAgentChat } from '../api/client';
 import { useSession } from '../lib/session';
 import type { AgentChatMessage, AgentConversation, AnalysisWindow } from '../types/api';
 
@@ -26,6 +27,9 @@ function formatVisibleQuerySummary(value?: string) {
     .join('\n')
     .trim();
 }
+
+// stage 占位文案集合：onDelta 判断当前内容是否还是状态提示而非回答正文
+const STREAMING_STAGES = new Set(['正在回复…', '正在生成查询…', '查询出错，正在修正…', '正在补充外部行情…', '正在分析数据…', '处理中…']);
 
 interface AgentChatPanelProps {
   selectedWindow?: AnalysisWindow;
@@ -115,35 +119,85 @@ export function AgentChatPanel({ selectedWindow = '7d', standalone = false }: Ag
       content,
       created_at: new Date().toISOString(),
     };
-    setChatMessages((items) => [...items, optimisticMessage]);
+    const streamingId = `streaming-${Date.now()}`;
+    setChatMessages((items) => [
+      ...items,
+      optimisticMessage,
+      { message_id: streamingId, role: 'assistant', content: '', created_at: new Date().toISOString() },
+    ]);
     setChatInput('');
     setChatSending(true);
     setChatError('');
+
+    const upsertStreaming = (patch: Partial<AgentChatMessage>) => {
+      setChatMessages((items) => items.map((item) => (item.message_id === streamingId ? { ...item, ...patch } : item)));
+    };
+
     try {
-      const response = await sendAgentChat({
-        conversation_id: activeConversationID || undefined,
-        message: content,
-        context: {
-          window: selectedWindow,
-          source: standalone ? 'ai-chat-page' : 'analysis-page-chat',
-        },
-      });
-      setActiveConversationID(response.conversation_id);
-      setChatMessages((items) => [
-        ...items.filter((item) => item.message_id !== optimisticMessage.message_id),
-        optimisticMessage,
+      await streamAgentChat(
         {
-          message_id: response.message_id,
-          role: 'assistant',
-          content: response.reply,
-          created_at: new Date().toISOString(),
-          run_id: response.run_id,
-          query_summary: response.query_summary,
+          conversation_id: activeConversationID || undefined,
+          message: content,
+          context: {
+            window: selectedWindow,
+            source: standalone ? 'ai-chat-page' : 'analysis-page-chat',
+          },
         },
-      ]);
+        {
+          onMeta: (payload) => {
+            setActiveConversationID(payload.conversation_id);
+            upsertStreaming({ run_id: payload.run_id });
+          },
+          onStage: (payload) => {
+            const stageText: Record<string, string> = {
+              smalltalk: '正在回复…',
+              generate_sql: '正在生成查询…',
+              repair_sql: '查询出错，正在修正…',
+              fetch_market_data: '正在补充外部行情…',
+              analyze: '正在分析数据…',
+            };
+            upsertStreaming({ content: stageText[payload.stage] ?? '处理中…' });
+          },
+          onSources: (payload) => {
+            upsertStreaming({ query_summary: payload.query_summary });
+          },
+          onDelta: (payload) => {
+            // 首个 delta 到达时清掉 stage 占位文案，之后逐字追加
+            setChatMessages((items) =>
+              items.map((item) => {
+                if (item.message_id !== streamingId) {
+                  return item;
+                }
+                const prefix = STREAMING_STAGES.has(item.content) ? '' : item.content;
+                return { ...item, content: prefix + payload.text };
+              }),
+            );
+          },
+          onDone: (payload) => {
+            upsertStreaming({
+              message_id: payload.message_id,
+              content: payload.reply,
+            });
+          },
+          onError: (payload) => {
+            throw new Error(payload.message);
+          },
+        },
+      );
       void loadChatConversations();
     } catch (error) {
-      setChatMessages((items) => items.filter((item) => item.message_id !== optimisticMessage.message_id));
+      // 流中途中断：占位消息保留已收到内容并标记；没有内容才移除
+      setChatMessages((items) =>
+        items.filter((item) => {
+          if (item.message_id !== streamingId) {
+            return true;
+          }
+          if (!item.content || STREAMING_STAGES.has(item.content)) {
+            return false;
+          }
+          return true;
+        }),
+      );
       setChatError(error instanceof Error ? error.message : '发送失败');
       setChatInput(content);
     } finally {
