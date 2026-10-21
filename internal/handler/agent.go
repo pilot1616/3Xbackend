@@ -53,11 +53,17 @@ func NewAgentHandler(authService *service.AuthService) *AgentHandler {
 	if baseURL == "" {
 		baseURL = "http://127.0.0.1:8010"
 	}
+	// 不设整体 Timeout：SSE 流式响应按块持续到达，整体计时会切断长回答。
+	// 首字节 30s 兜底连不上的 agent；chunk 间隔交给 upstream 的读超时。
+	transport := &http.Transport{
+		ResponseHeaderTimeout: 30 * time.Second,
+		IdleConnTimeout:       90 * time.Second,
+	}
 	return &AgentHandler{
 		authService:   authService,
 		baseURL:       baseURL,
 		internalToken: strings.TrimSpace(os.Getenv("AGENT_INTERNAL_TOKEN")),
-		client:        &http.Client{Timeout: 90 * time.Second},
+		client:        &http.Client{Transport: transport},
 	}
 }
 
@@ -118,7 +124,7 @@ func (h *AgentHandler) Chat(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "encode agent request failed"})
 		return
 	}
-	h.proxy(c, http.MethodPost, "/chat", body)
+	h.proxy(c, http.MethodPost, "/chat/stream", body)
 }
 
 func (h *AgentHandler) Prompt(c *gin.Context) {
@@ -228,15 +234,40 @@ func (h *AgentHandler) proxy(c *gin.Context, method string, path string, body []
 	}
 	defer resp.Body.Close()
 
+	contentType := resp.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "application/json"
+	}
+
+	// SSE 流式响应：逐块透传，不做整体缓冲；总时长不再受 client.Timeout 限制。
+	if resp.StatusCode == http.StatusOK && strings.HasPrefix(contentType, "text/event-stream") {
+		c.Writer.Header().Set("Content-Type", "text/event-stream")
+		c.Writer.Header().Set("Cache-Control", "no-cache")
+		c.Writer.Header().Set("X-Accel-Buffering", "no")
+		c.Writer.WriteHeader(http.StatusOK)
+		flusher, ok := c.Writer.(http.Flusher)
+		buffer := make([]byte, 4096)
+		for {
+			n, readErr := resp.Body.Read(buffer)
+			if n > 0 {
+				if _, writeErr := c.Writer.Write(buffer[:n]); writeErr != nil {
+					return // 客户端断开
+				}
+				if ok {
+					flusher.Flush()
+				}
+			}
+			if readErr != nil {
+				return // EOF 或上游断开
+			}
+		}
+	}
+
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"message": "read agent response failed"})
 		return
 	}
 
-	contentType := resp.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "application/json"
-	}
 	c.Data(resp.StatusCode, contentType, respBody)
 }
