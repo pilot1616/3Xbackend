@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import json
 import time
 from typing import Any, Callable
 
@@ -16,6 +17,15 @@ class LLMCallResult:
     response: dict[str, Any]
     latency_ms: int
     usage: dict[str, Any] | None = None
+
+
+@dataclass
+class LLMStreamResult:
+    content: str
+    request: dict[str, Any]
+    latency_ms: int
+    usage: dict[str, Any] | None = None
+    error: str = ""
 
 
 # 可选审计钩子：签名 (stage, model, request, response, latency_ms, error)。
@@ -128,3 +138,60 @@ class LLMClient:
                 continue
             return response
         raise RuntimeError("unreachable")
+
+    def chat_stream(self, system_prompt, user_prompt: str = "", stage: str = "") -> "LLMStreamResult":
+        """流式调用：返回 LLMStreamResult，content 为聚合后的完整文本。
+
+        内部逐行解析 OpenAI chunk 协议（data: {...} / data: [DONE]），
+        delta.reasoning_content（思考过程）被跳过，不计入 content。
+        usage 取自流尾的 usage chunk。
+        """
+        messages = (
+            list(system_prompt)
+            if isinstance(system_prompt, list)
+            else [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ]
+        )
+        model = settings.model_for_stage(stage) if stage else settings.llm_model
+        payload = {
+            "model": model,
+            "messages": messages,
+            "stream": True,
+        }
+        started = time.monotonic()
+        error = ""
+        usage: dict[str, Any] | None = None
+        parts: list[str] = []
+        try:
+            try:
+                with self._client.stream("POST", "/chat/completions", json=payload) as response:
+                    response.raise_for_status()
+                    for line in response.iter_lines():
+                        line = (line or "").strip()
+                        if not line.startswith("data:"):
+                            continue
+                        body = line[len("data:"):].strip()
+                        if body == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(body)
+                        except json.JSONDecodeError:
+                            continue
+                        usage = chunk.get("usage") or usage
+                        choices = chunk.get("choices") or []
+                        if not choices:
+                            continue
+                        delta = choices[0].get("delta") or {}
+                        # reasoning_content 是思考过程，不进入用户可见内容
+                        text = delta.get("content")
+                        if isinstance(text, str) and text:
+                            parts.append(text)
+            except httpx.HTTPError as exc:
+                error = str(exc)
+                raise
+        finally:
+            latency_ms = int((time.monotonic() - started) * 1000)
+            self._emit_log(payload, {"stream": True, "content": "".join(parts)} if error == "" else None, latency_ms, error)
+        return LLMStreamResult(content="".join(parts), request=payload, latency_ms=latency_ms, usage=usage, error=error)
