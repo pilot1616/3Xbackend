@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from datetime import date
 from typing import Any
 
@@ -27,6 +28,9 @@ from .llm import LLMClient, build_stable_messages
 
 # 计划步数上限：每步伴随一次参数填写 + 一次继续/终止判断，网关延迟下必须封顶。
 MAX_STEPS = 3
+# 外部取数全链（规划+执行+重规划+analyst）的总预算：超时立即降级为空数据，
+# 防止 planner 循环 × 重规划 × analyst 多轮叠加把一次聊天拖到小时级。
+MARKET_PLAN_BUDGET_SECONDS = 300.0
 # 注入 LLM 的步骤结果摘要每步上限（字符）。
 STEP_RESULT_CHARS = 1200
 
@@ -313,13 +317,15 @@ def run_market_plan(llm: LLMClient, prompt: str, search_doc, history: list[dict[
     history 是最近对话（含指代消息的上文），透传给所有 LLM 子调用。
     首轮计划无产出时，带失败教训重规划一次（换备用数据源）。
     任何环节失败都不抛异常：返回空字符串降级，由主管线继续。
+    整个外部取数链受总预算约束（deadline），超时立即降级返回空串。
     """
-    step_results = _run_plan_once(llm, prompt, search_doc, history)
+    deadline = time.monotonic() + MARKET_PLAN_BUDGET_SECONDS
+    step_results = _run_plan_once(llm, prompt, search_doc, history, deadline=deadline)
     failures = getattr(_run_plan_once, "_last_failures", [])
     # 有失败步骤就重规划一次（换备用数据源），已成功的步骤结果作为 prefill 传入
     # （如已解析出的股票代码），重规划轮不必重取；全部成功则直接产出。
     if step_results and not failures:
-        return _compose_output(llm, prompt, step_results, _plan_purposes(step_results), history)
+        return _compose_output(llm, prompt, step_results, _plan_purposes(step_results), history, deadline=deadline)
 
     # 首轮无产出或部分失败：带失败教训重规划（如东财 kline 限流 -> 换新浪源）。
     lessons = "; ".join(
@@ -327,12 +333,12 @@ def run_market_plan(llm: LLMClient, prompt: str, search_doc, history: list[dict[
         "必须改用【不同的接口/数据源】规划该步骤，不要再用同一个接口"
         for s in failures
     )
-    if not lessons:
+    if not lessons or time.monotonic() >= deadline:
         return ""
     prior_ok = [r for r in step_results if r["result"].get("rows")]
-    step_results = _run_plan_once(llm, prompt, search_doc, history, replan_hint=lessons, prior_results=prior_ok)
+    step_results = _run_plan_once(llm, prompt, search_doc, history, replan_hint=lessons, prior_results=prior_ok, deadline=deadline)
     if step_results and any(r["result"].get("rows") for r in step_results):
-        return _compose_output(llm, prompt, step_results, _plan_purposes(step_results), history)
+        return _compose_output(llm, prompt, step_results, _plan_purposes(step_results), history, deadline=deadline)
     return ""
 
 
@@ -344,11 +350,12 @@ def _record_failures(step_results: list[dict[str, Any]]) -> None:
     ]
 
 
-def _run_plan_once(llm: LLMClient, prompt: str, search_doc, history, replan_hint: str = "", prior_results: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+def _run_plan_once(llm: LLMClient, prompt: str, search_doc, history, replan_hint: str = "", prior_results: list[dict[str, Any]] | None = None, deadline: float | None = None) -> list[dict[str, Any]]:
     """执行一轮完整的计划-执行流程，返回步骤结果列表（含空结果步骤）。
 
     replan_hint 非空表示重规划（附失败教训）；prior_results 是上一轮成功
     的步骤结果，作为前序上下文（占位符引用、填参参考）带入。
+    deadline 是共享预算时钟：每个环节开始前检查，超时把剩余步骤记为跳过。
     """
     steps = plan_steps(llm, prompt, history, replan_hint)
     if not steps:
@@ -356,6 +363,9 @@ def _run_plan_once(llm: LLMClient, prompt: str, search_doc, history, replan_hint
 
     step_results: list[dict[str, Any]] = list(prior_results or [])
     for step in steps:
+        if deadline is not None and time.monotonic() >= deadline:
+            step_results.append({"step": step.get("step", len(step_results) + 1), "interface": step["interface"], "purpose": step.get("purpose", ""), "result": {"columns": [], "rows": [], "total_rows": 0, "error": "外部取数总预算已用完，跳过"}})
+            continue
         interface = step["interface"]
         interface_doc = search_doc(interface)
         arguments = fill_arguments(llm, interface, interface_doc, prompt, step["purpose"], step_results, history)
@@ -399,7 +409,7 @@ def _plan_purposes(step_results: list[dict[str, Any]]) -> list[str]:
     return [r["purpose"] for r in step_results]
 
 
-def _compose_output(llm: LLMClient, prompt: str, step_results: list[dict[str, Any]], purposes: list[str], history) -> str:
+def _compose_output(llm: LLMClient, prompt: str, step_results: list[dict[str, Any]], purposes: list[str], history, deadline: float | None = None) -> str:
     """汇总步骤产出并跑 analyst；无产出返回空串。"""
     parts = []
     for r in step_results:
@@ -412,7 +422,7 @@ def _compose_output(llm: LLMClient, prompt: str, step_results: list[dict[str, An
     raw_text = "\n\n".join(parts)
     if not raw_text:
         return ""
-    curated = analyze_market_data(llm, prompt, step_results, history)
+    curated = analyze_market_data(llm, prompt, step_results, history) if time.monotonic() < deadline else ""
     return curated if curated else raw_text
 
 

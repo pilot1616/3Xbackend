@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import collections
+import faulthandler
+import signal
 import json
 import secrets
 import threading
@@ -54,6 +56,9 @@ from .types import (
     PromptRequest,
     PromptResponse,
 )
+
+# SIGUSR1 → 向 stderr dump 所有线程 Python 栈（诊断卡死用）：kill -USR1 <agent_pid>
+faulthandler.register(signal.SIGUSR1, all_threads=True)
 
 GENERIC_AGENT_ERROR = "分析服务暂时不可用，请稍后重试"
 

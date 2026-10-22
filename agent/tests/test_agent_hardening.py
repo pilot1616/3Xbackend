@@ -55,33 +55,63 @@ class _StubResponse:
         return {"choices": [{"message": {"content": "ok"}}]}
 
 
-def test_llm_client_retries_transient_status(monkeypatch) -> None:
+class _StubStreamResponse:
+    """模拟 httpx stream 响应：status + SSE 行迭代。"""
+
+    def __init__(self, status_code: int, lines: list[str]) -> None:
+        self.status_code = status_code
+        self._lines = lines
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            # 真实 httpx 的 HTTPStatusError 总是携带 response
+            raise httpx.HTTPStatusError("error", request=None, response=self)
+
+    def iter_lines(self) -> list[str]:
+        return self._lines
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+
+def _sse_lines(content_chunks: list[str]) -> list[str]:
+    lines = [f'data: {{"choices":[{{"delta":{{"content":"{chunk}"}}}}]}}' for chunk in content_chunks]
+    lines.append("data: [DONE]")
+    return lines
+
+
+def test_llm_client_chat_streams_and_aggregates(monkeypatch) -> None:
     client = LLMClient()
     calls: list[int] = []
 
-    def fake_post(path, json=None):
+    def fake_stream(method, path, json=None):
         calls.append(1)
-        status = 503 if len(calls) == 1 else 200
-        return _StubResponse(status)
+        if len(calls) == 1:
+            return _StubStreamResponse(503, [])
+        return _StubStreamResponse(200, _sse_lines(["你好", "，世界"]))
 
-    monkeypatch.setattr(client._client, "post", fake_post)
+    monkeypatch.setattr(client._stream_client, "stream", fake_stream)
     monkeypatch.setattr(main.time, "sleep", lambda seconds: None)
 
     result = client.chat("system", "user")
 
+    # 503 后重试一次，聚合的 content 完整
     assert len(calls) == 2
-    assert result.content == "ok"
+    assert result.content == "你好，世界"
 
 
 def test_llm_client_does_not_retry_client_errors(monkeypatch) -> None:
     client = LLMClient()
     calls: list[int] = []
 
-    def fake_post(path, json=None):
+    def fake_stream(method, path, json=None):
         calls.append(1)
-        return _StubResponse(400)
+        return _StubStreamResponse(400, [])
 
-    monkeypatch.setattr(client._client, "post", fake_post)
+    monkeypatch.setattr(client._stream_client, "stream", fake_stream)
 
     with pytest.raises(httpx.HTTPStatusError):
         client.chat("system", "user")
@@ -91,14 +121,15 @@ def test_llm_client_does_not_retry_client_errors(monkeypatch) -> None:
 
 def test_llm_client_logs_calls(monkeypatch) -> None:
     logs: list[tuple[str, str, str]] = []
-    client = LLMClient(logger=lambda stage, model, request, response, latency, error: logs.append((stage, error, response["choices"][0]["message"]["content"])))
-    monkeypatch.setattr(client._client, "post", lambda path, json=None: _StubResponse(200))
+    client = LLMClient(logger=lambda stage, model, request, response, latency, error: logs.append((stage, error, response["content"])))
+    monkeypatch.setattr(client._stream_client, "stream", lambda method, path, json=None: _StubStreamResponse(200, _sse_lines(["ok"])))
 
     client.chat("system", "user")
 
     assert len(logs) == 1
     assert logs[0][0] == "graph_generate_sql"
     assert logs[0][1] == ""
+    assert logs[0][2] == "ok"
 
 
 def test_prompt_returns_generic_error_without_leaking_details(monkeypatch) -> None:

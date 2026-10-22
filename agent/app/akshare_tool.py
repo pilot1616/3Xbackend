@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import math
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -25,6 +26,8 @@ CALL_TIMEOUT_SECONDS = 30.0
 # 这类失败重放同一参数即可恢复，交给 LLM 重新填参没有意义。
 CONN_RETRY_ATTEMPTS = 3
 CONN_RETRY_BACKOFF_SECONDS = 2.0
+# 单次 akshare 接口调用的硬上限：远端挂死时宁可快速失败降级，不能拖死整个聊天
+AKSHARE_CALL_TIMEOUT_SECONDS = 90.0
 
 
 @dataclass(frozen=True)
@@ -281,7 +284,11 @@ def call_akshare(name: str, arguments: dict[str, Any] | None = None) -> dict[str
     last_exc: Exception | None = None
     for attempt in range(1, CONN_RETRY_ATTEMPTS + 1):
         try:
-            frame = func(**arguments)
+            # akshare 内部 requests 可能对挂死的远端无限等待；
+            # 用线程池加硬超时（90s），超时按瞬时错误处理走重试/降级。
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(func, **arguments)
+                frame = future.result(timeout=AKSHARE_CALL_TIMEOUT_SECONDS)
             break
         except Exception as exc:
             # 只对连接类瞬时错误重试（连接被掐/超时/重置等）；
