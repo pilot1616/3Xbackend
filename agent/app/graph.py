@@ -185,10 +185,25 @@ def _extract_json(text: str) -> str:
     raise ValueError(f"unbalanced json in response: {text[:200]}")
 
 
-def fetch_external_market_text(prompt: str, llm: LLMClient, history: list[dict[str, Any]] | None = None) -> str:
+def _emit_step_audit(on_step: Any, record: dict[str, Any]) -> None:
+    """单步 RAG 回落路径的审计上报；与 planner 一样吞掉回调异常。"""
+    try:
+        on_step(record)
+    except Exception:
+        pass
+
+
+def fetch_external_market_text(
+    prompt: str,
+    llm: LLMClient,
+    history: list[dict[str, Any]] | None = None,
+    on_step: Any | None = None,
+) -> str:
     """外部行情取数：优先多步计划（LLM 编排逐步调用），失败回落单步 RAG 路径。
 
     history 是最近对话（解析指代消息），透传给 planner 的所有 LLM 子调用。
+    on_step 是 planner 逐步审计回调（见 market_planner.run_market_plan），
+    供上层把每步的接口+参数+行数落到 LLM 日志；单步 RAG 回落路径同样上报。
     供 LangGraph 节点与 /chat 管线共用；任何一步失败都返回空字符串降级，
     绝不抛异常打断主管线。
     """
@@ -197,7 +212,7 @@ def fetch_external_market_text(prompt: str, llm: LLMClient, history: list[dict[s
 
     # 首选多步计划：LLM 按接口目录摘要编排（如先查代码再查行情），
     # 解决单步路径"只知道中文名填不了参数"的死结。
-    plan_text = run_market_plan(llm, prompt, get_interface_doc, history)
+    plan_text = run_market_plan(llm, prompt, get_interface_doc, history, on_step=on_step)
     if plan_text:
         return plan_text
 
@@ -236,9 +251,28 @@ def fetch_external_market_text(prompt: str, llm: LLMClient, history: list[dict[s
 
     try:
         result = call_akshare(iface, {str(k): v for k, v in arguments.items()})
-    except AkshareToolError:
+    except AkshareToolError as exc:
         # 数据源失败降级为无外部数据，主管线继续走库内分析。
+        if on_step is not None:
+            _emit_step_audit(on_step, {
+                "round": "rag-fallback",
+                "step": 0,
+                "interface": iface,
+                "arguments": arguments,
+                "rows": 0,
+                "error": str(exc),
+            })
         return ""
+
+    if on_step is not None:
+        _emit_step_audit(on_step, {
+            "round": "rag-fallback",
+            "step": 0,
+            "interface": iface,
+            "arguments": arguments,
+            "rows": len(result.get("rows") or []),
+            "error": "",
+        })
 
     return format_result_for_prompt(result)
 
@@ -257,6 +291,19 @@ def market_query_result_is_insufficient(query_result) -> bool:
 
 def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
     llm = LLMClient(logger=llm_logger)
+
+    def log_market_step(record: dict[str, Any]) -> None:
+        """把 planner 每步取数（接口+参数+行数+错误）落 LLM 日志，便于排查数据源问题。"""
+        if llm_logger is None:
+            return
+        llm_logger(
+            "fetch_market_step",
+            "akshare",
+            {"interface": record.get("interface"), "arguments": record.get("arguments"), "round": record.get("round"), "step": record.get("step")},
+            {"rows": record.get("rows"), "error": record.get("error")},
+            0,
+            str(record.get("error") or ""),
+        )
 
     def parse_prompt(state: AgentState) -> AgentState:
         prompt = state["prompt"].strip()
@@ -277,7 +324,7 @@ def build_graph(db_engine, llm_logger: LLMLogger | None = None) -> Any:
             return {**state, "market_data_text": ""}
         if not classify_external_data_need(llm, state["prompt"], db_engine):
             return {**state, "market_data_text": ""}
-        return {**state, "market_data_text": fetch_external_market_text(state["prompt"], llm)}
+        return {**state, "market_data_text": fetch_external_market_text(state["prompt"], llm, on_step=log_market_step)}
 
     def plan_query(state: AgentState) -> AgentState:
         from .db import list_tables, table_fingerprint

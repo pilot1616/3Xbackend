@@ -74,6 +74,33 @@ def sse_event(event: str, payload: dict[str, Any]) -> str:
     """封装一条 SSE 帧（\n\n 结尾）。"""
     return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False, default=str)}\n\n"
 
+
+def make_market_step_logger(run_id: str):
+    """planner 逐步取数审计 → agent_llm_logs 的适配器。
+
+    每条记录落 stage=fetch_market_step 的日志行：request 记接口+实际参数
+    （含 round/step 定位重规划轮），response 记行数，error 记失败原因。
+    之前只落最终事实清单，数据源返回什么参数区间完全不可考，排障无门。
+    """
+    def log_step(record: dict[str, Any]) -> None:
+        if not run_id:
+            return
+        log_llm(
+            engine,
+            run_id,
+            "fetch_market_step",
+            "akshare",
+            {
+                "interface": record.get("interface"),
+                "arguments": record.get("arguments"),
+                "round": record.get("round"),
+                "step": record.get("step"),
+            },
+            {"rows": record.get("rows"), "error": record.get("error")},
+            error=str(record.get("error") or ""),
+        )
+    return log_step
+
 RATE_LIMIT_MAX_REQUESTS = 10
 RATE_LIMIT_WINDOW_SECONDS = 60.0
 
@@ -414,7 +441,7 @@ def _chat_stream_events(request: ChatRequest) -> Generator[str, None, None]:
         market_data_text = ""
         if market_query_result_is_insufficient(query_result) and classify_external_data_need(llm, request.message, engine, recent):
             yield sse_event("stage", {"stage": SSE_STAGE_FETCH_MARKET})
-            market_data_text = fetch_external_market_text(request.message, llm, recent)
+            market_data_text = fetch_external_market_text(request.message, llm, recent, on_step=make_market_step_logger(run_id))
             if market_data_text:
                 log_llm(engine, run_id, "fetch_market_data", settings.model_for_stage("tool"), {"interface": "akshare"}, {"rows": market_data_text[:2000]})
         market_block = f"\n\n外部行情数据（AKShare 实时获取）：\n{market_data_text}" if market_data_text else ""
@@ -633,7 +660,7 @@ def chat(request: ChatRequest) -> ChatResponse:
         # 外部行情数据；命中才走 akshare 取数，任何失败都降级为空文本不阻断聊天。
         market_data_text = ""
         if market_query_result_is_insufficient(query_result) and classify_external_data_need(llm, request.message, engine, recent):
-            market_data_text = fetch_external_market_text(request.message, llm, recent)
+            market_data_text = fetch_external_market_text(request.message, llm, recent, on_step=make_market_step_logger(run_id))
             if market_data_text:
                 log_llm(engine, run_id, "fetch_market_data", settings.model_for_stage("tool"), {"interface": "akshare"}, {"rows": market_data_text[:2000]})
         market_block = f"\n\n外部行情数据（AKShare 实时获取）：\n{market_data_text}" if market_data_text else ""

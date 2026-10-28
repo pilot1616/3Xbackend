@@ -220,6 +220,20 @@ def _history_text(history: list[dict[str, Any]] | None) -> str:
     return "[最近对话]\n" + "\n".join(lines)
 
 
+# 步骤审计记录：每步调用的接口、实际参数、行数、错误，供上层落到 agent_llm_logs。
+# 回调抛出的异常一律吞掉——审计失败绝不打断取数主管线。
+StepAudit = dict[str, Any]
+
+
+def _emit_step_audit(on_step: Any | None, record: StepAudit) -> None:
+    if on_step is None:
+        return
+    try:
+        on_step(record)
+    except Exception:
+        pass
+
+
 def plan_steps(llm: LLMClient, prompt: str, history: list[dict[str, Any]] | None = None, replan_hint: str = "") -> list[dict[str, Any]]:
     """生成取数步骤计划；计划非法或为空返回 []。replan_hint 非空时是重规划（附失败教训）。"""
     hist = _history_text(history)
@@ -310,17 +324,25 @@ def decide_next(llm: LLMClient, prompt: str, steps: list[dict[str, Any]], step_r
     return "satisfied"
 
 
-def run_market_plan(llm: LLMClient, prompt: str, search_doc, history: list[dict[str, Any]] | None = None) -> str:
+def run_market_plan(llm: LLMClient, prompt: str, search_doc, history: list[dict[str, Any]] | None = None, on_step: Any | None = None) -> str:
     """规划并执行取数计划，返回注入分析轮的 market_data_text。
 
     search_doc: (interface_name) -> str，返回接口文档文本（RAG/目录查找的回调）。
     history 是最近对话（含指代消息的上文），透传给所有 LLM 子调用。
+    on_step 是逐步审计回调：每个步骤（含重试与重规划轮）结束后收到一条
+    {"round", "step", "interface", "arguments", "rows", "error"} 记录，供上层
+    落 agent_llm_logs；回调异常被吞掉，不影响取数。
     首轮计划无产出时，带失败教训重规划一次（换备用数据源）。
     任何环节失败都不抛异常：返回空字符串降级，由主管线继续。
     整个外部取数链受总预算约束（deadline），超时立即降级返回空串。
     """
     deadline = time.monotonic() + MARKET_PLAN_BUDGET_SECONDS
-    step_results = _run_plan_once(llm, prompt, search_doc, history, deadline=deadline)
+    round_no = 0
+
+    def audit(record: StepAudit) -> None:
+        _emit_step_audit(on_step, {**record, "round": record.get("round", round_no)})
+
+    step_results = _run_plan_once(llm, prompt, search_doc, history, deadline=deadline, on_step=on_step, round_no=round_no)
     failures = getattr(_run_plan_once, "_last_failures", [])
     # 有失败步骤就重规划一次（换备用数据源），已成功的步骤结果作为 prefill 传入
     # （如已解析出的股票代码），重规划轮不必重取；全部成功则直接产出。
@@ -336,7 +358,7 @@ def run_market_plan(llm: LLMClient, prompt: str, search_doc, history: list[dict[
     if not lessons or time.monotonic() >= deadline:
         return ""
     prior_ok = [r for r in step_results if r["result"].get("rows")]
-    step_results = _run_plan_once(llm, prompt, search_doc, history, replan_hint=lessons, prior_results=prior_ok, deadline=deadline)
+    step_results = _run_plan_once(llm, prompt, search_doc, history, replan_hint=lessons, prior_results=prior_ok, deadline=deadline, on_step=on_step, round_no=round_no + 1)
     if step_results and any(r["result"].get("rows") for r in step_results):
         return _compose_output(llm, prompt, step_results, _plan_purposes(step_results), history, deadline=deadline)
     return ""
@@ -350,16 +372,20 @@ def _record_failures(step_results: list[dict[str, Any]]) -> None:
     ]
 
 
-def _run_plan_once(llm: LLMClient, prompt: str, search_doc, history, replan_hint: str = "", prior_results: list[dict[str, Any]] | None = None, deadline: float | None = None) -> list[dict[str, Any]]:
+def _run_plan_once(llm: LLMClient, prompt: str, search_doc, history, replan_hint: str = "", prior_results: list[dict[str, Any]] | None = None, deadline: float | None = None, on_step: Any | None = None, round_no: int = 0) -> list[dict[str, Any]]:
     """执行一轮完整的计划-执行流程，返回步骤结果列表（含空结果步骤）。
 
     replan_hint 非空表示重规划（附失败教训）；prior_results 是上一轮成功
     的步骤结果，作为前序上下文（占位符引用、填参参考）带入。
     deadline 是共享预算时钟：每个环节开始前检查，超时把剩余步骤记为跳过。
+    on_step 是逐步审计回调（on_step 记录见 run_market_plan）。
     """
     steps = plan_steps(llm, prompt, history, replan_hint)
     if not steps:
         return []
+
+    def audit(record: StepAudit) -> None:
+        _emit_step_audit(on_step, {**record, "round": round_no})
 
     step_results: list[dict[str, Any]] = list(prior_results or [])
     for step in steps:
@@ -376,6 +402,7 @@ def _run_plan_once(llm: LLMClient, prompt: str, search_doc, history, replan_hint
         except AkshareToolError:
             # 数据源偶发抖动/源站挂掉：换一次参数重试（LLM 重新填参），
             # 仍失败才记为空结果。教训（错误信息）会出现在下一轮填参上下文里。
+            audit({"step": step.get("step", 0), "interface": interface, "arguments": arguments, "rows": 0, "error": "调用失败（准备重试）"})
             retry_args = fill_arguments(
                 llm, interface, interface_doc,
                 prompt, step["purpose"] + "（上次该接口调用失败，请换参数或用备选参数重试）",
@@ -385,9 +412,16 @@ def _run_plan_once(llm: LLMClient, prompt: str, search_doc, history, replan_hint
             try:
                 result = call_akshare(interface, retry_args)
             except AkshareToolError:
-                result = {"interface": interface, "arguments": arguments, "columns": [], "rows": [], "total_rows": 0,
+                result = {"interface": interface, "arguments": retry_args, "columns": [], "rows": [], "total_rows": 0,
                           "error": "调用失败（重试后仍失败）"}
         step_results.append({**step, "result": result})
+        audit({
+            "step": step.get("step", 0),
+            "interface": interface,
+            "arguments": result.get("arguments") or (retry_args if result.get("error") else arguments),
+            "rows": len(result.get("rows") or []),
+            "error": str(result.get("error") or ""),
+        })
 
         action = decide_next(llm, prompt, steps, step_results, history)
         if action == "fail":
