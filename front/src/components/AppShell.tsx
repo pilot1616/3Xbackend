@@ -137,6 +137,16 @@ export function AppShell() {
           </h1>
 
           <nav className="simple-header-links" aria-label="主导航">
+            {session?.user.is_admin ? (
+              <NavLink className={({ isActive }) => `simple-header-links-admin ${navClassName({ isActive }) ?? ''}`.trim()} end to="/admin/sync">
+                后台同步
+              </NavLink>
+            ) : null}
+            {session?.user.is_admin ? (
+              <NavLink className={({ isActive }) => `simple-header-links-admin ${navClassName({ isActive }) ?? ''}`.trim()} to="/admin/agent-logs">
+                LLM 调用历史
+              </NavLink>
+            ) : null}
             <NavLink className={navClassName} end to="/">
               首页
             </NavLink>
@@ -158,11 +168,6 @@ export function AppShell() {
             <NavLink className={navClassName} to="/profile">
               我的资料
             </NavLink>
-            {session?.user.is_admin ? (
-              <NavLink className={navClassName} to="/admin/sync">
-                后台同步
-              </NavLink>
-            ) : null}
           </nav>
 
           <div className="simple-header-auth">
