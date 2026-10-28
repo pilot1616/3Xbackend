@@ -5,9 +5,11 @@ import {
   getAgentLogRunDetail,
   getAgentLogStats,
   listAgentLogRuns,
+  listAgentLogUsers,
   type AgentLogRun,
   type AgentLogRunDetail,
   type AgentLogStats,
+  type AgentLogUser,
 } from '../api/forum';
 
 /**
@@ -132,19 +134,21 @@ function RunDetail({ runID }: { runID: string }) {
 export function AdminAgentLogsPage() {
   const [runs, setRuns] = useState<AgentLogRun[]>([]);
   const [stats, setStats] = useState<AgentLogStats[]>([]);
+  const [users, setUsers] = useState<AgentLogUser[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [userFilter, setUserFilter] = useState(0);
   const [selectedRun, setSelectedRun] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const load = useCallback(async (searchText: string, status: string) => {
+  const load = useCallback(async (searchText: string, status: string, userId: number) => {
     setLoading(true);
     setError('');
     try {
       const [runResp, statResp] = await Promise.all([
-        listAgentLogRuns({ limit: 100, status, search: searchText }),
-        getAgentLogStats(),
+        listAgentLogRuns({ limit: 100, status, search: searchText, userId }),
+        getAgentLogStats(168, userId),
       ]);
       setRuns(runResp.records);
       setStats(statResp.records);
@@ -156,7 +160,10 @@ export function AdminAgentLogsPage() {
   }, []);
 
   useEffect(() => {
-    load('', '');
+    load('', '', 0);
+    listAgentLogUsers()
+      .then((resp) => setUsers(resp.records))
+      .catch(() => setUsers([]));
   }, [load]);
 
   return (
@@ -199,10 +206,22 @@ export function AdminAgentLogsPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            load(search, statusFilter);
+            load(search, statusFilter, userFilter);
           }}
           style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}
         >
+          <select
+            onChange={(e) => setUserFilter(Number(e.target.value))}
+            style={{ background: '#0d1117', border: '1px solid #21262d', borderRadius: 6, color: '#e6edf3', fontSize: 13, padding: '6px 10px' }}
+            value={userFilter}
+          >
+            <option value={0}>全部用户</option>
+            {users.map((u) => (
+              <option key={u.user_id} value={u.user_id}>
+                {u.username || `用户 ${u.user_id}`}（{u.runs} 次）
+              </option>
+            ))}
+          </select>
           <input
             onChange={(e) => setSearch(e.target.value)}
             placeholder="搜索 prompt…"
@@ -240,6 +259,7 @@ export function AdminAgentLogsPage() {
                 >
                   <span style={{ color: statusColor[run.status] ?? '#8a94a6' }}>{run.status === 'success' ? '✓' : '✗'}</span>{' '}
                   <span style={{ color: '#e6edf3' }}>{run.prompt.slice(0, 60)}</span>
+                  <span style={{ color: '#7dd3fc' }}> · {run.username || `用户 ${run.user_id}`}</span>
                   <span style={{ color: '#484f58' }}> · {run.started_at} · {((run.latency_ms ?? 0) / 1000).toFixed(1)}s</span>
                   {run.error ? <span style={{ color: '#f87171' }}> · {run.error.slice(0, 50)}</span> : null}
                 </button>

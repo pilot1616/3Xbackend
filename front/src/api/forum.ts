@@ -256,6 +256,8 @@ export interface AgentLogRun {
   started_at: string;
   finished_at: string | null;
   latency_ms: number | null;
+  user_id: number;
+  username: string;
 }
 
 export interface AgentLogRunDetail extends AgentLogRun {
@@ -282,11 +284,19 @@ export interface AgentLogStats {
   max_seconds: number | null;
 }
 
-export function listAgentLogRuns(params: { limit?: number; status?: string; search?: string } = {}) {
+export interface AgentLogUser {
+  user_id: number;
+  username: string;
+  runs: number;
+  last_active_at: string | null;
+}
+
+export function listAgentLogRuns(params: { limit?: number; status?: string; search?: string; userId?: number } = {}) {
   const query = new URLSearchParams();
   if (params.limit) query.set('limit', String(params.limit));
   if (params.status) query.set('status', params.status);
   if (params.search) query.set('search', params.search);
+  if (params.userId) query.set('user_id', String(params.userId));
   const qs = query.toString();
   return request<{ records: AgentLogRun[] }>(`/api/v1/admin/agent-logs${qs ? `?${qs}` : ''}`);
 }
@@ -295,6 +305,11 @@ export function getAgentLogRunDetail(runID: string) {
   return request<AgentLogRunDetail>(`/api/v1/admin/agent-logs/${encodeURIComponent(runID)}`);
 }
 
-export function getAgentLogStats(sinceHours = 168) {
-  return request<{ records: AgentLogStats[] }>(`/api/v1/admin/agent-logs?view=stats&since_hours=${sinceHours}`);
+export function getAgentLogStats(sinceHours = 168, userId = 0) {
+  const userQS = userId ? `&user_id=${userId}` : '';
+  return request<{ records: AgentLogStats[] }>(`/api/v1/admin/agent-logs?view=stats&since_hours=${sinceHours}${userQS}`);
+}
+
+export function listAgentLogUsers() {
+  return request<{ records: AgentLogUser[] }>(`/api/v1/admin/agent-logs?view=users`);
 }

@@ -45,7 +45,7 @@ from .context import (
 from .akshare_tool import AkshareToolError, call_akshare, list_akshare_functions
 from .db import build_engine, execute_readonly_sql, schema_summary
 from .graph import MARKET_DATA_RULES, build_graph, classify_external_data_need, fetch_external_market_text, market_query_result_is_insufficient
-from .logs_viewer import list_runs, run_detail, stage_stats
+from .logs_viewer import list_run_users, list_runs, run_detail, stage_stats
 from .llm import LLMClient, build_stable_messages
 from .smalltalk import classify_message
 from .types import (
@@ -183,8 +183,8 @@ def akshare_call(request: AkshareCallRequest) -> AkshareCallResponse:
 
 
 @app.get("/logs/runs")
-def logs_runs(limit: int = 50, status: str = "", search: str = "") -> dict[str, object]:
-    return {"records": list_runs(engine, limit=limit, status=status, search=search)}
+def logs_runs(limit: int = 50, status: str = "", search: str = "", user_id: int = 0) -> dict[str, object]:
+    return {"records": list_runs(engine, limit=limit, status=status, search=search, user_id=user_id)}
 
 
 @app.get("/logs/runs/{run_id}")
@@ -196,8 +196,13 @@ def logs_run_detail(run_id: str) -> dict[str, object]:
 
 
 @app.get("/logs/stats")
-def logs_stats(since_hours: int = 168) -> dict[str, object]:
-    return {"records": stage_stats(engine, since_hours=since_hours)}
+def logs_stats(since_hours: int = 168, user_id: int = 0) -> dict[str, object]:
+    return {"records": stage_stats(engine, since_hours=since_hours, user_id=user_id)}
+
+
+@app.get("/logs/users")
+def logs_users() -> dict[str, object]:
+    return {"records": list_run_users(engine)}
 
 
 @app.post("/prompt", response_model=PromptResponse)
@@ -215,7 +220,7 @@ def prompt(request: PromptRequest) -> PromptResponse:
     try:
         ensure_chat_tables(engine)
         # /prompt 不属于任何会话；run 记录用空 conversation_id，仅用于审计与排障。
-        run_id = create_run(engine, "", "", request.prompt[:200])
+        run_id = create_run(engine, "", "", request.prompt[:200], user=request.user.model_dump() if request.user else None)
     except Exception:
         run_id = ""
 
@@ -319,7 +324,7 @@ def _chat_stream_events(request: ChatRequest) -> Generator[str, None, None]:
         history_text += "\n\n" + summarize_instruction()
 
     user_message_id = add_message(engine, conversation_id, user, "user", request.message)
-    run_id = create_run(engine, conversation_id, user_message_id, request.message)
+    run_id = create_run(engine, conversation_id, user_message_id, request.message, user=user)
     yield sse_event("meta", {"run_id": run_id, "conversation_id": conversation_id})
 
     def fail(error: str) -> Generator[str, None, None]:
@@ -567,7 +572,7 @@ def chat(request: ChatRequest) -> ChatResponse:
         history_text += "\n\n" + summarize_instruction()
 
     user_message_id = add_message(engine, conversation_id, user, "user", request.message)
-    run_id = create_run(engine, conversation_id, user_message_id, request.message)
+    run_id = create_run(engine, conversation_id, user_message_id, request.message, user=user)
 
     try:
         # 闲聊直答：由 LLM 判断消息是否为问候/身份/玩笑类闲聊（一轮轻量调用，

@@ -25,6 +25,8 @@ def ensure_chat_tables(engine: Engine) -> None:
           conversation_id VARCHAR(64) NOT NULL UNIQUE,
           user_id BIGINT NOT NULL,
           username VARCHAR(64) NOT NULL,
+          source VARCHAR(32) NOT NULL DEFAULT '',
+          title VARCHAR(200) NOT NULL DEFAULT '',
           source VARCHAR(64) NOT NULL,
           title VARCHAR(255) NOT NULL,
           created_at DATETIME NOT NULL,
@@ -62,7 +64,10 @@ def ensure_chat_tables(engine: Engine) -> None:
           started_at DATETIME NOT NULL,
           finished_at DATETIME,
           latency_ms BIGINT,
-          INDEX idx_agent_runs_conversation_started (conversation_id, started_at)
+          user_id BIGINT NOT NULL DEFAULT 0,
+          username VARCHAR(64) NOT NULL DEFAULT '',
+          INDEX idx_agent_runs_conversation_started (conversation_id, started_at),
+          INDEX idx_agent_runs_user_started (user_id, started_at)
         )
         """,
         """
@@ -95,6 +100,20 @@ def ensure_chat_tables(engine: Engine) -> None:
     with engine.begin() as conn:
         for statement in statements:
             conn.execute(text(statement))
+        # 旧库迁移：agent_runs 补用户列（幂等；已存在时忽略报错继续）。
+        try:
+            conn.execute(
+                text(
+                    """
+                    ALTER TABLE agent_runs
+                      ADD COLUMN user_id BIGINT NOT NULL DEFAULT 0 AFTER latency_ms,
+                      ADD COLUMN username VARCHAR(64) NOT NULL DEFAULT '' AFTER user_id,
+                      ADD INDEX idx_agent_runs_user_started (user_id, started_at)
+                    """
+                )
+            )
+        except Exception:
+            pass
     _chat_tables_ready = True
 
 
@@ -213,17 +232,27 @@ def list_messages(engine: Engine, conversation_id: str, user_id: int) -> list[di
     return [dict(row) for row in rows]
 
 
-def create_run(engine: Engine, conversation_id: str, user_message_id: str, prompt: str) -> str:
+def create_run(engine: Engine, conversation_id: str, user_message_id: str, prompt: str, user: dict[str, Any] | None = None) -> str:
     run_id = new_id("run")
+    user_id = int((user or {}).get("id") or 0)
+    username = str((user or {}).get("username") or "")
     with engine.begin() as conn:
         conn.execute(
             text(
                 """
-                INSERT INTO agent_runs (run_id, conversation_id, user_message_id, status, prompt, started_at)
-                VALUES (:run_id, :conversation_id, :user_message_id, 'running', :prompt, :started_at)
+                INSERT INTO agent_runs (run_id, conversation_id, user_message_id, status, prompt, started_at, user_id, username)
+                VALUES (:run_id, :conversation_id, :user_message_id, 'running', :prompt, :started_at, :user_id, :username)
                 """
             ),
-            {"run_id": run_id, "conversation_id": conversation_id, "user_message_id": user_message_id, "prompt": prompt, "started_at": datetime.now()},
+            {
+                "run_id": run_id,
+                "conversation_id": conversation_id,
+                "user_message_id": user_message_id,
+                "prompt": prompt,
+                "started_at": datetime.now(),
+                "user_id": user_id,
+                "username": username,
+            },
         )
     return run_id
 

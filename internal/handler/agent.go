@@ -172,6 +172,8 @@ func (h *AgentHandler) AgentLogs(c *gin.Context) {
 		path = "/logs/runs/" + url.PathEscape(runID)
 	case c.Query("view") == "stats":
 		path = "/logs/stats"
+	case c.Query("view") == "users":
+		path = "/logs/users"
 	default:
 		path = "/logs/runs"
 	}
@@ -180,7 +182,7 @@ func (h *AgentHandler) AgentLogs(c *gin.Context) {
 	if view := c.Query("view"); view != "" {
 		query.Set("view", view)
 	}
-	for _, key := range []string{"limit", "status", "search", "since_hours"} {
+	for _, key := range []string{"limit", "status", "search", "since_hours", "user_id"} {
 		if value := c.Query(key); value != "" {
 			query.Set(key, value)
 		}
